@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { maigretRecordToScanResult, parseMaigretSimpleReport } from "./maigret-adapter";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { maigretRecordToScanResult, parseMaigretSimpleReport, runMaigretScan } from "./maigret-adapter";
 
 describe("parseMaigretSimpleReport", () => {
   it("maps Maigret simple JSON claimed accounts into scan results", () => {
@@ -75,3 +75,119 @@ describe("maigretRecordToScanResult", () => {
     expect(result?.riskLevel).toBe("HIGH");
   });
 });
+
+describe("runMaigretScan remote Vercel function", () => {
+  const originalFetch = globalThis.fetch;
+  const originalVercel = process.env.VERCEL;
+  const originalVercelUrl = process.env.VERCEL_URL;
+  const originalMaigretApiUrl = process.env.MAIGRET_API_URL;
+  const originalMaigretApiSecret = process.env.MAIGRET_API_SECRET;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    restoreEnv("VERCEL", originalVercel);
+    restoreEnv("VERCEL_URL", originalVercelUrl);
+    restoreEnv("MAIGRET_API_URL", originalMaigretApiUrl);
+    restoreEnv("MAIGRET_API_SECRET", originalMaigretApiSecret);
+    vi.restoreAllMocks();
+  });
+
+  it("uses the Vercel Python Maigret function instead of local fallback data", async () => {
+    process.env.VERCEL = "1";
+    process.env.VERCEL_URL = "iddopel.vercel.app";
+    process.env.MAIGRET_API_SECRET = "internal-secret";
+    globalThis.fetch = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          checkedCount: 50,
+          failedRate: 0,
+          reportJson: JSON.stringify({
+            GitHub: {
+              url_user: "https://github.com/vercelreal",
+              url_main: "https://github.com",
+              tags: ["dev"]
+            }
+          }),
+          htmlReport: {
+            html: "<!doctype html><h1>Maigret</h1>",
+            htmlFilename: "vercelreal_plain.html"
+          }
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    ) as typeof fetch;
+
+    const result = await runMaigretScan({ username: "vercelreal", purpose: "SELF_CHECK", mode: "QUICK" });
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://iddopel.vercel.app/api/maigret_scan",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({ "x-maigret-api-secret": "internal-secret" })
+      })
+    );
+    expect(result.checkedCount).toBe(50);
+    expect(result.report?.htmlFilename).toBe("vercelreal_plain.html");
+    expect(result.results[0]).toMatchObject({
+      platform: "GitHub",
+      url: "https://github.com/vercelreal",
+      status: "FOUND"
+    });
+  });
+
+  it("throws when the Vercel Python Maigret function fails", async () => {
+    process.env.MAIGRET_API_URL = "https://scanner.example.com/api/maigret_scan";
+    globalThis.fetch = vi.fn(async () =>
+      new Response(JSON.stringify({ error: { message: "Maigret timed out." } }), {
+        status: 504,
+        headers: { "Content-Type": "application/json" }
+      })
+    ) as typeof fetch;
+
+    await expect(runMaigretScan({ username: "timeoutcase", purpose: "SELF_CHECK", mode: "QUICK" })).rejects.toThrow(
+      "Maigret timed out."
+    );
+  });
+
+  it("uses the request origin when Vercel system URL variables are unavailable", async () => {
+    process.env.VERCEL = "1";
+    delete process.env.VERCEL_URL;
+    globalThis.fetch = vi.fn(async () =>
+      new Response(
+        JSON.stringify({
+          ok: true,
+          checkedCount: 50,
+          failedRate: 0,
+          reportJson: JSON.stringify({
+            GitHub: {
+              url_user: "https://github.com/fromorigin",
+              url_main: "https://github.com",
+              tags: ["dev"]
+            }
+          })
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    ) as typeof fetch;
+
+    await runMaigretScan(
+      { username: "fromorigin", purpose: "SELF_CHECK", mode: "QUICK" },
+      { origin: "https://preview.example.com" }
+    );
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "https://preview.example.com/api/maigret_scan",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
+});
+
+function restoreEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}

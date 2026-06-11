@@ -8,6 +8,7 @@ import { createTossPreflightResponse, rejectDisallowedTossCors, withTossCors } f
 import { parseCreateScanInput } from "@/lib/validation";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export function OPTIONS(request: Request) {
   return createTossPreflightResponse(request, ["POST"]);
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     const input = parseCreateScanInput(await readJson(request));
-    const job = await createStoredScan(input);
+    const job = await createStoredScan(input, { origin: new URL(request.url).origin });
     return withTossCors(request, NextResponse.json(publicSummary(job), { status: 201 }));
   } catch (error) {
     return withTossCors(request, handleApiError(error));

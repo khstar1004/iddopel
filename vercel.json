@@ -1,9 +1,21 @@
 {
   "env": {
-    "SCAN_PROVIDER": "auto",
+    "SCAN_PROVIDER": "maigret",
+    "SCAN_STORE_PATH": "/tmp/id-doppelganger-scans.json",
+    "ORDER_STORE_PATH": "/tmp/id-doppelganger-orders.json",
+    "MONITORING_STORE_PATH": "/tmp/id-doppelganger-monitoring.json",
+    "MAIGRET_TOP_SITES_QUICK": "50",
+    "MAIGRET_TOP_SITES_DEEP": "150",
+    "MAIGRET_SITE_TIMEOUT_SECONDS": "6",
+    "MAIGRET_PROCESS_TIMEOUT_MS": "55000",
     "PAYMENT_PROVIDER": "mock",
     "ENABLE_MOCK_PAYMENTS": "false",
     "WEB_DETAILED_REPORT_PAYWALL_ENABLED": "false"
+  },
+  "functions": {
+    "api/maigret_scan.py": {
+      "maxDuration": 60
+    }
   },
   "crons": [
     {

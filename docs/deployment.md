@@ -106,7 +106,13 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - Keep Vercel as the frontend and add a separate scan worker service in a later slice.
 - Use `SCAN_PROVIDER=mock` only for demos and smoke tests.
 
-For the public Vercel beta, keep `SCAN_PROVIDER=auto`. It attempts Maigret first when a CLI is available, but returns a bounded fallback result instead of a 500 on serverless runtimes that cannot spawn Maigret. Do not set `SCAN_PROVIDER=maigret` on Vercel unless the runtime has been verified with `npm run scan:maigret:live`; strict `maigret` mode is intended for the Docker/Cloudtype path.
+For the public Vercel beta, keep `SCAN_PROVIDER=maigret`. Vercel installs Maigret from `requirements.txt` and the Node scan route calls the Python function at `/api/maigret_scan` for real CLI output. `vercel.json` also points the JSON stores at `/tmp` so the first scan response can complete on Vercel. That storage is not durable and is not a substitute for Postgres; stable detailed reports, orders, monitoring, and deletion audits still require `DATABASE_URL`.
+
+After each Vercel beta deployment, run:
+
+```bash
+SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
+```
 
 ## Required Environment Variables
 - `PRODUCTION_DOMAIN`: final public domain. `launch:button` derives `SITE_URL`, `PRODUCTION_BASE_URL`, `SMOKE_BASE_URL`, `STORE_PRODUCTION_ORIGIN`, and `MOBILE_APP_ORIGIN` from it.
@@ -115,11 +121,12 @@ For the public Vercel beta, keep `SCAN_PROVIDER=auto`. It attempts Maigret first
 - `CRON_SECRET`: random secret used by `/api/cron/prune` and `/api/cron/monitoring`
 - `MONITORING_CRON_LIMIT`: maximum monitoring subscriptions processed by one `/api/cron/monitoring` run
 - `SITE_URL`: production origin used for Toss success/fail URLs
-- `SCAN_PROVIDER`: `auto` for Vercel beta, `maigret` for Docker/Cloudtype real scans. `mock` must be used only for smoke tests or emergency fallback.
+- `SCAN_PROVIDER`: `maigret` for Vercel, Docker, and Cloudtype real scans. `mock` must be used only for private smoke tests and demos.
 - `MAIGRET_BIN`: CLI binary path, usually `maigret`
 - `MAIGRET_TOP_SITES_QUICK`: free scan scope, default `100`
 - `MAIGRET_TOP_SITES_DEEP`: paid/deep scan scope, default `500`
 - `MAIGRET_PROCESS_TIMEOUT_MS`: process kill timeout
+- `MAIGRET_API_SECRET`: optional shared secret for the Node scan route to call the Python Maigret function with `x-maigret-api-secret`
 - `PAYMENT_PROVIDER`: `toss` for production payments
 - `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` for beta so the one-time free detailed report remains available; set `true` after Toss checkout is ready to require checkout for detailed web reports
 - `TOSS_CLIENT_KEY`: Toss Payments client key for payment-window SDK compatibility and merchant verification
@@ -138,7 +145,7 @@ For the public Vercel beta, keep `SCAN_PROVIDER=auto`. It attempts Maigret first
 - `ALERT_WEBHOOK_TIMEOUT_MS`: alert webhook timeout, between `250` and `5000`
 - `ALERT_RUNBOOK_URL`: HTTPS runbook link included in every alert payload
 - `PRODUCTION_BASE_URL`: deployed HTTPS origin used by `npm run verify:production` runtime checks
-- `SMOKE_BASE_URL`: deployed HTTPS origin used by `npm run smoke:release`
+- `SMOKE_BASE_URL`: deployed HTTPS origin used by `npm run smoke:release` and `npm run smoke:vercel-beta`
 - `STORE_PRODUCTION_ORIGIN`: public HTTPS origin written into App Store / Google Play metadata
 - `STORE_SUPPORT_EMAIL`: final store support email
 - `MOBILE_APP_ORIGIN`: production HTTPS API origin embedded into native shell config
@@ -261,4 +268,4 @@ curl -sS -X POST http://localhost:3000/api/orders \
 ```
 
 ## Rollback
-Set `SCAN_PROVIDER=mock` to keep the product flow online if Maigret starts timing out or a platform blocks the worker IP. This preserves the landing, payment funnel, policy pages, and report UI while the scan worker is repaired.
+If Maigret starts timing out or a platform blocks the worker IP in production, roll back to the previous working deployment or temporarily disable the scan entry point while the scanner is repaired. Keep `SCAN_PROVIDER=mock` limited to private smoke tests and demos.

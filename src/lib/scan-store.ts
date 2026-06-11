@@ -3,8 +3,12 @@ import { getScanRepository } from "./repository";
 import { runScan } from "./scan-runner";
 import type { CreateScanInput, ScanJob } from "./types";
 
-export async function createStoredScan(input: CreateScanInput): Promise<ScanJob> {
-  const job = await runScan(input);
+interface CreateStoredScanOptions {
+  origin?: string;
+}
+
+export async function createStoredScan(input: CreateScanInput, options: CreateStoredScanOptions = {}): Promise<ScanJob> {
+  const job = await runScan(input, { origin: options.origin });
   return getScanRepository().create(job);
 }
 

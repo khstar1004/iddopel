@@ -29,6 +29,8 @@ next-local-start*.log
 next-ui-check*.log
 *.err.log
 npm-debug.log*
+__pycache__/
+*.pyc
 
 android/.gradle
 android/build

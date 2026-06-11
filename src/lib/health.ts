@@ -13,7 +13,7 @@ export function buildHealthStatus(env: Record<string, string | undefined>, now =
     service: "id-doppelganger",
     timestamp: now.toISOString(),
     storage: env.DATABASE_URL?.startsWith("postgres") ? "postgres" : "file",
-    scanProvider: normalizeProvider(env.SCAN_PROVIDER, "auto"),
+    scanProvider: normalizeProvider(env.SCAN_PROVIDER, "maigret"),
     paymentProvider: normalizeProvider(env.PAYMENT_PROVIDER, "mock")
   };
 }

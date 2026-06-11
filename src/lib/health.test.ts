@@ -25,7 +25,7 @@ describe("buildHealthStatus", () => {
     expect(JSON.stringify(status)).not.toContain("password");
   });
 
-  it("reports auto scan mode when no provider is configured for beta deployments", () => {
-    expect(buildHealthStatus({}, new Date("2026-06-11T00:00:00.000Z")).scanProvider).toBe("auto");
+  it("reports Maigret scan mode when no provider is configured", () => {
+    expect(buildHealthStatus({}, new Date("2026-06-11T00:00:00.000Z")).scanProvider).toBe("maigret");
   });
 });

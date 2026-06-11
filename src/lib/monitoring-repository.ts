@@ -1,6 +1,7 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
+import { defaultFileStorePath } from "./file-store-path";
 import type { MonitoringSubscription } from "./types";
 
 export interface MonitoringRepository {
@@ -28,63 +29,83 @@ export function resetMonitoringRepositoryForTests(nextRepository: MonitoringRepo
   monitoringRepository = nextRepository;
 }
 
-class FileMonitoringRepository implements MonitoringRepository {
+export class FileMonitoringRepository implements MonitoringRepository {
   private readonly filePath: string;
+  private queue = Promise.resolve();
 
-  constructor(filePath = path.join(process.cwd(), ".data", "monitoring.json")) {
+  constructor(filePath = defaultFileStorePath("monitoring.json")) {
     this.filePath = filePath;
   }
 
   async upsert(subscription: MonitoringSubscription): Promise<MonitoringSubscription> {
-    const subscriptions = await this.readAll();
-    const existing = Object.values(subscriptions).find(
-      (item) => item.ownerTokenHash === subscription.ownerTokenHash && item.status !== "DELETED"
-    );
-    const next = existing ? { ...subscription, monitoringId: existing.monitoringId, createdAt: existing.createdAt } : subscription;
-    subscriptions[next.monitoringId] = next;
-    await this.writeAll(subscriptions);
-    return next;
+    return this.withQueue(async () => {
+      const subscriptions = await this.readAll();
+      const existing = Object.values(subscriptions).find(
+        (item) => item.ownerTokenHash === subscription.ownerTokenHash && item.status !== "DELETED"
+      );
+      const next = existing ? { ...subscription, monitoringId: existing.monitoringId, createdAt: existing.createdAt } : subscription;
+      subscriptions[next.monitoringId] = next;
+      await this.writeAll(subscriptions);
+      return next;
+    });
   }
 
   async getByOwnerTokenHash(ownerTokenHash: string): Promise<MonitoringSubscription | null> {
-    const subscriptions = await this.readAll();
-    return (
-      Object.values(subscriptions).find((item) => item.ownerTokenHash === ownerTokenHash && item.status !== "DELETED") ?? null
-    );
+    return this.withQueue(async () => {
+      const subscriptions = await this.readAll();
+      return (
+        Object.values(subscriptions).find((item) => item.ownerTokenHash === ownerTokenHash && item.status !== "DELETED") ?? null
+      );
+    });
   }
 
   async getById(monitoringId: string): Promise<MonitoringSubscription | null> {
-    const subscriptions = await this.readAll();
-    const subscription = subscriptions[monitoringId] ?? null;
-    return subscription?.status === "DELETED" ? null : subscription;
+    return this.withQueue(async () => {
+      const subscriptions = await this.readAll();
+      const subscription = subscriptions[monitoringId] ?? null;
+      return subscription?.status === "DELETED" ? null : subscription;
+    });
   }
 
   async markDeleted(monitoringId: string, ownerTokenHash: string, now = new Date()): Promise<MonitoringSubscription | null> {
-    const subscriptions = await this.readAll();
-    const subscription = subscriptions[monitoringId];
-    if (!subscription || subscription.ownerTokenHash !== ownerTokenHash || subscription.status === "DELETED") return null;
+    return this.withQueue(async () => {
+      const subscriptions = await this.readAll();
+      const subscription = subscriptions[monitoringId];
+      if (!subscription || subscription.ownerTokenHash !== ownerTokenHash || subscription.status === "DELETED") return null;
 
-    const next: MonitoringSubscription = {
-      ...subscription,
-      status: "DELETED",
-      updatedAt: now.toISOString()
-    };
-    subscriptions[monitoringId] = next;
-    await this.writeAll(subscriptions);
-    return next;
+      const next: MonitoringSubscription = {
+        ...subscription,
+        status: "DELETED",
+        updatedAt: now.toISOString()
+      };
+      subscriptions[monitoringId] = next;
+      await this.writeAll(subscriptions);
+      return next;
+    });
   }
 
   async listDue(now = new Date(), limit = 10): Promise<MonitoringSubscription[]> {
-    const subscriptions = await this.readAll();
-    return Object.values(subscriptions)
-      .filter((item) => item.status === "ACTIVE" && new Date(item.nextRunAt).getTime() <= now.getTime())
-      .sort((a, b) => new Date(a.nextRunAt).getTime() - new Date(b.nextRunAt).getTime())
-      .slice(0, limit);
+    return this.withQueue(async () => {
+      const subscriptions = await this.readAll();
+      return Object.values(subscriptions)
+        .filter((item) => item.status === "ACTIVE" && new Date(item.nextRunAt).getTime() <= now.getTime())
+        .sort((a, b) => new Date(a.nextRunAt).getTime() - new Date(b.nextRunAt).getTime())
+        .slice(0, limit);
+    });
   }
 
   private async readAll(): Promise<Record<string, MonitoringSubscription>> {
     try {
-      return JSON.parse(await readFile(this.filePath, "utf-8")) as Record<string, MonitoringSubscription>;
+      const raw = await readFile(this.filePath, "utf-8");
+      try {
+        return JSON.parse(raw) as Record<string, MonitoringSubscription>;
+      } catch (parseError) {
+        if (parseError instanceof SyntaxError) {
+          await this.backupCorruptFile();
+          return {};
+        }
+        throw parseError;
+      }
     } catch (error) {
       const code = typeof error === "object" && error && "code" in error ? error.code : undefined;
       if (code === "ENOENT") return {};
@@ -92,11 +113,30 @@ class FileMonitoringRepository implements MonitoringRepository {
     }
   }
 
+  private async backupCorruptFile() {
+    const suffix = new Date().toISOString().replace(/[:.]/g, "-");
+    await rename(this.filePath, `${this.filePath}.corrupt-${suffix}`).catch(() => undefined);
+  }
+
+  private async withQueue<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(operation, operation);
+    this.queue = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
   private async writeAll(subscriptions: Record<string, MonitoringSubscription>) {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    const tempPath = `${this.filePath}.tmp`;
+    const tempPath = `${this.filePath}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
     await writeFile(tempPath, JSON.stringify(subscriptions, null, 2), "utf-8");
-    await rename(tempPath, this.filePath);
+    try {
+      await rename(tempPath, this.filePath);
+    } catch (error) {
+      await rm(tempPath, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 }
 

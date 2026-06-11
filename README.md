@@ -23,7 +23,7 @@ python -m venv .maigret-venv
 ./.maigret-venv/Scripts/python.exe -m pip install maigret
 ```
 
-`.env.local` points `MAIGRET_BIN` at that local executable and sets `SCAN_PROVIDER=maigret`, so a missing or failing Maigret install fails the scan instead of showing deterministic fallback data. The Vercel beta uses `SCAN_PROVIDER=auto` so serverless deployments do not return 500 when the Maigret CLI is unavailable. Use `SCAN_PROVIDER=mock` only for automated smoke tests or demos.
+`.env.local` points `MAIGRET_BIN` at that local executable and sets `SCAN_PROVIDER=maigret`, so a missing or failing Maigret install fails the scan instead of showing deterministic fallback data. Vercel runs the same real scanner through the Python function at `/api/maigret_scan`, installed from `requirements.txt`. Use `SCAN_PROVIDER=mock` only for automated smoke tests or demos.
 
 Verify the scanner runtime explicitly:
 
@@ -173,7 +173,13 @@ After the domain is live:
 npm run release:production
 ```
 
-For Vercel beta, the repository `vercel.json` sets `SCAN_PROVIDER=auto`, keeps mock payment confirmation disabled, and leaves the web detailed-report paywall off. For Cloudtype, use the Dockerfile web/API service plus a separate Cloudtype PostgreSQL service. The native apps are still built and submitted through App Store Connect / Google Play; they point at the Cloudtype HTTPS origin via `MOBILE_APP_ORIGIN`. See [docs/cloudtype-deployment.md](docs/cloudtype-deployment.md).
+For Vercel beta, the repository `vercel.json` sets `SCAN_PROVIDER=maigret`, installs Maigret from `requirements.txt`, and routes scans through the Python function at `/api/maigret_scan`. It also uses `/tmp` JSON stores so the first scan response does not fail on a read-only serverless filesystem, keeps mock payment confirmation disabled, and leaves the web detailed-report paywall off. Set `MAIGRET_API_SECRET` in Vercel to protect the Python function from direct public use. `/tmp` is not durable; use Postgres for stable detailed reports, orders, monitoring, and deletion audits. For Cloudtype, use the Dockerfile web/API service plus a separate Cloudtype PostgreSQL service. The native apps are still built and submitted through App Store Connect / Google Play; they point at the Cloudtype HTTPS origin via `MOBILE_APP_ORIGIN`. See [docs/cloudtype-deployment.md](docs/cloudtype-deployment.md).
+
+After a Vercel beta deployment, verify the real scan path:
+
+```bash
+SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
+```
 
 That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The full manual sequence is:
 
@@ -279,6 +285,6 @@ After launch:
 
 ## Rollback
 
-If Maigret is slow or blocked, set `SCAN_PROVIDER=mock` to keep the landing, checkout, report, policy, and deletion flows online while the scan worker is repaired.
+If Maigret is slow or blocked in production, roll back to the previous working deployment or temporarily disable the scan entry point while the scanner is repaired. Keep `SCAN_PROVIDER=mock` limited to private smoke tests and demos.
 
 If payment/report checkout fails, disable paid conversion CTAs or switch the deployment back to the previous image, then verify `/api/health`, `/`, `/toss`, and `/api/scans` recover.

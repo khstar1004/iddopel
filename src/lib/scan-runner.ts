@@ -2,24 +2,22 @@ import { runMaigretScan } from "./maigret-adapter";
 import { createScanJob, createScanJobFromResults } from "./scanner";
 import type { CreateScanInput, ScanJob } from "./types";
 
-export async function runScan(input: CreateScanInput): Promise<ScanJob> {
-  const provider = process.env.SCAN_PROVIDER ?? "auto";
+interface ScanRunOptions {
+  origin?: string;
+}
 
-  if (provider !== "mock") {
-    try {
-      const maigret = await runMaigretScan(input);
-      return createScanJobFromResults(input, maigret.results, {
-        checkedCount: maigret.checkedCount,
-        failedRate: maigret.failedRate,
-        maigretReport: maigret.report,
-        scanSource: "PUBLIC_SCAN"
-      });
-    } catch (error) {
-      if (provider === "maigret") {
-        throw error;
-      }
-    }
+export async function runScan(input: CreateScanInput, options: ScanRunOptions = {}): Promise<ScanJob> {
+  const provider = process.env.SCAN_PROVIDER ?? "maigret";
+
+  if (provider === "mock") {
+    return createScanJob(input);
   }
 
-  return createScanJob(input);
+  const maigret = await runMaigretScan(input, { origin: options.origin });
+  return createScanJobFromResults(input, maigret.results, {
+    checkedCount: maigret.checkedCount,
+    failedRate: maigret.failedRate,
+    maigretReport: maigret.report,
+    scanSource: "PUBLIC_SCAN"
+  });
 }

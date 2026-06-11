@@ -1,6 +1,7 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
+import { defaultFileStorePath } from "./file-store-path";
 import { isExpired } from "./retention";
 import type { ScanJob } from "./types";
 
@@ -29,62 +30,82 @@ export function resetScanRepositoryForTests(nextRepository: ScanRepository | nul
   repository = nextRepository;
 }
 
-class FileScanRepository implements ScanRepository {
+export class FileScanRepository implements ScanRepository {
   private readonly filePath: string;
+  private queue = Promise.resolve();
 
-  constructor(filePath = path.join(process.cwd(), ".data", "scans.json")) {
+  constructor(filePath = defaultFileStorePath("scans.json")) {
     this.filePath = filePath;
   }
 
   async create(job: ScanJob): Promise<ScanJob> {
-    const jobs = await this.readAll();
-    jobs[job.scanId] = job;
-    await this.writeAll(jobs);
-    return job;
+    return this.withQueue(async () => {
+      const jobs = await this.readAll();
+      jobs[job.scanId] = job;
+      await this.writeAll(jobs);
+      return job;
+    });
   }
 
   async get(scanId: string): Promise<ScanJob | null> {
-    const jobs = await this.readAll();
-    const job = jobs[scanId] ?? null;
+    return this.withQueue(async () => {
+      const jobs = await this.readAll();
+      const job = jobs[scanId] ?? null;
 
-    if (!job) return null;
-    if (isExpired(job.expiresAt)) {
-      delete jobs[scanId];
-      await this.writeAll(jobs);
-      return null;
-    }
+      if (!job) return null;
+      if (isExpired(job.expiresAt)) {
+        delete jobs[scanId];
+        await this.writeAll(jobs);
+        return null;
+      }
 
-    return job;
+      return job;
+    });
   }
 
   async delete(scanId: string): Promise<void> {
-    const jobs = await this.readAll();
-    delete jobs[scanId];
-    await this.writeAll(jobs);
+    return this.withQueue(async () => {
+      const jobs = await this.readAll();
+      delete jobs[scanId];
+      await this.writeAll(jobs);
+    });
   }
 
   async extendExpiration(scanId: string, expiresAt: string): Promise<void> {
-    const jobs = await this.readAll();
-    if (jobs[scanId]) {
-      jobs[scanId] = {
-        ...jobs[scanId],
-        expiresAt
-      };
-      await this.writeAll(jobs);
-    }
+    return this.withQueue(async () => {
+      const jobs = await this.readAll();
+      if (jobs[scanId]) {
+        jobs[scanId] = {
+          ...jobs[scanId],
+          expiresAt
+        };
+        await this.writeAll(jobs);
+      }
+    });
   }
 
   async pruneExpired(now = new Date()): Promise<number> {
-    const jobs = await this.readAll();
-    const before = Object.keys(jobs).length;
-    const activeEntries = Object.entries(jobs).filter(([, job]) => !isExpired(job.expiresAt, now));
-    await this.writeAll(Object.fromEntries(activeEntries));
-    return before - activeEntries.length;
+    return this.withQueue(async () => {
+      const jobs = await this.readAll();
+      const before = Object.keys(jobs).length;
+      const activeEntries = Object.entries(jobs).filter(([, job]) => !isExpired(job.expiresAt, now));
+      await this.writeAll(Object.fromEntries(activeEntries));
+      return before - activeEntries.length;
+    });
   }
 
   private async readAll(): Promise<Record<string, ScanJob>> {
     try {
-      return JSON.parse(await readFile(this.filePath, "utf-8")) as Record<string, ScanJob>;
+      const raw = await readFile(this.filePath, "utf-8");
+      try {
+        return JSON.parse(raw) as Record<string, ScanJob>;
+      } catch (parseError) {
+        if (parseError instanceof SyntaxError) {
+          await this.backupCorruptFile();
+          return {};
+        }
+        throw parseError;
+      }
     } catch (error) {
       const code = typeof error === "object" && error && "code" in error ? error.code : undefined;
       if (code === "ENOENT") return {};
@@ -92,11 +113,30 @@ class FileScanRepository implements ScanRepository {
     }
   }
 
+  private async backupCorruptFile() {
+    const suffix = new Date().toISOString().replace(/[:.]/g, "-");
+    await rename(this.filePath, `${this.filePath}.corrupt-${suffix}`).catch(() => undefined);
+  }
+
+  private async withQueue<T>(operation: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(operation, operation);
+    this.queue = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  }
+
   private async writeAll(jobs: Record<string, ScanJob>): Promise<void> {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    const tempPath = `${this.filePath}.tmp`;
+    const tempPath = `${this.filePath}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
     await writeFile(tempPath, JSON.stringify(jobs, null, 2), "utf-8");
-    await rename(tempPath, this.filePath);
+    try {
+      await rename(tempPath, this.filePath);
+    } catch (error) {
+      await rm(tempPath, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 }
 

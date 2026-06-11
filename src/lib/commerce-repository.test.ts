@@ -1,11 +1,18 @@
-import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { FileCommerceRepository } from "./commerce-repository";
 import type { ReportOrder } from "./types";
 
 describe("FileCommerceRepository", () => {
+  const originalVercel = process.env.VERCEL;
+
+  afterEach(async () => {
+    restoreEnv("VERCEL", originalVercel);
+    await rm(path.join(os.tmpdir(), "id-doppelganger", "orders.json"), { force: true }).catch(() => undefined);
+  });
+
   it("backs up a corrupted local order store and continues writing", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "orders-store-"));
     const filePath = path.join(dir, "orders.json");
@@ -35,6 +42,19 @@ describe("FileCommerceRepository", () => {
     expect(Object.keys(persisted).sort()).toEqual(["order_one", "order_three", "order_two"]);
     expect(persisted.order_three.status).toBe("PAID");
   });
+
+  it("uses writable tmp storage by default on Vercel when no database store is configured", async () => {
+    process.env.VERCEL = "1";
+    const repository = new FileCommerceRepository();
+    const order = orderFixture("order_vercel_tmp");
+
+    await expect(repository.create(order)).resolves.toEqual(order);
+
+    const persisted = JSON.parse(
+      await readFile(path.join(os.tmpdir(), "id-doppelganger", "orders.json"), "utf-8")
+    ) as Record<string, ReportOrder>;
+    expect(persisted.order_vercel_tmp).toMatchObject({ orderId: "order_vercel_tmp" });
+  });
 });
 
 function orderFixture(orderId: string): ReportOrder {
@@ -53,4 +73,13 @@ function orderFixture(orderId: string): ReportOrder {
     createdAt: new Date("2026-06-11T00:00:00.000Z").toISOString(),
     paidAt: null
   };
+}
+
+function restoreEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
 }

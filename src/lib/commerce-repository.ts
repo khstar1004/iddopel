@@ -1,6 +1,7 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
+import { defaultFileStorePath } from "./file-store-path";
 import type { ReportOrder } from "./types";
 
 export interface CommerceRepository {
@@ -32,7 +33,7 @@ export class FileCommerceRepository implements CommerceRepository {
   private readonly filePath: string;
   private queue = Promise.resolve();
 
-  constructor(filePath = path.join(process.cwd(), ".data", "orders.json")) {
+  constructor(filePath = defaultFileStorePath("orders.json")) {
     this.filePath = filePath;
   }
 
@@ -118,9 +119,14 @@ export class FileCommerceRepository implements CommerceRepository {
 
   private async writeAll(orders: Record<string, ReportOrder>) {
     await mkdir(path.dirname(this.filePath), { recursive: true });
-    const tempPath = `${this.filePath}.tmp`;
+    const tempPath = `${this.filePath}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
     await writeFile(tempPath, JSON.stringify(orders, null, 2), "utf-8");
-    await rename(tempPath, this.filePath);
+    try {
+      await rename(tempPath, this.filePath);
+    } catch (error) {
+      await rm(tempPath, { force: true }).catch(() => undefined);
+      throw error;
+    }
   }
 }
 

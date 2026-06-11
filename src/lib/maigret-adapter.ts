@@ -13,7 +13,26 @@ interface MaigretRunOutput {
   report?: MaigretReportArtifacts;
 }
 
+interface MaigretRunOptions {
+  origin?: string;
+}
+
 type MaigretReportRecord = Record<string, unknown>;
+
+interface RemoteMaigretResponse {
+  ok?: boolean;
+  checkedCount?: number;
+  failedRate?: number;
+  reportJson?: string;
+  htmlReport?: {
+    html?: string;
+    htmlFilename?: string;
+  } | null;
+  error?: {
+    code?: string;
+    message?: string;
+  };
+}
 
 const countryTags: Record<string, ScanResult["country"]> = {
   kr: "KR",
@@ -35,7 +54,11 @@ const categoryTags: Array<[PlatformCategory, string[]]> = [
   ["DOMAIN", ["domain", "dns", "website"]]
 ];
 
-export async function runMaigretScan(input: CreateScanInput): Promise<MaigretRunOutput> {
+export async function runMaigretScan(input: CreateScanInput, options: MaigretRunOptions = {}): Promise<MaigretRunOutput> {
+  if (shouldUseRemoteMaigret()) {
+    return runRemoteMaigretScan(input, options);
+  }
+
   const command = process.env.MAIGRET_BIN || "maigret";
   const tempDir = await mkdtemp(path.join(tmpdir(), "id-doppelganger-maigret-"));
   const topSites = resolveTopSites(input.mode ?? "QUICK");
@@ -87,6 +110,55 @@ export async function runMaigretScan(input: CreateScanInput): Promise<MaigretRun
   } finally {
     await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
   }
+}
+
+async function runRemoteMaigretScan(input: CreateScanInput, options: MaigretRunOptions): Promise<MaigretRunOutput> {
+  const endpoint = remoteMaigretEndpoint(options.origin);
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(process.env.MAIGRET_API_SECRET ? { "x-maigret-api-secret": process.env.MAIGRET_API_SECRET } : {})
+    },
+    body: JSON.stringify({ username: input.username, mode: input.mode ?? "QUICK" })
+  });
+  const body = (await response.json().catch(() => null)) as RemoteMaigretResponse | null;
+
+  if (!response.ok || !body?.reportJson) {
+    throw new Error(body?.error?.message ?? `Remote Maigret scan failed with status ${response.status}.`);
+  }
+
+  return {
+    results: parseMaigretSimpleReport(body.reportJson, input),
+    checkedCount: body.checkedCount ?? resolveTopSites(input.mode ?? "QUICK"),
+    failedRate: body.failedRate ?? 0,
+    report: body.htmlReport?.html
+      ? {
+          html: body.htmlReport.html,
+          htmlFilename: body.htmlReport.htmlFilename,
+          generatedAt: new Date().toISOString()
+        }
+      : undefined
+  };
+}
+
+function shouldUseRemoteMaigret() {
+  return Boolean(process.env.MAIGRET_API_URL || process.env.VERCEL === "1");
+}
+
+function remoteMaigretEndpoint(origin?: string) {
+  if (process.env.MAIGRET_API_URL) return process.env.MAIGRET_API_URL;
+  const baseUrl =
+    origin || process.env.SITE_URL || process.env.PRODUCTION_BASE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+
+  if (!baseUrl) {
+    throw new Error(
+      "MAIGRET_API_URL, request origin, SITE_URL, PRODUCTION_BASE_URL, or VERCEL_URL is required for remote Maigret scans."
+    );
+  }
+
+  const normalized = baseUrl.match(/^https?:\/\//i) ? baseUrl : `https://${baseUrl}`;
+  return `${normalized.replace(/\/$/, "")}/api/maigret_scan`;
 }
 
 export function parseMaigretSimpleReport(report: string, input: Pick<CreateScanInput, "purpose">): ScanResult[] {

@@ -10,22 +10,36 @@ describe("runScan provider resolution", () => {
     restoreEnv("MAIGRET_BIN", originalMaigretBin);
   });
 
-  it("defaults to auto mode so Vercel beta deployments do not 500 when the Maigret CLI is unavailable", async () => {
+  it("requires Maigret by default instead of returning fallback data", async () => {
     delete process.env.SCAN_PROVIDER;
     process.env.MAIGRET_BIN = "definitely-not-a-maigret-command";
 
-    const job = await runScan({ username: "vercelbeta", purpose: "SELF_CHECK", mode: "QUICK" });
+    await expect(runScan({ username: "vercelbeta", purpose: "SELF_CHECK", mode: "QUICK" })).rejects.toThrow();
+  });
+
+  it("requires Maigret when SCAN_PROVIDER is maigret", async () => {
+    process.env.SCAN_PROVIDER = "maigret";
+    process.env.MAIGRET_BIN = "definitely-not-a-maigret-command";
+
+    await expect(runScan({ username: "vercelprod", purpose: "SELF_CHECK", mode: "QUICK" })).rejects.toThrow();
+  });
+
+  it("does not keep legacy auto fallback behavior", async () => {
+    process.env.SCAN_PROVIDER = "auto";
+    process.env.MAIGRET_BIN = "definitely-not-a-maigret-command";
+
+    await expect(runScan({ username: "legacyauto", purpose: "SELF_CHECK", mode: "QUICK" })).rejects.toThrow();
+  });
+
+  it("uses local deterministic results only when mock mode is explicit", async () => {
+    process.env.SCAN_PROVIDER = "mock";
+    process.env.MAIGRET_BIN = "definitely-not-a-maigret-command";
+
+    const job = await runScan({ username: "mockonly", purpose: "SELF_CHECK", mode: "QUICK" });
 
     expect(job.status).toBe("COMPLETED");
     expect(job.scanSource).toBe("LOCAL_FALLBACK");
     expect(job.checkedCount).toBeGreaterThan(0);
-  });
-
-  it("still fails when production explicitly requires the Maigret CLI", async () => {
-    process.env.SCAN_PROVIDER = "maigret";
-    process.env.MAIGRET_BIN = "definitely-not-a-maigret-command";
-
-    await expect(runScan({ username: "strictmaigret", purpose: "SELF_CHECK", mode: "QUICK" })).rejects.toThrow();
   });
 });
 
