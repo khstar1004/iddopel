@@ -23,7 +23,7 @@ python -m venv .maigret-venv
 ./.maigret-venv/Scripts/python.exe -m pip install maigret
 ```
 
-`.env.local` points `MAIGRET_BIN` at that local executable and sets `SCAN_PROVIDER=maigret`, so a missing or failing Maigret install fails the scan instead of showing deterministic fallback data. Use `SCAN_PROVIDER=mock` only for automated smoke tests or demos.
+`.env.local` points `MAIGRET_BIN` at that local executable and sets `SCAN_PROVIDER=maigret`, so a missing or failing Maigret install fails the scan instead of showing deterministic fallback data. The Vercel beta uses `SCAN_PROVIDER=auto` so serverless deployments do not return 500 when the Maigret CLI is unavailable. Use `SCAN_PROVIDER=mock` only for automated smoke tests or demos.
 
 Verify the scanner runtime explicitly:
 
@@ -173,7 +173,7 @@ After the domain is live:
 npm run release:production
 ```
 
-For Cloudtype, use the Dockerfile web/API service plus a separate Cloudtype PostgreSQL service. The native apps are still built and submitted through App Store Connect / Google Play; they point at the Cloudtype HTTPS origin via `MOBILE_APP_ORIGIN`. See [docs/cloudtype-deployment.md](docs/cloudtype-deployment.md).
+For Vercel beta, the repository `vercel.json` sets `SCAN_PROVIDER=auto`, keeps mock payment confirmation disabled, and leaves the web detailed-report paywall off. For Cloudtype, use the Dockerfile web/API service plus a separate Cloudtype PostgreSQL service. The native apps are still built and submitted through App Store Connect / Google Play; they point at the Cloudtype HTTPS origin via `MOBILE_APP_ORIGIN`. See [docs/cloudtype-deployment.md](docs/cloudtype-deployment.md).
 
 That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The full manual sequence is:
 

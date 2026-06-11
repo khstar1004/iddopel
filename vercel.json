@@ -1,4 +1,10 @@
 {
+  "env": {
+    "SCAN_PROVIDER": "auto",
+    "PAYMENT_PROVIDER": "mock",
+    "ENABLE_MOCK_PAYMENTS": "false",
+    "WEB_DETAILED_REPORT_PAYWALL_ENABLED": "false"
+  },
   "crons": [
     {
       "path": "/api/cron/prune",

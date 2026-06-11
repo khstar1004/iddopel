@@ -106,6 +106,8 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - Keep Vercel as the frontend and add a separate scan worker service in a later slice.
 - Use `SCAN_PROVIDER=mock` only for demos and smoke tests.
 
+For the public Vercel beta, keep `SCAN_PROVIDER=auto`. It attempts Maigret first when a CLI is available, but returns a bounded fallback result instead of a 500 on serverless runtimes that cannot spawn Maigret. Do not set `SCAN_PROVIDER=maigret` on Vercel unless the runtime has been verified with `npm run scan:maigret:live`; strict `maigret` mode is intended for the Docker/Cloudtype path.
+
 ## Required Environment Variables
 - `PRODUCTION_DOMAIN`: final public domain. `launch:button` derives `SITE_URL`, `PRODUCTION_BASE_URL`, `SMOKE_BASE_URL`, `STORE_PRODUCTION_ORIGIN`, and `MOBILE_APP_ORIGIN` from it.
 - `DATABASE_URL`: production Postgres connection string
@@ -113,7 +115,7 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - `CRON_SECRET`: random secret used by `/api/cron/prune` and `/api/cron/monitoring`
 - `MONITORING_CRON_LIMIT`: maximum monitoring subscriptions processed by one `/api/cron/monitoring` run
 - `SITE_URL`: production origin used for Toss success/fail URLs
-- `SCAN_PROVIDER`: `maigret` for real scans. `mock` must be used only for smoke tests or emergency fallback.
+- `SCAN_PROVIDER`: `auto` for Vercel beta, `maigret` for Docker/Cloudtype real scans. `mock` must be used only for smoke tests or emergency fallback.
 - `MAIGRET_BIN`: CLI binary path, usually `maigret`
 - `MAIGRET_TOP_SITES_QUICK`: free scan scope, default `100`
 - `MAIGRET_TOP_SITES_DEEP`: paid/deep scan scope, default `500`

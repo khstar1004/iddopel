@@ -3,7 +3,7 @@ import { createScanJob, createScanJobFromResults } from "./scanner";
 import type { CreateScanInput, ScanJob } from "./types";
 
 export async function runScan(input: CreateScanInput): Promise<ScanJob> {
-  const provider = process.env.SCAN_PROVIDER ?? "maigret";
+  const provider = process.env.SCAN_PROVIDER ?? "auto";
 
   if (provider !== "mock") {
     try {
