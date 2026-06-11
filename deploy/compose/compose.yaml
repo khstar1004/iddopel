@@ -1,0 +1,149 @@
+name: id-doppelganger
+
+x-app-build: &app-build
+  context: ../..
+  dockerfile: Dockerfile
+
+x-app-env: &app-env
+  DATABASE_URL: "postgres://${POSTGRES_USER:-id_doppelganger}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/compose/.env}@postgres:5432/${POSTGRES_DB:-id_doppelganger}"
+  DATABASE_SSL: "${DATABASE_SSL:-false}"
+  CRON_SECRET: "${CRON_SECRET:?Set CRON_SECRET in deploy/compose/.env}"
+  MONITORING_CRON_LIMIT: "${MONITORING_CRON_LIMIT:-3}"
+  SITE_URL: "${SITE_URL:?Set SITE_URL in deploy/compose/.env}"
+  SCAN_PROVIDER: "${SCAN_PROVIDER:-maigret}"
+  MAIGRET_BIN: "${MAIGRET_BIN:-maigret}"
+  MAIGRET_TOP_SITES_QUICK: "${MAIGRET_TOP_SITES_QUICK:-100}"
+  MAIGRET_TOP_SITES_DEEP: "${MAIGRET_TOP_SITES_DEEP:-500}"
+  MAIGRET_DEEP_ALL: "${MAIGRET_DEEP_ALL:-false}"
+  MAIGRET_SITE_TIMEOUT_SECONDS: "${MAIGRET_SITE_TIMEOUT_SECONDS:-12}"
+  MAIGRET_PROCESS_TIMEOUT_MS: "${MAIGRET_PROCESS_TIMEOUT_MS:-120000}"
+  PAYMENT_PROVIDER: "${PAYMENT_PROVIDER:-toss}"
+  ENABLE_MOCK_PAYMENTS: "${ENABLE_MOCK_PAYMENTS:-false}"
+  TOSS_CLIENT_KEY: "${TOSS_CLIENT_KEY:?Set TOSS_CLIENT_KEY in deploy/compose/.env}"
+  TOSS_SECRET_KEY: "${TOSS_SECRET_KEY:?Set TOSS_SECRET_KEY in deploy/compose/.env}"
+  TOSS_SECURITY_KEY: "${TOSS_SECURITY_KEY:?Set TOSS_SECURITY_KEY in deploy/compose/.env}"
+  TOSS_CONSOLE_APP_ID: "${TOSS_CONSOLE_APP_ID:-}"
+  TOSS_MINI_APP_NAME: "${TOSS_MINI_APP_NAME:-}"
+  TOSS_ALLOWED_ORIGINS: "${TOSS_ALLOWED_ORIGINS:-}"
+  TOSS_REVIEW_TEST_USERNAME: "${TOSS_REVIEW_TEST_USERNAME:-khstar104}"
+  TOSS_REVIEW_SCENARIO: "${TOSS_REVIEW_SCENARIO:-}"
+  TELEMETRY_DISABLED: "${TELEMETRY_DISABLED:-false}"
+  NEXT_PUBLIC_TELEMETRY_DISABLED: "${NEXT_PUBLIC_TELEMETRY_DISABLED:-false}"
+  ALERT_WEBHOOK_URL: "${ALERT_WEBHOOK_URL:-}"
+  ALERT_WEBHOOK_PROVIDER: "${ALERT_WEBHOOK_PROVIDER:-generic}"
+  ALERT_WEBHOOK_TIMEOUT_MS: "${ALERT_WEBHOOK_TIMEOUT_MS:-1500}"
+  ALERT_RUNBOOK_URL: "${ALERT_RUNBOOK_URL:-}"
+  RELEASE_VERSION: "${RELEASE_VERSION:-compose-local}"
+  MOBILE_APP_ORIGIN: "${MOBILE_APP_ORIGIN:?Set MOBILE_APP_ORIGIN in deploy/compose/.env}"
+  MOBILE_SUPPORT_URL: "${MOBILE_SUPPORT_URL:?Set MOBILE_SUPPORT_URL in deploy/compose/.env}"
+  MOBILE_PRIVACY_URL: "${MOBILE_PRIVACY_URL:?Set MOBILE_PRIVACY_URL in deploy/compose/.env}"
+  MOBILE_TERMS_URL: "${MOBILE_TERMS_URL:?Set MOBILE_TERMS_URL in deploy/compose/.env}"
+  MOBILE_PAYMENTS_ENABLED: "${MOBILE_PAYMENTS_ENABLED:-false}"
+  APPLE_BUNDLE_ID: "${APPLE_BUNDLE_ID:-com.iddoppelganger.app}"
+  APPLE_DETAILED_REPORT_PRODUCT_ID: "${APPLE_DETAILED_REPORT_PRODUCT_ID:-detailed_report}"
+  APPLE_ENVIRONMENT: "${APPLE_ENVIRONMENT:-sandbox}"
+  APPLE_KEY_ID: "${APPLE_KEY_ID:-}"
+  APPLE_ISSUER_ID: "${APPLE_ISSUER_ID:-}"
+  APPLE_PRIVATE_KEY: "${APPLE_PRIVATE_KEY:-}"
+  APPLE_REQUIRE_JWS_VERIFICATION: "${APPLE_REQUIRE_JWS_VERIFICATION:-false}"
+  APPLE_ROOT_CERTIFICATES_BASE64: "${APPLE_ROOT_CERTIFICATES_BASE64:-}"
+  APPLE_APP_APPLE_ID: "${APPLE_APP_APPLE_ID:-}"
+  GOOGLE_PLAY_PACKAGE_NAME: "${GOOGLE_PLAY_PACKAGE_NAME:-com.iddoppelganger.app}"
+  GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "${GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID:-detailed_report}"
+  GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: "${GOOGLE_PLAY_SERVICE_ACCOUNT_JSON:-}"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-id_doppelganger}"
+      POSTGRES_USER: "${POSTGRES_USER:-id_doppelganger}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/compose/.env}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  migrate:
+    build: *app-build
+    image: "${APP_IMAGE:-id-doppelganger:latest}"
+    restart: "no"
+    command: ["npm", "run", "db:migrate"]
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build: *app-build
+    image: "${APP_IMAGE:-id-doppelganger:latest}"
+    restart: unless-stopped
+    environment: *app-env
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >
+          fetch('http://127.0.0.1:3000/api/health')
+          .then((response) => process.exit(response.ok ? 0 : 1))
+          .catch(() => process.exit(1))
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: "${DOMAIN:?Set DOMAIN in deploy/compose/.env}"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+  prune:
+    profiles: ["maintenance"]
+    build: *app-build
+    image: "${APP_IMAGE:-id-doppelganger:latest}"
+    restart: "no"
+    command: ["npm", "run", "retention:prune"]
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  monitoring-cron:
+    profiles: ["maintenance"]
+    build: *app-build
+    image: "${APP_IMAGE:-id-doppelganger:latest}"
+    restart: "no"
+    command: ["node", "-e", "fetch('http://app:3000/api/cron/monitoring',{headers:{authorization:'Bearer '+process.env.CRON_SECRET}}).then(async r=>{console.log(await r.text());process.exit(r.ok?0:1)}).catch(e=>{console.error(e);process.exit(1)})"]
+    environment: *app-env
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

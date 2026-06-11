@@ -1,0 +1,16 @@
+.next
+node_modules
+.data
+coverage
+next-dev*.log
+next-start*.log
+npm-debug.log*
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo
+android
+ios
+fastlane
+store-assets
+native-web

@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "productName": "ID 도플갱어",
+  "lastReviewed": "2026-06-11",
+  "privacyPolicyUrl": "https://YOUR_PRODUCTION_DOMAIN/privacy",
+  "supportUrl": "https://YOUR_PRODUCTION_DOMAIN/responsible-use",
+  "tracking": false,
+  "thirdPartyAdvertising": false,
+  "nativePaidReportsEnabled": false,
+  "summary": "The app transmits a user-entered username string and scan purpose to provide public username usage results. It does not collect real names, phone numbers, email search values, precise location, contacts, profile photos, posts, comments, or same-person identity conclusions.",
+  "appleAppPrivacy": {
+    "privacyPolicyRequired": true,
+    "tracking": false,
+    "dataLinkedToUser": false,
+    "dataUsedForTracking": false,
+    "dataTypes": [
+      {
+        "category": "Search History",
+        "dataType": "Search History",
+        "fields": ["username string"],
+        "purposes": ["App Functionality", "Fraud Prevention"],
+        "linkedToUser": false,
+        "usedForTracking": false
+      },
+      {
+        "category": "User Content",
+        "dataType": "Other User Content",
+        "fields": ["scan purpose", "generated scan summary", "generated report result"],
+        "purposes": ["App Functionality", "Fraud Prevention"],
+        "linkedToUser": false,
+        "usedForTracking": false
+      },
+      {
+        "category": "Diagnostics",
+        "dataType": "Performance Data",
+        "fields": ["Core Web Vitals metric name and bounded value"],
+        "purposes": ["Analytics", "App Functionality"],
+        "linkedToUser": false,
+        "usedForTracking": false
+      },
+      {
+        "category": "Diagnostics",
+        "dataType": "Other Diagnostic Data",
+        "fields": ["client error type", "page path without query string", "release version"],
+        "purposes": ["Analytics", "App Functionality"],
+        "linkedToUser": false,
+        "usedForTracking": false
+      },
+      {
+        "category": "Identifiers",
+        "dataType": "User ID",
+        "fields": ["hashed browser owner token for monthly monitoring"],
+        "purposes": ["App Functionality", "Fraud Prevention"],
+        "linkedToUser": false,
+        "usedForTracking": false
+      }
+    ],
+    "notCollected": [
+      "Contact Info",
+      "Health and Fitness",
+      "Financial Info",
+      "Location",
+      "Contacts",
+      "User Contacts",
+      "Photos or Videos",
+      "Audio Data",
+      "Gameplay Content",
+      "Customer Support messages in app",
+      "Sensitive Info",
+      "Browsing History",
+      "Purchases",
+      "Advertising Data"
+    ],
+    "reviewNotes": [
+      "Native paid reports are bridge-ready but disabled by default until StoreKit and Google Play Billing products, the native billing bridge, and receipt verification credentials are configured.",
+      "Discovered accounts are public username-string candidates and are not represented as the same person."
+    ]
+  },
+  "googlePlayDataSafety": {
+    "privacyPolicyRequired": true,
+    "dataEncryptedInTransit": true,
+    "usersCanRequestDeletion": true,
+    "dataShared": false,
+    "dataTypes": [
+      {
+        "category": "App activity",
+        "dataType": "Search history",
+        "fields": ["username string"],
+        "collected": true,
+        "shared": false,
+        "required": true,
+        "purposes": ["App functionality", "Fraud prevention, security, and compliance"]
+      },
+      {
+        "category": "App activity",
+        "dataType": "App interactions",
+        "fields": ["scan purpose", "scan mode", "result view path"],
+        "collected": true,
+        "shared": false,
+        "required": true,
+        "purposes": ["App functionality", "Fraud prevention, security, and compliance"]
+      },
+      {
+        "category": "App info and performance",
+        "dataType": "Crash logs",
+        "fields": ["client error type", "unhandled rejection type"],
+        "collected": true,
+        "shared": false,
+        "required": false,
+        "purposes": ["Analytics", "App functionality"]
+      },
+      {
+        "category": "App info and performance",
+        "dataType": "Diagnostics",
+        "fields": ["Core Web Vitals metric name and bounded value", "release version"],
+        "collected": true,
+        "shared": false,
+        "required": false,
+        "purposes": ["Analytics", "App functionality"]
+      },
+      {
+        "category": "Personal info",
+        "dataType": "User IDs",
+        "fields": ["hashed browser owner token for monthly monitoring"],
+        "collected": true,
+        "shared": false,
+        "required": false,
+        "purposes": ["App functionality", "Fraud prevention, security, and compliance"]
+      }
+    ],
+    "notCollected": [
+      "Name",
+      "Email address",
+      "Phone number",
+      "Precise location",
+      "Approximate location",
+      "Contacts",
+      "Photos",
+      "Videos",
+      "Audio files",
+      "Health info",
+      "Financial info",
+      "Web browsing history",
+      "SMS or MMS",
+      "Calendar events"
+    ],
+    "reviewNotes": [
+      "No ads SDK is integrated.",
+      "No third-party analytics SDK is integrated.",
+      "Toss web checkout is used only for the web/Toss path; App Store and Play Store native paid report unlock stays disabled by default until native billing is configured."
+    ]
+  },
+  "conditionalDeclarationsBeforeNativePaidReports": [
+    "If MOBILE_PAYMENTS_ENABLED=true, update Apple App Privacy and Google Play Data safety for purchase/entitlement identifiers used to verify native report access.",
+    "If a crash reporting, analytics, advertising, attribution, or push SDK is added, update these declarations for that SDK before release."
+  ]
+}

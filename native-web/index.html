@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#090A0F" />
+    <title>ID 도플갱어</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app-config.js"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true"></span>
+          <span>ID 도플갱어</span>
+        </div>
+        <h1>아이디 하나로 공개 후보를 바로 확인하세요</h1>
+        <p>검색 직후 후보 카드부터 보여주고, 전체 URL과 정리 가이드는 정밀 리포트에서 엽니다.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="scan-title">
+        <h2 id="scan-title">아이디 점검</h2>
+        <form id="scan-form">
+          <label for="username">아이디</label>
+          <input id="username" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="@brand_id" required minlength="3" maxlength="30" />
+          <label for="purpose">점검 목적</label>
+          <select id="purpose" name="purpose">
+            <option value="SELF_CHECK">내 아이디 점검</option>
+            <option value="BRAND_CHECK">브랜드/활동명 점검</option>
+            <option value="NICKNAME_CHECK">새 닉네임 후보 확인</option>
+          </select>
+          <label class="check-row" for="acknowledge">
+            <input id="acknowledge" name="acknowledge" type="checkbox" />
+            <span>본인 아이디, 브랜드명, 사용 예정 닉네임 등 정당한 목적으로만 점검해요.</span>
+          </label>
+          <button id="submit" type="submit" disabled>공개 후보 확인</button>
+        </form>
+        <p class="notice">실명, 전화번호, 이메일, 주민번호처럼 보이는 값은 검색할 수 없어요.</p>
+      </section>
+
+      <section class="panel review-panel" aria-labelledby="responsible-title">
+        <p class="eyebrow">책임 있는 사용</p>
+        <h2 id="responsible-title">사람 찾기나 동일인 판정 앱이 아니에요</h2>
+        <ul class="review-list">
+          <li>아이디 문자열의 공개 사용 후보만 점검합니다.</li>
+          <li>발견된 후보가 같은 사람이라는 뜻은 아닙니다.</li>
+          <li>검색 기록은 결과 화면에서 바로 삭제할 수 있습니다.</li>
+        </ul>
+      </section>
+
+      <section class="panel hidden" id="result-panel" aria-live="polite">
+        <div class="result-header">
+          <div>
+            <p class="eyebrow">점검 결과</p>
+            <h2 id="result-username"></h2>
+          </div>
+          <button class="ghost" id="delete-scan" type="button">삭제</button>
+        </div>
+        <div class="result-summary">
+          <div><span>발견된 공개 후보</span><strong id="found-count">0개</strong></div>
+          <p>가장 궁금한 후보 목록을 먼저 확인하고, 전체 URL은 결제 후 정밀 리포트에서 엽니다.</p>
+        </div>
+        <div id="preview-results" class="results"></div>
+        <div class="metrics" aria-label="마지막 점수 해석">
+          <div><span>희소성</span><strong id="rarity-score">0점</strong></div>
+          <div><span>노출도</span><strong id="exposure-score">0점</strong></div>
+          <div><span>사칭 가능성</span><strong id="impersonation-score">0점</strong></div>
+        </div>
+        <div class="locked">
+          <h3>정밀 리포트</h3>
+          <p id="payment-copy">App Store와 Google Play 결제 상품 설정 후 앱 내 정밀 리포트 구매가 활성화됩니다.</p>
+          <button class="secondary" id="purchase-report" type="button" disabled>정밀 리포트 준비 중</button>
+          <button class="secondary" id="restore-report" type="button" disabled>구매 복원</button>
+        </div>
+      </section>
+
+      <section class="links">
+        <a id="privacy-link" href="#">개인정보처리방침</a>
+        <a id="terms-link" href="#">이용약관</a>
+        <a id="support-link" href="#">책임 있는 사용</a>
+      </section>
+
+      <div class="toast hidden" id="toast"></div>
+    </main>
+    <script src="./native-billing-bridge.js"></script>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

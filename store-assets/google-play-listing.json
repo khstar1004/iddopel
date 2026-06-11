@@ -1,0 +1,27 @@
+{
+  "appName": "ID 도플갱어",
+  "shortDescription": "아이디 하나로 잡힌 공개 계정 후보를 먼저 확인하세요.",
+  "fullDescription": "ID 도플갱어는 사용자가 입력한 아이디 문자열이 공개 플랫폼 어디에서 후보로 잡히는지 먼저 보여주는 username 점검 서비스입니다.\n\n무료 점검에서는 발견된 플랫폼 카드와 잠긴 상세 URL을 먼저 확인하고, 희소성·노출도·사칭 가능성·방치 계정 위험 점수는 마지막 참고 분석으로 정리합니다.\n\n본인 아이디, 브랜드명, 활동명, 새 닉네임 후보를 점검할 수 있으며, 발견된 후보는 동일인 여부를 의미하지 않습니다. 실명, 전화번호, 이메일, 주민번호, 위치 정보 검색은 지원하지 않습니다.\n\n정밀 리포트에서는 전체 URL, 위험도, 조치 가이드, PDF/HTML 저장 기능을 사용할 수 있습니다.",
+  "category": "Tools",
+  "tags": ["Utilities", "Productivity"],
+  "contactEmail": "support@YOUR_DOMAIN",
+  "privacyPolicyUrl": "https://YOUR_PRODUCTION_DOMAIN/privacy",
+  "appIcon": "store-assets/play-icon-512.png",
+  "featureGraphic": "store-assets/play-feature-graphic-1024x500.png",
+  "phoneScreenshots": [
+    "store-assets/screenshots/android-phone-01-scan.png",
+    "store-assets/screenshots/android-phone-02-results.png",
+    "store-assets/screenshots/android-phone-03-report.png"
+  ],
+  "tabletScreenshots": [
+    "store-assets/screenshots/android-tablet-01-scan.png",
+    "store-assets/screenshots/android-tablet-02-results.png",
+    "store-assets/screenshots/android-tablet-03-report.png"
+  ],
+  "dataSafetyNotes": {
+    "collected": ["username string", "scan purpose", "generated scan result", "payment/report entitlement id", "hashed browser owner token for monthly monitoring"],
+    "notCollected": ["real name", "phone number search value", "email search value", "precise location", "profile photo", "post content"],
+    "purpose": ["app functionality", "abuse prevention", "customer support", "paid report delivery"],
+    "retention": "non-member scans 24 hours, paid reports 90 days"
+  }
+}

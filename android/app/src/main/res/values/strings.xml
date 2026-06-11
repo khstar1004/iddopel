@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ID 도플갱어</string>
+    <string name="title_activity_main">ID 도플갱어</string>
+    <string name="package_name">com.iddoppelganger.app</string>
+    <string name="custom_url_scheme">com.iddoppelganger.app</string>
+</resources>

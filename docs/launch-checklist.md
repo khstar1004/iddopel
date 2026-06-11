@@ -1,0 +1,110 @@
+# Launch Checklist
+
+## Web MVP
+- [x] Korean landing page with username input and purpose confirmation
+- [x] Free scan summary, score cards, category/country distribution, preview results
+- [x] Search record deletion from local browser history and API store
+- [x] Disallowed search blocking for email, phone-number-like, resident-number-like values
+- [x] Responsible-use disclaimer on result surface
+- [x] Privacy, terms, and responsible-use pages
+- [x] Postgres-ready scan persistence with local file fallback
+- [x] 24-hour non-member retention timestamp and prune script
+- [x] Protected `/api/cron/prune` endpoint and Vercel hourly cron schedule
+- [x] Maigret CLI adapter with deterministic fallback
+- [x] Docker production path that installs Maigret CLI
+- [x] Docker Compose production package for Postgres, migration, app, Caddy HTTPS proxy, and retention prune job
+- [x] `/api/health` readiness endpoint
+- [x] `npm run scan:maigret` verifies local/runtime Maigret provider configuration and CLI availability
+- [x] `npm run scan:maigret:live` verifies Maigret can generate a public simple JSON scan report
+- [x] Baseline security headers with CSP, HSTS, frame blocking, content sniffing protection
+- [x] Release smoke script for health, headers, scan, checkout, report download, and deletion
+- [x] SEO guide landing pages for id rarity, nickname search, old-account, brand, impersonation, and digital footprint keywords
+- [x] `sitemap.xml` and `robots.txt` metadata routes for public launch pages
+- [x] PWA icons, app store icon, Play feature graphic, and store screenshot assets
+- [x] Capacitor Android/iOS projects with branded native app icons
+- [x] Native app shell for free scan/preview flow with release-domain configuration script
+- [x] Native app shell responsible-use guardrails, client-side disallowed-input blocking, and scan deletion UX
+- [x] App Store / Google Play server receipt verification endpoints for native report entitlements
+- [x] Native paid report WebView bridge contract and local App Store-style entitlement redemption E2E
+- [x] Android Google Play Billing plugin and iOS StoreKit plugin registered through Capacitor NativeBilling
+- [x] Android debug APK build verifies the Play Billing plugin compiles with the native shell
+- [x] Android release AAB build verifies the Google Play upload bundle compiles
+- [x] GitHub Actions release verification workflow for web, assets, audit, mobile sync, Android debug APK, and Android release AAB
+- [x] Paid report order, checkout, entitlement token, locked full-result API
+- [x] First detailed report free entitlement and blurred locked-result paywall for later reports
+- [x] Viral-safe PNG share card for result screens without platform URLs or profile details
+- [x] Local developer admin login for repeated scan and report testing
+- [x] Toss Payments server-side payment window and confirm API integration
+- [x] Browser-token monthly monitoring registration, deletion, and protected due re-check cron API
+- [x] Server-side HTML report download
+- [x] Server-side PDF report download with Korean font embedding
+- [x] First-party analytics, Core Web Vitals, and client error telemetry to structured server logs
+- [x] Webhook alert routing for client errors, unhandled rejections, poor Web Vitals, and launch test-fire
+- [x] One-command production release preparation script for Compose env, launch runbook, store URLs, and native app config
+- [x] Launch button orchestration for `.env.launch`, release asset generation, release preparation, Compose deployment, and production verification
+- [x] Local `/launch` operator console for developer-login launch dry-runs, validated `.env.launch` saves, and guarded execution
+- [x] Fastlane App Store / Google Play metadata upload lanes and manual store submission workflow
+- [x] iPhone, iPad, Android phone, Android tablet screenshots and store icon dimensions verified
+- [x] App Store App Privacy and Google Play Data safety declarations prepared and locally verified
+- [x] Toss in-app route, CORS allowlist, review copy, and local submission gate prepared
+- [ ] Production domain, SSL, DNS, live alert webhook test, and external monitoring dashboard wiring
+
+## Verification Gates
+- [x] `npm run verify` passes after the current release candidate changes
+- [x] `npm run code:hygiene` passes with no unresolved task markers, debug breakpoints, console tracing, or narrowed tests in release paths
+- [x] `npm run product:verify` passes for result-first UX, competitor benchmark coverage, and launch-copy positioning
+- [x] `npm run security:audit` passes with no high/critical dependency vulnerabilities
+- [x] `npm run security:secrets` passes with no committed secret-like source values
+- [x] `npm run release:prepare` prepares final Compose env, store URLs, and native app config when production external values are provided
+- [x] `npm run release:local` runs the local web, Maigret runtime, code hygiene, high/critical security audit, secret scan, E2E, release asset regeneration, store, Toss, mobile, Android, deploy, and readiness gates
+- [x] `npm run launch:button` dry-run reports production asset generation, release plan, and missing values without exposing secrets
+- [x] Browser E2E verifies `/launch` shows the dry-run plan, blocks invalid launch values, saves `.env.launch`, redacts secrets, and keeps execution locked by default
+- [x] `npm run e2e` covers 320, 768, 1024, and 1440 px local release smoke widths, paid report unlock, and landing scan-to-delete flow
+- [x] `npm run e2e` verifies the result share-card PNG endpoint during the landing scan flow
+- [x] `npm run e2e` covers the native shell review guardrails
+- [x] `npm run e2e` covers native paid-report disabled states and App Store-style entitlement redemption through the bridge
+- [x] `npm run e2e` covers Capacitor NativeBilling adapter mapping and Google Play consumable completion after server entitlement
+- [x] `npm run e2e` covers monthly monitoring registration and cancellation
+- [x] `npm run e2e` covers Toss in-app scan-to-checkout flow
+- [ ] `DATABASE_URL=... npm run db:migrate` succeeds for production database
+- [ ] Set `CRON_SECRET` in production and confirm scheduled prune invocations
+- [ ] Confirm scheduled monthly monitoring invocations via `/api/cron/monitoring`
+- [ ] Deploy Docker image with `SCAN_PROVIDER=maigret` for real username scanning
+- [ ] Set `PAYMENT_PROVIDER=toss`, `SITE_URL`, `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, `TOSS_SECURITY_KEY`, and `TOSS_CONSOLE_API_KEY`
+- [ ] Run a Toss Payments test-key payment from checkout to `/reports/{scanId}`
+- [x] Browser smoke test at 320, 768, 1024, 1440 px
+- [ ] Security headers checked on the production domain
+- [ ] `npm run release:production` passes with real production env, deployed domain, regenerated release assets, store credentials, and Toss credentials
+- [ ] `SMOKE_BASE_URL=https://production-domain npm run smoke:release` passes
+- [ ] Production preflight `PRODUCTION_BASE_URL=https://production-domain npm run verify:production` passes
+- [ ] Alert route test `ALERT_WEBHOOK_URL=https://alert-webhook ALERT_WEBHOOK_PROVIDER=slack ALERT_RUNBOOK_URL=https://runbook npm run alerts:test` reaches the intended channel
+- [x] `npm run assets:all` regenerates store screenshots, marketing images, press kits, and verifies release assets
+- [x] `npm run assets:verify` passes before app store upload and launch kit distribution
+- [x] `npm run store:verify` passes for local submission package
+- [x] `npm run privacy:verify` passes for App Store / Google Play privacy declarations
+- [x] `npm run android:debug` passes for local Android native compile verification
+- [x] `npm run android:bundle` passes for local Android release bundle verification
+- [x] `npm run deploy:verify` passes for the Docker Compose deployment package
+- [x] `npm run launch:readiness` summarizes local release gates and remaining external blockers
+- [x] `npm run toss:verify` passes for local Toss in-app submission readiness
+- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
+- [ ] Production `npm run launch:button -- --execute --ship` completes with real domain, database, Toss, store, alert, and mobile release values
+- [ ] `DEPLOY_RELEASE_CHECK=true npm run deploy:verify` passes with real production `deploy/compose/.env`
+- [ ] Production `sitemap.xml` and `robots.txt` checked after final `SITE_URL` deployment
+- [ ] `TOSS_RELEASE_CHECK=true npm run toss:verify` passes with Toss console app id and production review scenario
+- [ ] `STORE_PRODUCTION_ORIGIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain npm run store:finalize` has been run before store upload
+- [ ] `STORE_RELEASE_CHECK=true APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run store:verify` passes with App Store Connect and Google Play credentials
+- [ ] `MOBILE_APP_ORIGIN=https://production-domain npm run mobile:configure` has been run for release
+- [ ] `MOBILE_RELEASE_CHECK=true npm run mobile:verify` passes before native archive
+- [ ] Apple IAP / Google Play Billing products and production receipt credentials validated before enabling paid reports inside native app
+- [ ] GitHub Actions `Release Verification` passes on the release branch
+- [x] `npm run security:audit` reviewed with no high/critical reachable production issues
+- [x] `npm run code:hygiene` reviewed with no release-path debug leftovers
+- [x] `npm run security:secrets` reviewed with no committed production secrets
+- [x] Manual scan flow tested from landing to deletion
+
+## Rollback Plan
+1. Disable paid conversion CTA or feature flag if payment/report flow fails.
+2. Revert deployment to previous build.
+3. Confirm `/api/scans` and landing page return normal responses.
+4. Review logs and block problematic input pattern if abuse triggered rollback.

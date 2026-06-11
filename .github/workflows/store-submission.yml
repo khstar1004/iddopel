@@ -1,0 +1,163 @@
+name: Store Submission
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: Store lane to run
+        type: choice
+        required: true
+        default: verify-only
+        options:
+          - verify-only
+          - android-metadata
+          - android-internal-validate
+          - ios-metadata
+          - ios-testflight
+          - ios-submit-review
+      production_origin:
+        description: Production HTTPS origin
+        required: true
+        type: string
+      ios_ipa_path:
+        description: Existing IPA path for ios-testflight lane
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  verify:
+    name: Verify Store Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate and verify store package
+        run: |
+          npm run assets:store
+          STORE_PRODUCTION_ORIGIN="${{ inputs.production_origin }}" STORE_SUPPORT_EMAIL="${{ secrets.STORE_SUPPORT_EMAIL }}" npm run store:finalize
+          npm run assets:verify
+          if [ "${{ inputs.lane }}" = "verify-only" ]; then
+            npm run store:verify
+          else
+            STORE_RELEASE_CHECK=true MOBILE_APP_ORIGIN="${{ inputs.production_origin }}" npm run store:verify
+          fi
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+
+  android:
+    name: Android Play Upload
+    needs: verify
+    if: ${{ startsWith(inputs.lane, 'android-') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "gradle"
+
+      - name: Install Android SDK packages
+        run: yes | sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies and configure native shell
+        run: |
+          npm ci
+          MOBILE_APP_ORIGIN="${{ inputs.production_origin }}" npm run mobile:configure
+          npm run assets:store
+          STORE_PRODUCTION_ORIGIN="${{ inputs.production_origin }}" STORE_SUPPORT_EMAIL="${{ secrets.STORE_SUPPORT_EMAIL }}" npm run store:finalize
+          npm run mobile:icons
+          npm run mobile:sync
+
+      - name: Upload metadata to Play Console
+        if: ${{ inputs.lane == 'android-metadata' }}
+        run: bundle exec fastlane android metadata
+        env:
+          GOOGLE_PLAY_PACKAGE_NAME: com.iddoppelganger.app
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_PLAY_TRACK: internal
+
+      - name: Validate internal Play upload
+        if: ${{ inputs.lane == 'android-internal-validate' }}
+        run: bundle exec fastlane android validate_internal
+        env:
+          GOOGLE_PLAY_PACKAGE_NAME: com.iddoppelganger.app
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_PLAY_TRACK: internal
+          GOOGLE_PLAY_RELEASE_STATUS: draft
+
+  ios:
+    name: iOS App Store Connect Upload
+    needs: verify
+    if: ${{ startsWith(inputs.lane, 'ios-') }}
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Install dependencies and configure native shell
+        run: |
+          npm ci
+          MOBILE_APP_ORIGIN="${{ inputs.production_origin }}" npm run mobile:configure
+          npm run assets:store
+          STORE_PRODUCTION_ORIGIN="${{ inputs.production_origin }}" STORE_SUPPORT_EMAIL="${{ secrets.STORE_SUPPORT_EMAIL }}" npm run store:finalize
+          npm run mobile:icons
+          npm run mobile:sync
+
+      - name: Upload App Store metadata
+        if: ${{ inputs.lane == 'ios-metadata' }}
+        run: bundle exec fastlane ios metadata
+        env:
+          APPLE_BUNDLE_ID: com.iddoppelganger.app
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+
+      - name: Upload IPA to TestFlight
+        if: ${{ inputs.lane == 'ios-testflight' }}
+        run: bundle exec fastlane ios testflight
+        env:
+          APPLE_BUNDLE_ID: com.iddoppelganger.app
+          IOS_IPA_PATH: ${{ inputs.ios_ipa_path }}
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+
+      - name: Submit App Store review
+        if: ${{ inputs.lane == 'ios-submit-review' }}
+        run: bundle exec fastlane ios submit_review
+        env:
+          APPLE_BUNDLE_ID: com.iddoppelganger.app
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}

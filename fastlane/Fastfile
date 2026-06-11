@@ -1,0 +1,130 @@
+default_platform(:ios)
+
+def ios_bundle_id
+  ENV.fetch("APPLE_BUNDLE_ID", "com.iddoppelganger.app")
+end
+
+def android_package_name
+  ENV.fetch("GOOGLE_PLAY_PACKAGE_NAME", "com.iddoppelganger.app")
+end
+
+def app_store_api_key_from_env
+  key_id = ENV["APP_STORE_CONNECT_KEY_ID"] || ENV["APPLE_KEY_ID"]
+  issuer_id = ENV["APP_STORE_CONNECT_ISSUER_ID"] || ENV["APPLE_ISSUER_ID"]
+  key_content = ENV["APP_STORE_CONNECT_API_KEY_P8_BASE64"] || ENV["APP_STORE_CONNECT_API_KEY_P8"] || ENV["APPLE_PRIVATE_KEY"]
+
+  UI.user_error!("Set APP_STORE_CONNECT_KEY_ID or APPLE_KEY_ID.") if key_id.to_s.empty?
+  UI.user_error!("Set APP_STORE_CONNECT_ISSUER_ID or APPLE_ISSUER_ID.") if issuer_id.to_s.empty?
+  UI.user_error!("Set APP_STORE_CONNECT_API_KEY_P8_BASE64 or APP_STORE_CONNECT_API_KEY_P8.") if key_content.to_s.empty?
+
+  app_store_connect_api_key(
+    key_id: key_id,
+    issuer_id: issuer_id,
+    key_content: key_content,
+    is_key_content_base64: ENV["APP_STORE_CONNECT_API_KEY_IS_BASE64"] != "false",
+    duration: 1200,
+    in_house: false
+  )
+end
+
+def google_play_credentials
+  if ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"].to_s.length.positive?
+    { json_key: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH"] }
+  elsif ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"].to_s.length.positive?
+    { json_key_data: ENV["GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"] }
+  else
+    UI.user_error!("Set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON or GOOGLE_PLAY_SERVICE_ACCOUNT_JSON_PATH.")
+  end
+end
+
+platform :ios do
+  desc "Upload App Store Connect metadata and screenshots without submitting a binary."
+  lane :metadata do
+    deliver(
+      api_key: app_store_api_key_from_env,
+      app_identifier: ios_bundle_id,
+      app_version: ENV.fetch("APP_VERSION", "1.0"),
+      metadata_path: "fastlane/metadata",
+      screenshots_path: "fastlane/screenshots",
+      skip_binary_upload: true,
+      skip_metadata: false,
+      skip_screenshots: false,
+      submit_for_review: false,
+      force: true
+    )
+  end
+
+  desc "Upload an already-built IPA to TestFlight."
+  lane :testflight do
+    upload_to_testflight(
+      api_key: app_store_api_key_from_env,
+      app_identifier: ios_bundle_id,
+      ipa: ENV.fetch("IOS_IPA_PATH"),
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Submit the prepared App Store version for review with manual release."
+  lane :submit_review do
+    deliver(
+      api_key: app_store_api_key_from_env,
+      app_identifier: ios_bundle_id,
+      app_version: ENV.fetch("APP_VERSION", "1.0"),
+      metadata_path: "fastlane/metadata",
+      screenshots_path: "fastlane/screenshots",
+      skip_binary_upload: true,
+      submit_for_review: true,
+      automatic_release: false,
+      force: true,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        export_compliance_uses_encryption: false,
+        content_rights_contains_third_party_content: false
+      }
+    )
+  end
+end
+
+platform :android do
+  desc "Upload Google Play metadata, icon, feature graphic, and screenshots without an app bundle."
+  lane :metadata do
+    upload_to_play_store(
+      **google_play_credentials,
+      package_name: android_package_name,
+      metadata_path: "fastlane/metadata/android",
+      track: ENV.fetch("GOOGLE_PLAY_TRACK", "internal"),
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_changelogs: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false
+    )
+  end
+
+  desc "Build an Android App Bundle and validate an internal-track Play upload without releasing."
+  lane :validate_internal do
+    gradle(project_dir: "android", task: "bundle", build_type: "Release")
+    upload_to_play_store(
+      **google_play_credentials,
+      package_name: android_package_name,
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      metadata_path: "fastlane/metadata/android",
+      track: ENV.fetch("GOOGLE_PLAY_TRACK", "internal"),
+      release_status: ENV.fetch("GOOGLE_PLAY_RELEASE_STATUS", "draft"),
+      validate_only: true
+    )
+  end
+
+  desc "Build and upload an Android App Bundle to the selected Play track as draft."
+  lane :internal do
+    gradle(project_dir: "android", task: "bundle", build_type: "Release")
+    upload_to_play_store(
+      **google_play_credentials,
+      package_name: android_package_name,
+      aab: "android/app/build/outputs/bundle/release/app-release.aab",
+      metadata_path: "fastlane/metadata/android",
+      track: ENV.fetch("GOOGLE_PLAY_TRACK", "internal"),
+      release_status: ENV.fetch("GOOGLE_PLAY_RELEASE_STATUS", "draft")
+    )
+  end
+end

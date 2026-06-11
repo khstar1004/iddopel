@@ -1,0 +1,22 @@
+{
+  "appName": "ID 도플갱어",
+  "subtitle": "공개 계정 후보 점검",
+  "primaryCategory": "Utilities",
+  "secondaryCategory": "Productivity",
+  "keywords": "아이디,닉네임,계정 점검,사칭 확인,브랜드 보호,노출 점검,디지털 풋프린트",
+  "description": "ID 도플갱어는 사용자가 입력한 아이디 문자열이 공개 플랫폼 어디에서 후보로 잡히는지 먼저 보여주는 username 점검 서비스입니다.\n\n무료 점검에서는 발견된 플랫폼 카드와 잠긴 상세 URL을 먼저 확인하고, 희소성·노출도·사칭 가능성·방치 계정 위험 점수는 마지막 참고 분석으로 정리합니다.\n\n본인 아이디, 브랜드명, 활동명, 새 닉네임 후보를 점검할 수 있으며, 발견된 후보는 동일인 여부를 의미하지 않습니다. 실명, 전화번호, 이메일, 주민번호, 위치 정보 검색은 지원하지 않습니다.\n\n정밀 리포트에서는 발견 플랫폼, 전체 URL, 위험도, 조치 가이드를 PDF와 HTML로 저장할 수 있습니다.",
+  "reviewNotes": "This app is not a people-search service. It only checks public username-string usage and does not identify whether discovered accounts belong to the same person. Real names, phone numbers, email addresses, resident-registration-number-like values, location, post content, and profile photos are not searchable. Monthly monitoring uses a random browser owner token stored locally and only a hash is stored on the server for deletion and re-check ownership.",
+  "privacyPolicyUrl": "https://YOUR_PRODUCTION_DOMAIN/privacy",
+  "supportUrl": "https://YOUR_PRODUCTION_DOMAIN/responsible-use",
+  "marketingUrl": "https://YOUR_PRODUCTION_DOMAIN/",
+  "copyright": "2026 ID Doppelganger",
+  "appIcon": "store-assets/app-icon-1024.png",
+  "screenshots": [
+    "store-assets/screenshots/iphone-6.7-01-scan.png",
+    "store-assets/screenshots/iphone-6.7-02-results.png",
+    "store-assets/screenshots/iphone-6.7-03-report.png",
+    "store-assets/screenshots/ipad-12.9-01-scan.png",
+    "store-assets/screenshots/ipad-12.9-02-results.png",
+    "store-assets/screenshots/ipad-12.9-03-report.png"
+  ]
+}
