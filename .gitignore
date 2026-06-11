@@ -35,3 +35,6 @@ android/build
 android/app/build
 ios/App/build
 ios/DerivedData
+
+.vercel
+.env*

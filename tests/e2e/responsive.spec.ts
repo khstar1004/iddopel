@@ -15,7 +15,7 @@ test("landing page is responsive across release smoke widths", async ({ page, re
   const purposeAck = page.getByLabel(/정당한 목적으로/);
   await purposeAck.check();
   await expect(purposeAck).toBeChecked();
-  const submitButton = page.getByRole("button", { name: "공개 후보 확인" });
+  const submitButton = page.getByRole("button", { name: "내 아이디 흔적 찾기" });
   await expect(submitButton).toBeVisible();
   await expect(submitButton).toBeEnabled();
 
@@ -36,14 +36,14 @@ test("language switch exposes a shareable English version", async ({ page }) => 
 
   await page.goto("/en");
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("heading", { name: "Check public username matches" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Where is your username still public?" })).toBeVisible();
   await expect(page.getByLabel("Username input")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Check public matches" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Find my username traces" })).toBeDisabled();
 
   await page.getByRole("link", { name: "한국어" }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator("html")).toHaveAttribute("lang", "ko");
-  await expect(page.getByRole("heading", { name: "아이디 공개 후보 확인" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "내 아이디, 어디에 남아 있을까?" })).toBeVisible();
 
   expect(browserMessages).toEqual([]);
 });
@@ -206,9 +206,9 @@ test("result cards stay dense enough on narrow screens", async ({ page }) => {
   const scanResponsePromise = page.waitForResponse(
     (response) => response.url().endsWith("/api/scans") && response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "공개 후보 확인" }).click();
+  await page.getByRole("button", { name: "내 아이디 흔적 찾기" }).click();
   await scanResponsePromise;
-  await expect(page.getByRole("heading", { name: "densitycheck에서 지금 잡힌 후보" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "densitycheck가 남아 있는 곳" })).toBeVisible();
 
   const cards = page.locator(".result-first-panel .rich-result-card");
   await expect(cards.first()).toBeInViewport();

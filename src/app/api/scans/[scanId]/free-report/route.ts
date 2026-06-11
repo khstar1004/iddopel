@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { handleApiError, jsonError, readJson } from "@/lib/api";
 import { FirstFreeReportError, firstFreeRequestFingerprint, grantFirstFreeReportAccess } from "@/lib/entitlements";
 import { getStoredScan } from "@/lib/scan-store";
+import { isWebDetailedReportPaywallEnabled, webPaywallEnabledMessage } from "@/lib/web-report-paywall";
 
 interface RouteContext {
   params: Promise<{ scanId: string }>;
@@ -20,6 +21,11 @@ export async function POST(request: Request, context: RouteContext) {
 
     const body = (await readJson(request).catch(() => ({}))) as Record<string, unknown>;
     softFailure = body.soft === true;
+
+    if (isWebDetailedReportPaywallEnabled()) {
+      return jsonError("WEB_PAYWALL_ENABLED", webPaywallEnabledMessage(), softFailure ? 200 : 402);
+    }
+
     const ownerToken = typeof body.ownerToken === "string" && body.ownerToken.length > 0 ? body.ownerToken : null;
     const grant = await grantFirstFreeReportAccess(scan, ownerToken, firstFreeRequestFingerprint(request));
 

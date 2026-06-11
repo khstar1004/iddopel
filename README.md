@@ -111,6 +111,7 @@ TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" \
 TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" \
 TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" \
 TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" \
+WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" \
 ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" \
 ALERT_WEBHOOK_PROVIDER="slack" \
 ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" \
@@ -142,6 +143,7 @@ Before starting the stack, confirm real values in `deploy/compose/.env`:
 - `SCAN_PROVIDER=maigret`
 - `PAYMENT_PROVIDER=toss`
 - `ENABLE_MOCK_PAYMENTS=false`
+- `WEB_DETAILED_REPORT_PAYWALL_ENABLED=false` for beta. Switch to `true` only after Toss web checkout is ready.
 - `TOSS_CLIENT_KEY`
 - `TOSS_SECRET_KEY`
 - `TOSS_SECURITY_KEY`
@@ -173,10 +175,10 @@ npm run release:production
 
 For Cloudtype, use the Dockerfile web/API service plus a separate Cloudtype PostgreSQL service. The native apps are still built and submitted through App Store Connect / Google Play; they point at the Cloudtype HTTPS origin via `MOBILE_APP_ORIGIN`. See [docs/cloudtype-deployment.md](docs/cloudtype-deployment.md).
 
-That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss, store, mobile, Android, and release-readiness checks. The full manual sequence is:
+That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The full manual sequence is:
 
 ```bash
-PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
+PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
 DEPLOY_RELEASE_CHECK=true npm run deploy:verify
 npm run assets:all
 npm run scan:maigret
@@ -188,17 +190,21 @@ PRODUCTION_BASE_URL="https://YOUR_DOMAIN" npm run verify:production
 ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" npm run alerts:test
 SMOKE_BASE_URL="https://YOUR_DOMAIN" SMOKE_CONFIRM_PAYMENT=skip npm run smoke:release
 TOSS_RELEASE_CHECK=true npm run toss:verify
+npm run store:finalize
 STORE_RELEASE_CHECK=true npm run store:verify
+npm run mobile:configure
 MOBILE_RELEASE_CHECK=true npm run mobile:verify
 npm run android:bundle
 LAUNCH_RELEASE_CHECK=true npm run launch:readiness
 ```
 
-For a Toss test-key checkout that can be confirmed end to end, set the production/staging Toss test key and run:
+For beta and production, keep automated smoke checks in locked-report mode while mock payment confirmation is disabled:
 
 ```bash
-SMOKE_BASE_URL="https://YOUR_DOMAIN" npm run smoke:release
+SMOKE_BASE_URL="https://YOUR_DOMAIN" SMOKE_CONFIRM_PAYMENT=skip npm run smoke:release
 ```
+
+For a local mock-payment smoke test, run the server with `ENABLE_MOCK_PAYMENTS=true` and `PAYMENT_PROVIDER=mock`, then run `npm run smoke:release` against that local URL.
 
 ## Toss In-App
 
@@ -213,7 +219,7 @@ Submission notes are in `docs/toss-submission.md`.
 
 ## App Store And Google Play
 
-Finalize store URLs and support email after the production domain is live:
+`npm run launch:button -- --execute --ship` and `npm run release:production` finalize store URLs and native config automatically when the production env is present. For a manual store-only refresh after the production domain changes:
 
 ```bash
 STORE_PRODUCTION_ORIGIN="https://YOUR_DOMAIN" \

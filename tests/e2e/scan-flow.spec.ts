@@ -49,29 +49,34 @@ test("user can scan from landing page and delete the created record", async ({ p
   const scanResponsePromise = page.waitForResponse(
     (response) => response.url().endsWith("/api/scans") && response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "공개 후보 확인" }).click();
+  await page.getByRole("button", { name: "내 아이디 흔적 찾기" }).click();
 
   const scanResponse = await scanResponsePromise;
   expect(scanResponse.status()).toBe(201);
   const scan = (await scanResponse.json()) as { scanId: string };
 
-  const resultHeading = page.getByRole("heading", { name: `${username}에서 발견된 공개 후보` });
+  const resultHeading = page.getByRole("heading", { name: `${username}로 찾은 공개 흔적` });
   await expect(resultHeading).toBeVisible();
-  await expect(page.locator(".result-first-panel .source-badge", { hasText: "공개 후보" })).toBeVisible();
+  await expect(page.locator(".result-first-panel .source-badge", { hasText: "공개 흔적" })).toBeVisible();
   await expect(page.locator('[aria-label="결과 규모"]')).toBeVisible();
-  await expect(page.getByRole("heading", { name: new RegExp(`${username}에서 지금 잡힌 후보|${username} 공개 후보 없음`) })).toBeVisible();
+  await expect(page.getByRole("heading", { name: new RegExp(`${username}가 남아 있는 곳|${username} 공개 흔적 없음`) })).toBeVisible();
   await expect(page.locator(".result-first-panel")).toBeInViewport();
-  await expect(page.locator(".result-first-panel .rich-result-card").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "점수" })).toBeVisible();
+  const resultCards = page.locator(".result-first-panel .rich-result-card");
   const resultPanelBox = await page.locator(".result-first-panel").boundingBox();
-  const firstResultBox = await page.locator(".result-first-panel .rich-result-card").first().boundingBox();
   const scoreHeadingBox = await page.getByRole("heading", { name: "점수" }).boundingBox();
-  const viewport = page.viewportSize();
   expect(resultPanelBox?.y).toBeLessThan(scoreHeadingBox?.y ?? 0);
-  expect(firstResultBox?.y).toBeLessThan(scoreHeadingBox?.y ?? 0);
-  expect(firstResultBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(viewport?.height ?? 0);
+  if ((await resultCards.count()) > 0) {
+    await expect(resultCards.first()).toBeVisible();
+    const firstResultBox = await resultCards.first().boundingBox();
+    const viewport = page.viewportSize();
+    expect(firstResultBox?.y).toBeLessThan(scoreHeadingBox?.y ?? 0);
+    expect(firstResultBox?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(viewport?.height ?? 0);
+  } else {
+    await expect(page.getByText("무료 점검에서 바로 보이는 공개 흔적이 없어요.")).toBeVisible();
+  }
   await expect(page.getByText(/1회 무료 상세 결과/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "정밀 리포트 열기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /정밀 리포트 열기|전체 리포트 보기/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "공유 카드 저장" })).toBeVisible();
   const shareCardResponse = await request.get(`/api/scans/${scan.scanId}/share.png`);
   expect(shareCardResponse.status()).toBe(200);
@@ -84,8 +89,8 @@ test("user can scan from landing page and delete the created record", async ({ p
   const copiedShareText = await page.evaluate(() => {
     return (window as Window & { __copiedShareText?: string }).__copiedShareText;
   });
-  expect(copiedShareText).toContain(`${username} 공개 계정 후보`);
-  expect(copiedShareText).toContain("열린 후보");
+  expect(copiedShareText).toContain(`${username} 공개 흔적`);
+  expect(copiedShareText).toContain("먼저 열린 결과");
   expect(copiedShareText).toContain("발견된 계정들이 동일인이라는 뜻은 아니에요.");
   await page.getByRole("button", { name: "월간 재점검에 넣기" }).click();
   await expect(page.getByLabel("모니터링할 아이디")).toHaveValue(username);
@@ -142,8 +147,8 @@ test("later scans after the first free report show paid preview without browser 
   await page.goto("/");
 
   scanIds.push(await submitLandingScan(page, "firstfree-ui"));
-  await expect(page.getByRole("status").filter({ hasText: /1회 무료 상세 결과/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "정밀 리포트 열기" })).toBeVisible();
+  await expect(page.locator(".action-status").filter({ hasText: /1회 무료 상세 결과|무료 미리보기/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /정밀 리포트 열기|전체 리포트 보기/ })).toBeVisible();
 
   await page.getByRole("button", { name: "다른 아이디 점검" }).click();
   await expect(page.getByRole("heading", { name: "아이디를 입력하면 결과가 바로 떠요" })).toBeVisible();
@@ -205,12 +210,12 @@ test("scan result cards appear immediately while detailed access is still loadin
     const scanResponsePromise = page.waitForResponse(
       (response) => response.url().endsWith("/api/scans") && response.request().method() === "POST"
     );
-    await page.getByRole("button", { name: "공개 후보 확인" }).click();
+    await page.getByRole("button", { name: "내 아이디 흔적 찾기" }).click();
     const scanResponse = await scanResponsePromise;
     expect(scanResponse.status()).toBe(201);
     scanId = ((await scanResponse.json()) as { scanId: string }).scanId;
 
-    await expect(page.getByRole("heading", { name: `${username}에서 발견된 공개 후보` })).toBeVisible();
+    await expect(page.getByRole("heading", { name: `${username}로 찾은 공개 흔적` })).toBeVisible();
     await expect(page.locator(".result-first-panel .rich-result-card").first()).toBeVisible();
     await expect(page.locator(".result-first-panel .rich-result-card").first()).toBeInViewport();
     await expect(page.getByRole("status").filter({ hasText: "상세 결과 확인 중" })).toBeVisible();
@@ -233,8 +238,8 @@ test("landing form blocks disallowed identifiers before submit", async ({ page }
   await page.getByLabel("아이디 입력").fill("me@example.com");
   await page.getByLabel(/정당한 목적으로/).check();
 
-  await expect(page.getByText("이메일 검색은 지원하지 않아요.")).toBeVisible();
-  await expect(page.getByRole("button", { name: "공개 후보 확인" })).toBeDisabled();
+  await expect(page.locator('[role="alert"]').filter({ hasText: "이메일 검색은 지원하지 않아요." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "내 아이디 흔적 찾기" })).toBeDisabled();
 
   expect(browserMessages).toEqual([]);
 });
@@ -282,11 +287,11 @@ async function submitLandingScan(page: Page, username: string) {
   const scanResponsePromise = page.waitForResponse(
     (response) => response.url().endsWith("/api/scans") && response.request().method() === "POST"
   );
-  await page.getByRole("button", { name: "공개 후보 확인" }).click();
+  await page.getByRole("button", { name: "내 아이디 흔적 찾기" }).click();
   const scanResponse = await scanResponsePromise;
   expect(scanResponse.status()).toBe(201);
   const scan = (await scanResponse.json()) as { scanId: string };
-  await expect(page.getByRole("heading", { name: `${username}에서 발견된 공개 후보` })).toBeVisible();
-  await expect(page.locator(".result-first-panel .rich-result-card").first()).toBeInViewport();
+  await expect(page.getByRole("heading", { name: `${username}로 찾은 공개 흔적` })).toBeVisible();
+  await expect(page.locator(".result-first-panel")).toBeInViewport();
   return scan.scanId;
 }

@@ -5,7 +5,7 @@ import { grantReportAccess } from "@/lib/entitlements";
 
 export async function POST(request: Request) {
   try {
-    if (process.env.PAYMENT_PROVIDER === "toss" && process.env.ENABLE_MOCK_PAYMENTS !== "true") {
+    if (process.env.ENABLE_MOCK_PAYMENTS !== "true") {
       return jsonError("FORBIDDEN", "테스트 결제는 비활성화되어 있어요.", 403);
     }
 
@@ -15,6 +15,10 @@ export async function POST(request: Request) {
 
     if (!order) {
       return jsonError("NOT_FOUND", "주문을 찾을 수 없어요.", 404);
+    }
+
+    if (order.provider !== "MOCK") {
+      return jsonError("FORBIDDEN", "테스트 결제로 승인할 수 없는 주문이에요.", 403);
     }
 
     if (order.status === "PAID" && order.reportTokenHash) {

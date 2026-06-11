@@ -16,7 +16,9 @@ describe("production release verifier", () => {
       "alerts:test",
       "smoke:release",
       "toss:verify",
+      "store:finalize",
       "store:verify",
+      "mobile:configure",
       "mobile:verify",
       "android:bundle",
       "launch:readiness"
@@ -34,9 +36,11 @@ describe("production release verifier", () => {
       { script: "db:migrate", command: "npm run db:migrate", env: {} },
       { script: "verify:production", command: "npm run verify:production", env: {} },
       { script: "alerts:test", command: "npm run alerts:test", env: {} },
-      { script: "smoke:release", command: "npm run smoke:release", env: {} },
+      { script: "smoke:release", command: "SMOKE_CONFIRM_PAYMENT=skip npm run smoke:release", env: { SMOKE_CONFIRM_PAYMENT: "skip" } },
       { script: "toss:verify", command: "TOSS_RELEASE_CHECK=true npm run toss:verify", env: { TOSS_RELEASE_CHECK: "true" } },
+      { script: "store:finalize", command: "npm run store:finalize", env: {} },
       { script: "store:verify", command: "STORE_RELEASE_CHECK=true npm run store:verify", env: { STORE_RELEASE_CHECK: "true" } },
+      { script: "mobile:configure", command: "npm run mobile:configure", env: {} },
       { script: "mobile:verify", command: "MOBILE_RELEASE_CHECK=true npm run mobile:verify", env: { MOBILE_RELEASE_CHECK: "true" } },
       { script: "android:bundle", command: "npm run android:bundle", env: {} },
       { script: "launch:readiness", command: "LAUNCH_RELEASE_CHECK=true npm run launch:readiness", env: { LAUNCH_RELEASE_CHECK: "true" } }

@@ -38,6 +38,7 @@ export const launchEnvFields: LaunchEnvField[] = [
   },
   { key: "TOSS_REVIEW_TEST_USERNAME", label: "Toss 심사용 아이디", sensitive: false, placeholder: "khstar104" },
   { key: "TOSS_REVIEW_SCENARIO", label: "Toss 심사 시나리오", sensitive: false, placeholder: "Enter the review username and run the flow." },
+  { key: "WEB_DETAILED_REPORT_PAYWALL_ENABLED", label: "웹 정밀 리포트 유료잠금", sensitive: false, placeholder: "false" },
   { key: "ALERT_WEBHOOK_URL", label: "런칭 알림 Webhook", sensitive: true, placeholder: "https://hooks.yourdomain.kr/..." },
   { key: "ALERT_WEBHOOK_PROVIDER", label: "알림 Provider", sensitive: false, placeholder: "slack" },
   { key: "ALERT_RUNBOOK_URL", label: "장애 대응 Runbook URL", sensitive: false, placeholder: "https://docs.yourdomain.kr/runbook" },
@@ -148,6 +149,7 @@ export function validateLaunchEnvValues(values: Record<string, string>) {
   validatePattern(values.TOSS_SECURITY_KEY, "TOSS_SECURITY_KEY", "Toss Payments Security Key", /^[a-f0-9]{64}$/i, "64자 hex 보안 키여야 해요.", errors);
   validateMinimumLength(values.TOSS_CONSOLE_API_KEY, "TOSS_CONSOLE_API_KEY", "Toss Console API Key", 12, errors);
   validateTossAllowedOrigins(values.TOSS_ALLOWED_ORIGINS, errors);
+  validateBoolean(values.WEB_DETAILED_REPORT_PAYWALL_ENABLED, "WEB_DETAILED_REPORT_PAYWALL_ENABLED", errors);
   validateHttpsUrl(values.ALERT_WEBHOOK_URL, "ALERT_WEBHOOK_URL", "런칭 알림 Webhook", errors);
   validateWebhookProvider(values.ALERT_WEBHOOK_PROVIDER, errors);
   validateHttpsUrl(values.ALERT_RUNBOOK_URL, "ALERT_RUNBOOK_URL", "장애 대응 Runbook URL", errors);

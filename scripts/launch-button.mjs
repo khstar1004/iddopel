@@ -56,6 +56,7 @@ const publicLaunchEnvKeys = new Set([
   "MAIGRET_PROCESS_TIMEOUT_MS",
   "PAYMENT_PROVIDER",
   "ENABLE_MOCK_PAYMENTS",
+  "WEB_DETAILED_REPORT_PAYWALL_ENABLED",
   "TOSS_CLIENT_KEY",
   "SITE_URL",
   "PRODUCTION_BASE_URL",
@@ -151,6 +152,7 @@ export function buildLaunchEnvironment({ fileEnv = {}, env = {} } = {}) {
   merged.SCAN_PROVIDER ||= "maigret";
   merged.PAYMENT_PROVIDER ||= "toss";
   merged.ENABLE_MOCK_PAYMENTS ||= "false";
+  merged.WEB_DETAILED_REPORT_PAYWALL_ENABLED ||= "false";
   merged.DATABASE_SSL ||= "false";
   merged.MONITORING_CRON_LIMIT ||= "3";
   merged.SMOKE_CONFIRM_PAYMENT ||= "skip";

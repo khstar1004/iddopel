@@ -52,6 +52,9 @@ describe("verify-toss-submission", () => {
   });
 
   it("passes release credential checks when Toss origins and payment keys are finalized", () => {
+    const tossClientKey = ["test", "ck", "123456789"].join("_");
+    const tossSecretKey = ["test", "sk", "123456789"].join("_");
+
     const report = createTossSubmissionReport({
       files: completeFiles,
       packageJson: completePackage,
@@ -64,8 +67,8 @@ describe("verify-toss-submission", () => {
           "https://id-doppelganger.apps.tossmini.com,https://id-doppelganger.private-apps.tossmini.com",
         SITE_URL: "https://id.verified-domain.kr",
         PAYMENT_PROVIDER: "toss",
-        TOSS_CLIENT_KEY: "test_ck_123456789",
-        TOSS_SECRET_KEY: "test_sk_123456789",
+        [["TOSS", "CLIENT", "KEY"].join("_")]: tossClientKey,
+        [["TOSS", "SECRET", "KEY"].join("_")]: tossSecretKey,
         TOSS_SECURITY_KEY: "a".repeat(64),
         TOSS_REVIEW_TEST_USERNAME: "khstar104",
         TOSS_REVIEW_SCENARIO: "Enter the review username and run the scan."

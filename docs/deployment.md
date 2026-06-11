@@ -35,7 +35,7 @@ npm run launch:button -- --execute --local-gate
 npm run launch:button -- --execute --ship
 ```
 
-`npm run launch:button` is the safe dry run. It loads `.env.launch`, reports missing production values, and redacts secret-like values. Execute mode first runs `npm run assets:all` so store screenshots, marketing images, press-kit ZIPs, and stale-asset checks are fresh. `--execute --local-gate` then runs the local release candidate gate before writing production files. `--execute --ship` prepares the release, verifies `deploy/compose/.env`, starts the Compose stack, and runs production verification.
+`npm run launch:button` is the safe dry run. It loads `.env.launch`, reports missing production values, and redacts secret-like values. Execute mode first runs `npm run assets:all` so store screenshots, marketing images, press-kit ZIPs, and stale-asset checks are fresh. `--execute --local-gate` then runs the local release candidate gate before writing production files. `--execute --ship` prepares the release, verifies `deploy/compose/.env`, starts the Compose stack, finalizes store URLs, refreshes native config, and runs production verification.
 
 The same plan is available in the local browser console at `/launch` after developer login. It is loopback-only, validates and saves allowlisted production values into `.env.launch`, never echoes stored secrets back to the page, and keeps execution disabled until `ENABLE_LAUNCH_CONSOLE=true` is set.
 
@@ -53,6 +53,7 @@ TOSS_CONSOLE_API_KEY="your-toss-console-api-key" \
 TOSS_CONSOLE_APP_ID="your-toss-console-app-id" \
 TOSS_MINI_APP_NAME="your-toss-mini-app-name" \
 TOSS_ALLOWED_ORIGINS="https://your-toss-mini-app-name.apps.tossmini.com,https://your-toss-mini-app-name.private-apps.tossmini.com" \
+WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" \
 ALERT_WEBHOOK_URL="https://your-alert-webhook.example" \
 ALERT_WEBHOOK_PROVIDER="slack" \
 ALERT_RUNBOOK_URL="https://your-runbook.example/id-doppelganger" \
@@ -73,7 +74,7 @@ DEPLOY_RELEASE_CHECK=true npm run deploy:verify
 docker compose --env-file deploy/compose/.env -f deploy/compose/compose.yaml up -d --build
 ```
 
-Run `npm run assets:all` before the manual path if you are not using `launch:button`; it regenerates store screenshots, marketing launch images, and press-kit ZIPs before verification. `npm run release:production` also re-runs `assets:all` as its first live gate, so stale screenshots or launch kits cannot slip through the final check.
+Run `npm run assets:all` before the manual path if you are not using `launch:button`; it regenerates store screenshots, marketing launch images, and press-kit ZIPs before verification. `npm run release:production` also re-runs `assets:all` as its first live gate, then runs `store:finalize` before store verification and `mobile:configure` before mobile verification, so stale screenshots, store URLs, native origins, or launch kits cannot slip through the final check.
 
 `npm run release:prepare` generates `deploy/compose/.env`, writes `deploy/compose/PRODUCTION_LAUNCH_RUNBOOK.md`, updates Fastlane and store listing URLs, and points `native-web/app-config.js` at the production HTTPS origin. It exits before writing when required production values are missing. Use `PREPARE_RELEASE_DRY_RUN=true npm run release:prepare` to preview the update list.
 
@@ -118,6 +119,7 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - `MAIGRET_TOP_SITES_DEEP`: paid/deep scan scope, default `500`
 - `MAIGRET_PROCESS_TIMEOUT_MS`: process kill timeout
 - `PAYMENT_PROVIDER`: `toss` for production payments
+- `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` for beta so the one-time free detailed report remains available; set `true` after Toss checkout is ready to require checkout for detailed web reports
 - `TOSS_CLIENT_KEY`: Toss Payments client key for payment-window SDK compatibility and merchant verification
 - `TOSS_SECRET_KEY`: Toss Payments API secret key
 - `TOSS_SECURITY_KEY`: Toss Payments 64-character security key for encrypted services or webhook signature verification when enabled
@@ -125,7 +127,7 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - `TOSS_CONSOLE_APP_ID`: Toss developer console app id
 - `TOSS_MINI_APP_NAME`: Toss mini app slug used to derive standard Toss origins
 - `TOSS_ALLOWED_ORIGINS`: comma-separated live and private `tossmini.com` origins
-- `ENABLE_MOCK_PAYMENTS`: keep `false` in production
+- `ENABLE_MOCK_PAYMENTS`: keep `false` in production and beta; set `true` only on local/E2E servers that intentionally exercise `/api/payments/mock/confirm`
 - `TELEMETRY_DISABLED`: keep unset or `false` for launch monitoring
 - `NEXT_PUBLIC_TELEMETRY_DISABLED`: keep unset or `false` so the browser reports page views, Core Web Vitals, and client errors
 - `RELEASE_VERSION`: release identifier included in structured telemetry logs
@@ -173,10 +175,16 @@ Check the runtime health endpoint:
 curl -sS http://localhost:3000/api/health
 ```
 
-Run the release smoke script against a local, staging, or production candidate URL:
+Run the release smoke script against a local or staging candidate URL where mock payments are intentionally enabled on the server:
 
 ```bash
 SMOKE_BASE_URL="https://your-domain.example" npm run smoke:release
+```
+
+For beta or production URLs where mock payment confirmation is disabled, smoke the locked-report path without granting a report token:
+
+```bash
+SMOKE_BASE_URL="https://your-domain.example" SMOKE_CONFIRM_PAYMENT=skip npm run smoke:release
 ```
 
 Run browser smoke tests against a built release candidate. The Playwright config starts `next start` automatically when `E2E_BASE_URL` is not already serving. This covers responsive landing widths, paid report unlocking, PDF delivery, and landing-page scan deletion:

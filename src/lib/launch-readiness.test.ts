@@ -20,9 +20,11 @@ const completeScripts = {
   "assets:marketing": "npm run assets:promotion && node scripts/package-marketing-assets.mjs",
   "assets:all": "npm run assets:store && npm run assets:marketing && npm run assets:verify",
   "assets:verify": "node scripts/verify-store-assets.mjs && node scripts/verify-marketing-assets.mjs",
+  "store:finalize": "node scripts/finalize-store-metadata.mjs",
   "store:verify": "node scripts/verify-store-submission.mjs && npm run privacy:verify",
   "privacy:verify": "node scripts/verify-store-privacy.mjs",
   "toss:verify": "node scripts/verify-toss-submission.mjs",
+  "mobile:configure": "node scripts/configure-mobile-app.mjs",
   "mobile:verify": "node scripts/verify-mobile-app.mjs",
   "android:debug": "node scripts/verify-android-debug-build.mjs",
   "android:bundle": "node scripts/verify-android-bundle-build.mjs",
@@ -103,8 +105,10 @@ npm run assets:verify
 npm run launch:readiness
 npm run deploy:verify
 npm run toss:verify
+npm run store:finalize
 npm run store:verify
 npm run privacy:verify
+npm run mobile:configure
 npm run mobile:verify
 npm run android:debug
 npm run android:bundle
@@ -125,6 +129,7 @@ MAIGRET_SITE_TIMEOUT_SECONDS=12
 MAIGRET_PROCESS_TIMEOUT_MS=120000
 PAYMENT_PROVIDER=mock
 ENABLE_MOCK_PAYMENTS=false
+WEB_DETAILED_REPORT_PAYWALL_ENABLED=false
 SITE_URL=http://localhost:3000
 TOSS_CLIENT_KEY=
 TOSS_SECRET_KEY=
@@ -173,6 +178,7 @@ TOSS_MINI_APP_NAME=YOUR_TOSS_MINI_APP_NAME
 TOSS_ALLOWED_ORIGINS=https://YOUR_TOSS_APP_NAME.apps.tossmini.com
 TOSS_REVIEW_TEST_USERNAME=khstar104
 TOSS_REVIEW_SCENARIO=Enter the review username and run the flow.
+WEB_DETAILED_REPORT_PAYWALL_ENABLED=false
 ALERT_WEBHOOK_URL=https://YOUR_ALERT_WEBHOOK
 ALERT_WEBHOOK_PROVIDER=slack
 ALERT_RUNBOOK_URL=https://YOUR_RUNBOOK_URL
@@ -262,5 +268,20 @@ describe("launch-readiness", () => {
 
     expect(report.ok).toBe(false);
     expect(report.localFailures).toContainEqual(expect.objectContaining({ name: "README documents npm run android:debug" }));
+  });
+
+  it("fails default mode when a production finalization helper is missing", () => {
+    const report = createReadinessReport({
+      packageJson: { scripts: { ...completeScripts, "store:finalize": undefined } },
+      existingFiles: completeFiles,
+      envExample: completeEnv,
+      launchEnvExample: completeLaunchEnv,
+      readme: completeReadme,
+      checklistMarkdown: "- [x] Local package",
+      releaseCheck: false
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.localFailures).toContainEqual(expect.objectContaining({ name: "Package script store:finalize" }));
   });
 });

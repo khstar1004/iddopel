@@ -187,6 +187,7 @@ const scanExperienceCopy = {
       adminFull: "어드민 전체 결과",
       adminFullDescription: "개발자 테스트 모드로 결제 없이 전체 결과를 보고 있어요.",
       freePreview: "무료 미리보기",
+      paywallPreview: "정밀 리포트 잠김",
       freeDetail: "1회 무료 상세 결과",
       freeDetailAgain: "1회 무료 상세 결과 다시 보기",
       fullOpen: "전체 결과 열림",
@@ -350,6 +351,7 @@ const scanExperienceCopy = {
       adminFull: "Admin full results",
       adminFullDescription: "Developer test mode shows full results without payment.",
       freePreview: "Free preview",
+      paywallPreview: "Detailed report locked",
       freeDetail: "One-time free detailed result",
       freeDetailAgain: "View one-time free detailed result again",
       fullOpen: "Full results open",
@@ -1378,7 +1380,12 @@ function ResultPreview({
   const isFullAccess = detailAccess.access === "FULL";
   const ctaLabel = isFullAccess ? copy.preview.fullReport : copy.preview.checkout;
   const hiddenCount = Math.max(detailAccess.lockedCount, 0);
-  const paidPreviewLead = detailAccess.label === copy.detailLabels.freePreview ? copy.preview.freeUsedLead : "";
+  const lockedLead =
+    detailAccess.label === copy.detailLabels.freePreview
+      ? copy.preview.freeUsedLead
+      : !isFullAccess && detailAccess.description !== copy.detailLabels.lockedUrl
+        ? `${detailAccess.description} `
+        : "";
   const hasResults = detailAccess.results.length > 0;
 
   return (
@@ -1420,7 +1427,7 @@ function ResultPreview({
           {isFullAccess
             ? copy.preview.fullOpen(detailAccess.results.length)
             : hiddenCount > 0
-              ? `${paidPreviewLead}${copy.preview.lockedCount(hiddenCount)}`
+              ? `${lockedLead}${copy.preview.lockedCount(hiddenCount)}`
               : detailAccess.description}
         </span>
         <button className="secondary-button" type="button" onClick={onOpenFullReport} disabled={isLoadingFull}>
@@ -1794,6 +1801,14 @@ async function loadFirstFreeOrPreviewResults(scanId: string, copy: ScanExperienc
 
   if (freeBody?.error?.code === "FIRST_FREE_USED") {
     window.localStorage.setItem(freeDetailUsedScanIdKey, scanId);
+  }
+
+  if (freeBody?.error?.code === "WEB_PAYWALL_ENABLED") {
+    return loadPreviewResults(
+      scanId,
+      copy.detailLabels.paywallPreview,
+      freeBody?.error?.message ?? copy.detailLabels.lockedUrl
+    );
   }
 
   return loadPreviewResults(

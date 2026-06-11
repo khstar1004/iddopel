@@ -13,9 +13,11 @@ export const productionReleaseSteps = [
   { script: "db:migrate", env: {} },
   { script: "verify:production", env: {} },
   { script: "alerts:test", env: {} },
-  { script: "smoke:release", env: {} },
+  { script: "smoke:release", env: { SMOKE_CONFIRM_PAYMENT: "skip" } },
   { script: "toss:verify", env: { TOSS_RELEASE_CHECK: "true" } },
+  { script: "store:finalize", env: {} },
   { script: "store:verify", env: { STORE_RELEASE_CHECK: "true" } },
+  { script: "mobile:configure", env: {} },
   { script: "mobile:verify", env: { MOBILE_RELEASE_CHECK: "true" } },
   { script: "android:bundle", env: {} },
   { script: "launch:readiness", env: { LAUNCH_RELEASE_CHECK: "true" } }

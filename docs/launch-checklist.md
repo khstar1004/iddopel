@@ -32,6 +32,8 @@
 - [x] GitHub Actions release verification workflow for web, assets, audit, mobile sync, Android debug APK, and Android release AAB
 - [x] Paid report order, checkout, entitlement token, locked full-result API
 - [x] First detailed report free entitlement and blurred locked-result paywall for later reports
+- [x] Web detailed-report paywall flag prepared; beta keeps `WEB_DETAILED_REPORT_PAYWALL_ENABLED=false` until Toss checkout is registered
+- [x] Mock payment confirmation is blocked unless `ENABLE_MOCK_PAYMENTS=true` and the order is a local mock order
 - [x] Viral-safe PNG share card for result screens without platform URLs or profile details
 - [x] Local developer admin login for repeated scan and report testing
 - [x] Toss Payments server-side payment window and confirm API integration
@@ -75,7 +77,7 @@
 - [x] Browser smoke test at 320, 768, 1024, 1440 px
 - [ ] Security headers checked on the production domain
 - [ ] `npm run release:production` passes with real production env, deployed domain, regenerated release assets, store credentials, and Toss credentials
-- [ ] `SMOKE_BASE_URL=https://production-domain npm run smoke:release` passes
+- [ ] `SMOKE_BASE_URL=https://production-domain SMOKE_CONFIRM_PAYMENT=skip npm run smoke:release` passes
 - [ ] Production preflight `PRODUCTION_BASE_URL=https://production-domain npm run verify:production` passes
 - [ ] Alert route test `ALERT_WEBHOOK_URL=https://alert-webhook ALERT_WEBHOOK_PROVIDER=slack ALERT_RUNBOOK_URL=https://runbook npm run alerts:test` reaches the intended channel
 - [x] `npm run assets:all` regenerates store screenshots, marketing images, press kits, and verifies release assets
@@ -87,14 +89,14 @@
 - [x] `npm run deploy:verify` passes for the Docker Compose deployment package
 - [x] `npm run launch:readiness` summarizes local release gates and remaining external blockers
 - [x] `npm run toss:verify` passes for local Toss in-app submission readiness
-- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... TOSS_ALLOWED_ORIGINS=... ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_BUNDLE_ID=com.iddoppelganger.app APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report APPLE_ENVIRONMENT=production APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
+- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... TOSS_ALLOWED_ORIGINS=... WEB_DETAILED_REPORT_PAYWALL_ENABLED=false ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_BUNDLE_ID=com.iddoppelganger.app APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report APPLE_ENVIRONMENT=production APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
 - [ ] Production `npm run launch:button -- --execute --ship` completes with real domain, database, Toss, store, alert, and mobile release values
 - [ ] `DEPLOY_RELEASE_CHECK=true npm run deploy:verify` passes with real production `deploy/compose/.env`
 - [ ] Production `sitemap.xml` and `robots.txt` checked after final `SITE_URL` deployment
 - [ ] `TOSS_RELEASE_CHECK=true npm run toss:verify` passes with Toss console app id, live/private Toss origins, and production review scenario
-- [ ] `STORE_PRODUCTION_ORIGIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain npm run store:finalize` has been run before store upload
+- [x] `npm run release:production` runs `store:finalize` before store upload verification
 - [ ] `STORE_RELEASE_CHECK=true APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run store:verify` passes with App Store Connect and Google Play credentials
-- [ ] `MOBILE_APP_ORIGIN=https://production-domain npm run mobile:configure` has been run for release
+- [x] `npm run release:production` runs `mobile:configure` before native release verification
 - [ ] `MOBILE_RELEASE_CHECK=true npm run mobile:verify` passes before native archive
 - [ ] Apple IAP / Google Play Billing products and production receipt credentials validated before enabling paid reports inside native app
 - [ ] GitHub Actions `Release Verification` passes on the release branch

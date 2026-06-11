@@ -24,7 +24,7 @@
 - Cron endpoint: `GET /api/cron/prune` with `Authorization: Bearer $CRON_SECRET`
 - Create paid report order: `POST /api/orders`
 - Confirm Toss payment: `POST /api/payments/confirm`
-- Mock payment for local smoke tests: `POST /api/payments/mock/confirm`
+- Mock payment for local smoke tests only: `POST /api/payments/mock/confirm` with `ENABLE_MOCK_PAYMENTS=true`
 
 ## Project Structure
 - `src/app`: routes, API handlers, global styles

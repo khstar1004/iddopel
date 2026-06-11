@@ -74,6 +74,7 @@ export function renderDeployEnv(values) {
     MAIGRET_PROCESS_TIMEOUT_MS: "120000",
     PAYMENT_PROVIDER: "toss",
     ENABLE_MOCK_PAYMENTS: "false",
+    WEB_DETAILED_REPORT_PAYWALL_ENABLED: values.WEB_DETAILED_REPORT_PAYWALL_ENABLED || "false",
     TOSS_CLIENT_KEY: values.TOSS_CLIENT_KEY,
     "TOSS_SECRET_KEY": values.TOSS_SECRET_KEY,
     TOSS_SECURITY_KEY: values.TOSS_SECURITY_KEY,
@@ -304,6 +305,8 @@ MOBILE_APP_ORIGIN="${values.SITE_URL}" npm run mobile:configure
 MOBILE_RELEASE_CHECK=true npm run mobile:verify
 npm run android:bundle
 \`\`\`
+
+\`npm run release:production\` runs the same store finalization and native configuration steps before the store and mobile release gates.
 
 Keep native paid reports disabled until Apple IAP and Google Play Billing products, receipt verification credentials, sandbox purchases, restore flow, and review notes are complete.
 
