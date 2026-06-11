@@ -54,8 +54,13 @@ def run_maigret(username, mode):
     top_sites = resolve_top_sites(mode)
     site_timeout = positive_int(os.environ.get("MAIGRET_SITE_TIMEOUT_SECONDS"), 6)
     process_timeout_ms = positive_int(os.environ.get("MAIGRET_PROCESS_TIMEOUT_MS"), 55000)
+    max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 10)
 
     with tempfile.TemporaryDirectory(prefix="id-doppelganger-maigret-") as temp_dir:
+        runtime_env = os.environ.copy()
+        runtime_env.setdefault("HOME", tempfile.gettempdir())
+        runtime_env.setdefault("XDG_CACHE_HOME", tempfile.gettempdir())
+        runtime_env["PYTHONIOENCODING"] = "utf-8"
         args = [
             sys.executable,
             "-m",
@@ -74,6 +79,8 @@ def run_maigret(username, mode):
             str(site_timeout),
             "--retries",
             "0",
+            "--max-connections",
+            str(max_connections),
             "--reports-sorting",
             "data",
         ]
@@ -92,6 +99,7 @@ def run_maigret(username, mode):
             check=False,
             encoding="utf-8",
             errors="replace",
+            env=runtime_env,
             timeout=process_timeout_ms / 1000,
         )
 

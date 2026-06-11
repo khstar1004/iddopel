@@ -64,6 +64,7 @@ export async function runMaigretScan(input: CreateScanInput, options: MaigretRun
   const topSites = resolveTopSites(input.mode ?? "QUICK");
   const timeoutSeconds = Number(process.env.MAIGRET_SITE_TIMEOUT_SECONDS || "12");
   const processTimeoutMs = Number(process.env.MAIGRET_PROCESS_TIMEOUT_MS || "120000");
+  const maxConnections = Number(process.env.MAIGRET_MAX_CONNECTIONS || "40");
   const args = [
     input.username,
     "--html",
@@ -79,6 +80,8 @@ export async function runMaigretScan(input: CreateScanInput, options: MaigretRun
     String(timeoutSeconds),
     "--retries",
     "0",
+    "--max-connections",
+    String(maxConnections),
     "--reports-sorting",
     "data"
   ];

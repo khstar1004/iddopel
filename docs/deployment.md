@@ -126,6 +126,8 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_TOP_SITES_QUICK`: free scan scope, default `100`
 - `MAIGRET_TOP_SITES_DEEP`: paid/deep scan scope, default `500`
 - `MAIGRET_PROCESS_TIMEOUT_MS`: process kill timeout
+- `MAIGRET_MAX_CONNECTIONS`: Maigret concurrent connection limit; keep it low on Vercel serverless functions
+- `MAIGRET_EXTRACT_EXTENDED`: set `false` on Vercel to reduce Maigret memory and network pressure
 - `MAIGRET_API_SECRET`: optional shared secret for the Node scan route to call the Python Maigret function with `x-maigret-api-secret`
 - `PAYMENT_PROVIDER`: `toss` for production payments
 - `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` for beta so the one-time free detailed report remains available; set `true` after Toss checkout is ready to require checkout for detailed web reports
