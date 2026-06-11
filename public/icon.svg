@@ -1,9 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ID 도플갱어">
-  <rect width="512" height="512" rx="96" fill="#090A0F"/>
-  <circle cx="256" cy="256" r="174" fill="none" stroke="#00D4FF" stroke-width="16" opacity=".42"/>
-  <circle cx="256" cy="256" r="112" fill="none" stroke="#2DD4BF" stroke-width="14" opacity=".7"/>
-  <path d="M256 96v320M96 256h320" stroke="#FFFFFF" stroke-width="10" opacity=".18"/>
-  <path d="M256 256 400 176" stroke="#00D4FF" stroke-width="18" stroke-linecap="round"/>
-  <circle cx="256" cy="256" r="42" fill="#00D4FF"/>
-  <circle cx="256" cy="256" r="20" fill="#090A0F"/>
+  <rect width="512" height="512" rx="104" fill="#FFFFFF"/>
+  <path d="M160 80 432 352l-64 64L96 144z" fill="#54B7F7"/>
+  <path d="M368 91 432 155 160 427 96 363z" fill="#54B7F7"/>
+  <path d="M91 229 155 165l117 117-64 64z" fill="#78C9FF"/>
 </svg>

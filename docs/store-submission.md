@@ -96,6 +96,16 @@ APP_STORE_CONNECT_API_KEY_P8_BASE64="..." \
 bundle exec fastlane ios submit_review
 ```
 
+The launch env names also work for Fastlane and `STORE_RELEASE_CHECK=true npm run store:verify`:
+
+```bash
+APPLE_KEY_ID="..." \
+APPLE_ISSUER_ID="..." \
+APPLE_PRIVATE_KEY="..." \
+APPLE_APP_APPLE_ID="..." \
+bundle exec fastlane ios metadata
+```
+
 Google Play:
 
 ```bash

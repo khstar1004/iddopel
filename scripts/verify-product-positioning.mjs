@@ -22,19 +22,19 @@ const requiredContent = [
   },
   {
     file: "src/components/ScanExperience.tsx",
-    snippets: ["공개 후보 확인", "지금 잡힌 후보", "상세 URL 잠김"]
+    snippets: ["내 아이디, 어디에 남아 있을까?", "내 아이디 흔적 찾기", "상세 URL 잠김"]
   },
   {
     file: "src/components/TossMiniApp.tsx",
-    snippets: ["공개 후보 확인", "잡힌 공개 후보", "상세 URL 잠김"]
+    snippets: ["내 아이디, 어디에 남아 있을까?", "내 아이디 흔적 찾기", "상세 URL 잠김"]
   },
   {
     file: "native-web/index.html",
-    snippets: ["공개 후보 확인", "발견된 공개 후보"]
+    snippets: ["내 아이디, 어디에 남아 있을까?", "발견된 공개 흔적"]
   },
   {
     file: "scripts/generate-store-assets.mjs",
-    snippets: ["공개 후보 확인", "지금 잡힌 후보", "상세 URL 잠김", "원본 HTML/PDF 저장"]
+    snippets: ["내 아이디 흔적 찾기", "내 아이디, 어디에 남아 있을까?", "상세 URL 잠김", "원본 HTML/PDF 저장"]
   },
   {
     file: "plan.md",
@@ -49,7 +49,7 @@ const requiredContent = [
 const staleCopyChecks = [
   {
     pattern: /희소성 점수 보기/g,
-    detail: "Use result-first CTA copy such as 공개 후보 확인."
+    detail: "Use result-first CTA copy such as 내 아이디 흔적 찾기."
   },
   {
     pattern: /CTA:\s*(?:내 아이디 점수 보기|아이디 점수 보기|ID 도플갱어 찾기)/g,

@@ -6,8 +6,8 @@ const siteUrl = normalizeOrigin(process.env.SITE_URL || process.env.VERCEL_PROJE
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "ID 도플갱어 | 공개 계정 후보 점검",
-  description: "아이디 하나로 공개 계정 후보를 빠르게 확인하세요.",
+  title: "ID 도플갱어 | 내 아이디 흔적 점검",
+  description: "자주 쓰는 아이디가 어디에 공개로 남아 있는지 빠르게 확인하세요.",
   applicationName: "ID 도플갱어",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "ID 도플갱어",
-    description: "전세계에 나랑 같은 아이디 쓰는 사람 있을까?",
+    description: "내 아이디가 어디에 공개로 남아 있는지 바로 확인하세요.",
     type: "website",
     locale: "ko_KR",
     url: siteUrl

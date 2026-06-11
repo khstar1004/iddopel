@@ -142,9 +142,48 @@ export const requiredEnvExampleKeys = [
   "STORE_SUPPORT_EMAIL",
   "MOBILE_APP_ORIGIN",
   "MOBILE_PAYMENTS_ENABLED",
+  "APPLE_BUNDLE_ID",
+  "APPLE_DETAILED_REPORT_PRODUCT_ID",
+  "APPLE_ENVIRONMENT",
   "APPLE_KEY_ID",
   "APPLE_ISSUER_ID",
   "APPLE_PRIVATE_KEY",
+  "APPLE_REQUIRE_JWS_VERIFICATION",
+  "APPLE_ROOT_CERTIFICATES_BASE64",
+  "APPLE_APP_APPLE_ID",
+  "GOOGLE_PLAY_PACKAGE_NAME",
+  "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID",
+  "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+];
+
+export const requiredLaunchEnvExampleKeys = [
+  "PRODUCTION_DOMAIN",
+  "STORE_SUPPORT_EMAIL",
+  "DATABASE_URL",
+  "DATABASE_SSL",
+  "CRON_SECRET",
+  "TOSS_CLIENT_KEY",
+  "TOSS_SECRET_KEY",
+  "TOSS_SECURITY_KEY",
+  "TOSS_CONSOLE_API_KEY",
+  "TOSS_CONSOLE_APP_ID",
+  "TOSS_MINI_APP_NAME",
+  "TOSS_ALLOWED_ORIGINS",
+  "TOSS_REVIEW_TEST_USERNAME",
+  "TOSS_REVIEW_SCENARIO",
+  "ALERT_WEBHOOK_URL",
+  "ALERT_WEBHOOK_PROVIDER",
+  "ALERT_RUNBOOK_URL",
+  "MOBILE_PAYMENTS_ENABLED",
+  "APPLE_BUNDLE_ID",
+  "APPLE_DETAILED_REPORT_PRODUCT_ID",
+  "APPLE_ENVIRONMENT",
+  "APPLE_KEY_ID",
+  "APPLE_ISSUER_ID",
+  "APPLE_PRIVATE_KEY",
+  "APPLE_APP_APPLE_ID",
+  "GOOGLE_PLAY_PACKAGE_NAME",
+  "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID",
   "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
 ];
 
@@ -198,6 +237,7 @@ export function createReadinessReport({
   packageJson,
   existingFiles,
   envExample,
+  launchEnvExample = "",
   readme = "",
   checklistMarkdown,
   releaseCheck = false,
@@ -207,6 +247,7 @@ export function createReadinessReport({
   const localFailures = [];
   const externalBlockers = [];
   const envKeys = parseEnvKeys(envExample);
+  const launchEnvKeys = parseEnvKeys(launchEnvExample);
   const checklistItems = parseChecklistItems(checklistMarkdown);
 
   for (const script of requiredPackageScripts) {
@@ -229,6 +270,16 @@ export function createReadinessReport({
 
   for (const key of requiredEnvExampleKeys) {
     addCheck(checks, localFailures, `.env.example key ${key}`, envKeys.has(key), `.env.example must document ${key}.`);
+  }
+
+  for (const key of requiredLaunchEnvExampleKeys) {
+    addCheck(
+      checks,
+      localFailures,
+      `.env.launch.example key ${key}`,
+      launchEnvKeys.has(key),
+      `.env.launch.example must document ${key}.`
+    );
   }
 
   for (const item of checklistItems.filter((checklistItem) => !checklistItem.checked)) {
@@ -279,9 +330,10 @@ function addCheck(checks, failures, name, ok, detail) {
 }
 
 async function main() {
-  const [packageJson, envExample, checklistMarkdown, existingFiles] = await Promise.all([
+  const [packageJson, envExample, launchEnvExample, checklistMarkdown, existingFiles] = await Promise.all([
     readJson("package.json"),
     readFile(".env.example", "utf-8"),
+    readFile(".env.launch.example", "utf-8"),
     readFile("docs/launch-checklist.md", "utf-8"),
     findExistingFiles(requiredFiles)
   ]);
@@ -291,6 +343,7 @@ async function main() {
     packageJson,
     existingFiles,
     envExample,
+    launchEnvExample,
     readme,
     checklistMarkdown,
     releaseCheck: process.env.LAUNCH_RELEASE_CHECK === "true"

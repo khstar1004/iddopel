@@ -3,7 +3,7 @@ import { TossMiniApp } from "@/components/TossMiniApp";
 
 export const metadata: Metadata = {
   title: "ID 도플갱어 | 토스 인앱",
-  description: "내 아이디 노출 점검과 공개 플랫폼 후보를 토스 인앱 톤으로 확인하세요."
+  description: "내 아이디가 어디에 공개로 남아 있는지 토스 인앱 톤으로 확인하세요."
 };
 
 export const viewport: Viewport = {

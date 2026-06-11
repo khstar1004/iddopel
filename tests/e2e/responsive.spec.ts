@@ -31,6 +31,23 @@ test("landing page is responsive across release smoke widths", async ({ page, re
   expect(browserMessages).toEqual([]);
 });
 
+test("language switch exposes a shareable English version", async ({ page }) => {
+  const browserMessages = watchBrowserErrors(page);
+
+  await page.goto("/en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("heading", { name: "Check public username matches" })).toBeVisible();
+  await expect(page.getByLabel("Username input")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check public matches" })).toBeDisabled();
+
+  await page.getByRole("link", { name: "한국어" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "ko");
+  await expect(page.getByRole("heading", { name: "아이디 공개 후보 확인" })).toBeVisible();
+
+  expect(browserMessages).toEqual([]);
+});
+
 test("result cards stay dense enough on narrow screens", async ({ page }) => {
   const browserMessages = watchBrowserErrors(page);
   const viewport = page.viewportSize();

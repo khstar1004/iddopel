@@ -68,12 +68,16 @@ async function main() {
   addCheck("Google tablet screenshots", tabletScreenshots.filter((file) => file.endsWith(".png")).length >= 3, "Provide at least 3 tablet screenshots.");
 
   if (releaseCheck) {
-    requireEnv("APP_STORE_CONNECT_KEY_ID", "Apple metadata/review upload requires an App Store Connect API key id.");
-    requireEnv("APP_STORE_CONNECT_ISSUER_ID", "Apple metadata/review upload requires an App Store Connect issuer id.");
+    requireOneOf(["APP_STORE_CONNECT_KEY_ID", "APPLE_KEY_ID"], "Apple metadata/review upload requires an App Store Connect API key id.");
+    requireOneOf(["APP_STORE_CONNECT_ISSUER_ID", "APPLE_ISSUER_ID"], "Apple metadata/review upload requires an App Store Connect issuer id.");
     addCheck(
       "App Store Connect API key configured",
-      Boolean(process.env.APP_STORE_CONNECT_API_KEY_P8_BASE64 || process.env.APP_STORE_CONNECT_API_KEY_P8),
-      "Set APP_STORE_CONNECT_API_KEY_P8_BASE64 or APP_STORE_CONNECT_API_KEY_P8."
+      Boolean(
+        process.env.APP_STORE_CONNECT_API_KEY_P8_BASE64 ||
+          process.env.APP_STORE_CONNECT_API_KEY_P8 ||
+          process.env.APPLE_PRIVATE_KEY
+      ),
+      "Set APP_STORE_CONNECT_API_KEY_P8_BASE64, APP_STORE_CONNECT_API_KEY_P8, or APPLE_PRIVATE_KEY."
     );
     requireEnv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "Google Play upload requires Android Publisher service account JSON.");
     requireEnv("MOBILE_APP_ORIGIN", "Native release requires MOBILE_APP_ORIGIN.");
@@ -83,7 +87,7 @@ async function main() {
   }
 
   const failed = checks.filter((check) => !check.ok);
-  console.log(JSON.stringify({ ok: failed.length === 0, failed: failed.length, warnings: warnings.length, checks, warnings }, null, 2));
+  console.log(JSON.stringify({ ok: failed.length === 0, failed: failed.length, warningCount: warnings.length, checks, warnings }, null, 2));
   if (failed.length > 0) process.exit(1);
 }
 
@@ -118,6 +122,10 @@ function validateUrl(name, value) {
 
 function requireEnv(name, detail) {
   addCheck(`Env ${name}`, Boolean(process.env[name]?.trim()), detail);
+}
+
+function requireOneOf(names, detail) {
+  addCheck(`Env ${names.join(" or ")}`, names.some((name) => Boolean(process.env[name]?.trim())), detail);
 }
 
 function validateSupportEmail(value) {

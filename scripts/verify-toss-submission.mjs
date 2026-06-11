@@ -37,12 +37,12 @@ export function createTossSubmissionReport({ files, packageJson, env = process.e
   addLocalCheck("Package script toss:verify", Boolean(packageJson?.scripts?.["toss:verify"]), "package.json must define toss:verify.");
 
   const page = text(files, "src/app/toss/page.tsx");
-  addLocalCheck("Toss route metadata", page.includes("토스 인앱") && page.includes("내 아이디 노출 점검"), "The /toss route needs review-safe metadata.");
+  addLocalCheck("Toss route metadata", page.includes("토스 인앱") && page.includes("어디에 공개로 남아"), "The /toss route needs review-safe metadata.");
   addLocalCheck("Toss route mobile viewport", page.includes("device-width") && page.includes("#F7F8FA"), "The /toss route needs a mobile viewport and Toss-light theme color.");
 
   const component = text(files, "src/components/TossMiniApp.tsx");
-  addLocalCheck("Toss surface uses soft security positioning", component.includes("아이디 공개 후보 확인"), "Use a simple Toss/app result headline.");
-  addLocalCheck("Toss surface prioritizes result cards", component.includes("잡힌 공개 후보") && component.includes("toss-result-card"), "Show public account candidates before the score summary.");
+  addLocalCheck("Toss surface uses soft security positioning", component.includes("내 아이디, 어디에 남아 있을까?"), "Use a simple Toss/app result headline.");
+  addLocalCheck("Toss surface prioritizes result cards", component.includes("공개 흔적") && component.includes("toss-result-card"), "Show public traces before the score summary.");
   addLocalCheck("Toss surface requires legitimate purpose", component.includes("정당한 목적으로 공개 아이디 사용 현황을 점검해요."), "Require legitimate-purpose acknowledgement.");
   addLocalCheck("Toss surface includes disallowed search copy", component.includes("실명, 전화번호, 이메일 검색은 지원하지 않아요."), "Explain unsupported sensitive searches.");
   addLocalCheck("Toss surface avoids identity proof claims", component.includes("같은 사람이라고 단정하지 않아요"), "Explain that results do not prove same-person identity.");

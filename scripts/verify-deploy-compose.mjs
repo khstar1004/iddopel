@@ -34,7 +34,7 @@ async function main() {
   validateDockerComposeConfig();
 
   const failed = checks.filter((check) => !check.ok);
-  console.log(JSON.stringify({ ok: failed.length === 0, failed: failed.length, warnings: warnings.length, checks, warnings }, null, 2));
+  console.log(JSON.stringify({ ok: failed.length === 0, failed: failed.length, warningCount: warnings.length, checks, warnings }, null, 2));
   if (failed.length > 0) process.exit(1);
 }
 

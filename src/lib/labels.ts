@@ -1,5 +1,7 @@
 import type { PlatformCategory, RiskLevel, ScanPurpose } from "./types";
 
+export type Locale = "ko" | "en";
+
 export const purposeLabels: Record<ScanPurpose, string> = {
   SELF_CHECK: "내 아이디 점검",
   BRAND_CHECK: "브랜드/활동명 점검",
@@ -28,6 +30,39 @@ export const riskLabels: Record<RiskLevel, string> = {
   LOW: "낮음",
   MEDIUM: "확인 필요",
   HIGH: "주의"
+};
+
+export const categoryLabelsByLocale: Record<Locale, Record<PlatformCategory, string>> = {
+  ko: categoryLabels,
+  en: {
+    SNS: "Social",
+    BLOG: "Blog",
+    COMMUNITY: "Community",
+    DEVELOPER: "Developer",
+    CREATOR: "Creator",
+    COMMERCE: "Commerce",
+    DOMAIN: "Domain",
+    GLOBAL: "Global profile"
+  }
+};
+
+export const countryLabelsByLocale: Record<Locale, Record<string, string>> = {
+  ko: countryLabels,
+  en: {
+    KR: "Korea",
+    US: "United States",
+    JP: "Japan",
+    GLOBAL: "Global"
+  }
+};
+
+export const riskLabelsByLocale: Record<Locale, Record<RiskLevel, string>> = {
+  ko: riskLabels,
+  en: {
+    LOW: "Low",
+    MEDIUM: "Review",
+    HIGH: "Attention"
+  }
 };
 
 export function scoreTone(score: number) {

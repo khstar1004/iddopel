@@ -18,7 +18,13 @@ import {
   UserRound
 } from "lucide-react";
 import { FormEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
-import { categoryLabels, countryLabels, riskLabels, scoreTone } from "@/lib/labels";
+import {
+  categoryLabelsByLocale,
+  countryLabelsByLocale,
+  riskLabelsByLocale,
+  scoreTone,
+  type Locale
+} from "@/lib/labels";
 import type { PublicMonitoringSubscription, ScanResult, ScanSummary } from "@/lib/types";
 import { normalizeUsername } from "@/lib/validation";
 import { BrandIcon } from "./BrandIcon";
@@ -48,12 +54,335 @@ const monitoringOwnerTokenKey = "id-doppelganger-monitoring-owner-token";
 const freeDetailOwnerTokenKey = "id-doppelganger-free-detail-owner-token";
 const freeDetailUsedScanIdKey = "id-doppelganger-free-detail-used-scan-id";
 const devAdminTokenKey = "id-doppelganger-dev-admin-token";
-const scanSteps = [
-  "공개 프로필 확인 중",
-  "한국 서비스 확인 중",
-  "SNS·블로그 확인 중",
-  "후보 정리 중"
-];
+const localeStorageKey = "id-doppelganger-locale";
+const scanExperienceCopy = {
+  ko: {
+    brandName: "ID 도플갱어",
+    languageLabel: "언어",
+    languageOptions: { ko: "한국어", en: "English" },
+    brandHomeLabel: "ID 도플갱어 홈",
+    navLabel: "주요 링크",
+    nav: {
+      results: "결과",
+      pricing: "가격",
+      guides: "SEO 가이드",
+      toss: "토스 인앱"
+    },
+    hero: {
+      eyebrow: "아이디 흔적 점검",
+      title: "내 아이디, 어디에 남아 있을까?",
+      description: "자주 쓰는 아이디를 입력하면 공개 프로필 흔적을 바로 찾아 보여줘요.",
+      safetyLabel: "안전 정책",
+      trust: ["실명 검색 미지원", "전화번호·이메일 차단", "동일인 판정 안 함"]
+    },
+    form: {
+      label: "아이디",
+      ariaLabel: "아이디 입력",
+      placeholder: "아이디만 입력",
+      scanLabel: "아이디 점검",
+      acknowledgement: "정당한 목적으로 공개 아이디 사용 현황을 점검해요.",
+      safetyNote: "실명, 전화번호, 이메일 검색은 지원하지 않아요. 같은 사람이라고 단정하지 않아요.",
+      withoutAt: (value: string) => `@ 없이 ${value}로 점검돼요.`,
+      submit: "내 아이디 흔적 찾기",
+      submitting: "찾는 중"
+    },
+    scanSteps: ["공개 프로필 확인 중", "한국 서비스 확인 중", "SNS·블로그 확인 중", "후보 정리 중"],
+    results: {
+      heading: (summary: ScanSummary | null) => summary ? `${summary.username}로 찾은 공개 흔적` : "아이디를 입력하면 결과가 바로 떠요",
+      delete: "기록 삭제",
+      emptyTitle: "아직 검색한 아이디가 없어요",
+      sourceBadge: "공개 흔적",
+      previewTitle: (summary: ScanSummary) =>
+        summary.foundCount > 0 ? `${summary.username}가 남아 있는 곳` : `${summary.username} 공개 흔적 없음`,
+      metricsLabel: "결과 규모",
+      visible: "먼저 공개",
+      locked: "잠긴 후보",
+      korea: "한국",
+      nextActions: "다음 작업",
+      shareCard: "공유 카드 저장",
+      copySummary: "결과 요약 복사",
+      monitoringAdd: "월간 재점검에 넣기",
+      scanAgain: "다른 아이디 점검",
+      analysisLabel: "점검 보조 분석",
+      interpretation: "결과 해석",
+      checkedPlatforms: "검사 플랫폼",
+      failedChecks: "확인 실패",
+      koreanServices: "한국 서비스",
+      countries: "국가별 분포",
+      categories: "카테고리별 분포",
+      score: "점수",
+      rarity: "희소성",
+      exposure: "노출도",
+      impersonation: "사칭 가능성",
+      cleanup: "방치 계정 위험"
+    },
+    preview: {
+      fullReport: "정밀 리포트 열기",
+      checkout: "전체 리포트 보기",
+      noResults: "무료 점검에서 바로 보이는 공개 흔적이 없어요.",
+      loading: "상세 결과 확인 중",
+      lockedLabel: "잠긴 상세 결과",
+      lockedResult: (index: number) => `공개 계정 후보 #${index}`,
+      lockedDescription: "URL, 위험도, 정리 가이드 잠김",
+      fullOpen: (count: number) => `${count}개 상세 결과가 열렸어요.`,
+      freeUsedLead: "1회 무료 상세 결과를 이미 사용했어요. ",
+      lockedCount: (count: number) => `상세 URL ${count}개 잠김`,
+      ordering: "주문 만드는 중",
+      foundRank: (index: number) => `#${index} 발견됨`,
+      candidateAria: (platform: string) => `${platform} 공개 계정 후보`,
+      metadataAria: (platform: string) => `${platform} 메타데이터`,
+      maskedAria: (platform: string) => `${platform} 잠긴 상세 URL 미리보기`,
+      lockedUrlFallback: "상세 URL 잠김",
+      lockCopy: "플랫폼 후보는 먼저 공개하고, 정확한 URL과 정리 가이드는 전체 리포트에서 열려요."
+    },
+    pricing: {
+      title: "가격",
+      freeTitle: "무료",
+      freePrice: "0원",
+      freeItems: ["빠른 점검", "후보 카드 미리보기", "잠긴 URL 미리보기"],
+      reportTitle: "정밀 리포트",
+      reportPrice: "2,900원",
+      reportItems: ["전체 결과 URL", "위험도 분석", "HTML/PDF 리포트"],
+      monitoringTitle: "월간 모니터링",
+      monitoringPrice: "3,900원/월",
+      monitoringItems: ["월 1회 자동 재점검", "새 후보 알림", "아이디 3개 모니터링"]
+    },
+    monitoring: {
+      title: "월간 자동 재점검",
+      inputLabel: "모니터링할 아이디",
+      placeholder: "쉼표로 여러 아이디 입력",
+      saving: "등록 중",
+      submit: "월간 재점검 등록",
+      statusTitle: "모니터링 상태",
+      nextRun: "다음 자동 재점검",
+      lastRun: "최근 재점검",
+      noneYet: "아직 없음",
+      cancel: "모니터링 해지",
+      empty: "아직 등록된 월간 모니터링이 없어요. 무료 점검 후 같은 아이디를 바로 등록할 수 있어요."
+    },
+    history: {
+      title: "최근 검색한 아이디",
+      empty: "이 브라우저에 저장된 검색 기록이 없어요.",
+      meta: (foundCount: number, rarityScore: number) => `후보 ${foundCount}개 · 희소성 ${rarityScore}점`,
+      restoreAria: (username: string) => `${username} 결과 다시 보기`,
+      deleteAria: (username: string) => `${username} 기록 삭제`,
+      restore: "다시 보기",
+      delete: "삭제"
+    },
+    faq: {
+      title: "FAQ",
+      items: [
+        ["이게 사람 찾기인가요?", "아니요. 아이디 문자열의 공개 사용 현황만 확인해요."],
+        ["결과가 모두 같은 사람인가요?", "아니요. 동일인 여부를 판정하지 않아요."],
+        ["검색 기록을 지울 수 있나요?", "네. 무료 기록은 즉시 삭제할 수 있어요."]
+      ]
+    },
+    footer: {
+      privacy: "개인정보처리방침",
+      terms: "이용약관",
+      responsibleUse: "책임 있는 사용"
+    },
+    detailLabels: {
+      adminFull: "어드민 전체 결과",
+      adminFullDescription: "개발자 테스트 모드로 결제 없이 전체 결과를 보고 있어요.",
+      freePreview: "무료 미리보기",
+      freeDetail: "1회 무료 상세 결과",
+      freeDetailAgain: "1회 무료 상세 결과 다시 보기",
+      fullOpen: "전체 결과 열림",
+      lockedUrl: "상세 URL 잠김"
+    },
+    sourceReport: {
+      title: "원본 HTML 리포트",
+      open: "새 탭으로 보기",
+      save: "HTML 저장",
+      iframeTitle: "원본 HTML 리포트 미리보기"
+    },
+    fullReport: {
+      title: "전체 리포트",
+      description: "발견 플랫폼, URL, 위험도, 조치 가이드를 확인하세요.",
+      download: "HTML 리포트 다운로드"
+    },
+    copyMessages: {
+      copied: "공유용 요약을 복사했어요.",
+      failed: "복사하지 못했어요. 브라우저 권한을 확인해 주세요."
+    },
+    devAdmin: {
+      activeTitle: "개발자 테스트 모드",
+      activeDescription: "스캔 제한과 결제 잠금 없이 전체 결과를 확인합니다.",
+      logout: "로그아웃",
+      loginTitle: "개발자 테스트 로그인",
+      summaryHint: "필요할 때만 펼치기",
+      defaultAccount: "로컬 테스트 기본 계정은 admin / admin 입니다.",
+      usernameLabel: "개발자 아이디",
+      passwordLabel: "개발자 비밀번호",
+      passwordPlaceholder: "비밀번호",
+      login: "로그인"
+    }
+  },
+  en: {
+    brandName: "ID Doppelganger",
+    languageLabel: "Language",
+    languageOptions: { ko: "한국어", en: "English" },
+    brandHomeLabel: "ID Doppelganger home",
+    navLabel: "Primary links",
+    nav: {
+      results: "Results",
+      pricing: "Pricing",
+      guides: "Guides",
+      toss: "Toss mini app"
+    },
+    hero: {
+      eyebrow: "Public username exposure check",
+      title: "Where is your username still public?",
+      description: "Enter one username and see the public profile traces it leaves behind.",
+      safetyLabel: "Safety policy",
+      trust: ["No real-name search", "Phone and email blocked", "No identity matching"]
+    },
+    form: {
+      label: "Username",
+      ariaLabel: "Username input",
+      placeholder: "Enter username only",
+      scanLabel: "Username check",
+      acknowledgement: "I am checking public username usage for a legitimate purpose.",
+      safetyNote: "Real-name, phone, and email search are not supported. We do not claim accounts belong to the same person.",
+      withoutAt: (value: string) => `We'll check ${value} without the @ sign.`,
+      submit: "Find my username traces",
+      submitting: "Checking"
+    },
+    scanSteps: ["Checking public profiles", "Checking regional services", "Checking social and blogs", "Organizing matches"],
+    results: {
+      heading: (summary: ScanSummary | null) => summary ? `Public traces found for ${summary.username}` : "Enter a username to see results",
+      delete: "Delete record",
+      emptyTitle: "No username searched yet",
+      sourceBadge: "Public trace",
+      previewTitle: (summary: ScanSummary) =>
+        summary.foundCount > 0 ? `Where ${summary.username} shows up` : `No public traces for ${summary.username}`,
+      metricsLabel: "Result size",
+      visible: "Shown first",
+      locked: "Locked matches",
+      korea: "Korea",
+      nextActions: "Next actions",
+      shareCard: "Save share card",
+      copySummary: "Copy result summary",
+      monitoringAdd: "Add to monthly check",
+      scanAgain: "Check another username",
+      analysisLabel: "Supporting analysis",
+      interpretation: "Result interpretation",
+      checkedPlatforms: "Checked platforms",
+      failedChecks: "Failed checks",
+      koreanServices: "Korean services",
+      countries: "Country distribution",
+      categories: "Category distribution",
+      score: "Score",
+      rarity: "Rarity",
+      exposure: "Exposure",
+      impersonation: "Impersonation risk",
+      cleanup: "Dormant account risk"
+    },
+    preview: {
+      fullReport: "Open detailed report",
+      checkout: "View full report",
+      noResults: "No public account candidates were found in the free check.",
+      loading: "Checking detailed access",
+      lockedLabel: "Locked detailed results",
+      lockedResult: (index: number) => `Public account candidate #${index}`,
+      lockedDescription: "URL, risk, and cleanup guide locked",
+      fullOpen: (count: number) => `${count} detailed results are open.`,
+      freeUsedLead: "You already used the one-time free detailed result. ",
+      lockedCount: (count: number) => `${count} detailed URLs locked`,
+      ordering: "Creating order",
+      foundRank: (index: number) => `#${index} found`,
+      candidateAria: (platform: string) => `${platform} public account candidate`,
+      metadataAria: (platform: string) => `${platform} metadata`,
+      maskedAria: (platform: string) => `${platform} locked URL preview`,
+      lockedUrlFallback: "Detailed URL locked",
+      lockCopy: "Candidates are shown first; exact URLs and cleanup guidance open in the full report."
+    },
+    pricing: {
+      title: "Pricing",
+      freeTitle: "Free",
+      freePrice: "$0",
+      freeItems: ["Quick check", "Candidate card preview", "Locked URL preview"],
+      reportTitle: "Detailed report",
+      reportPrice: "$2.99",
+      reportItems: ["Full result URLs", "Risk analysis", "HTML/PDF report"],
+      monitoringTitle: "Monthly monitoring",
+      monitoringPrice: "$3.99/mo",
+      monitoringItems: ["Monthly automatic recheck", "New match alerts", "Monitor 3 usernames"]
+    },
+    monitoring: {
+      title: "Monthly automatic recheck",
+      inputLabel: "Usernames to monitor",
+      placeholder: "Enter multiple usernames with commas",
+      saving: "Saving",
+      submit: "Start monthly recheck",
+      statusTitle: "Monitoring status",
+      nextRun: "Next automatic recheck",
+      lastRun: "Last recheck",
+      noneYet: "Not yet",
+      cancel: "Cancel monitoring",
+      empty: "No monthly monitoring is registered yet. You can add the same username right after a free check."
+    },
+    history: {
+      title: "Recent usernames",
+      empty: "No search history is saved in this browser.",
+      meta: (foundCount: number, rarityScore: number) => `${foundCount} matches · ${rarityScore} rarity pts`,
+      restoreAria: (username: string) => `View ${username} results again`,
+      deleteAria: (username: string) => `Delete ${username} record`,
+      restore: "View again",
+      delete: "Delete"
+    },
+    faq: {
+      title: "FAQ",
+      items: [
+        ["Is this a people search tool?", "No. It only checks public usage of a username string."],
+        ["Do all results belong to the same person?", "No. We do not determine whether accounts belong to the same person."],
+        ["Can I delete search history?", "Yes. Free records can be deleted immediately."]
+      ]
+    },
+    footer: {
+      privacy: "Privacy Policy",
+      terms: "Terms",
+      responsibleUse: "Responsible Use"
+    },
+    detailLabels: {
+      adminFull: "Admin full results",
+      adminFullDescription: "Developer test mode shows full results without payment.",
+      freePreview: "Free preview",
+      freeDetail: "One-time free detailed result",
+      freeDetailAgain: "View one-time free detailed result again",
+      fullOpen: "Full results open",
+      lockedUrl: "Detailed URL locked"
+    },
+    sourceReport: {
+      title: "Original HTML report",
+      open: "Open in new tab",
+      save: "Save HTML",
+      iframeTitle: "Original HTML report preview"
+    },
+    fullReport: {
+      title: "Full report",
+      description: "Review found platforms, URLs, risk, and action guidance.",
+      download: "Download HTML report"
+    },
+    copyMessages: {
+      copied: "Share summary copied.",
+      failed: "Could not copy. Check browser permissions."
+    },
+    devAdmin: {
+      activeTitle: "Developer test mode",
+      activeDescription: "View full results without scan limits or payment locks.",
+      logout: "Log out",
+      loginTitle: "Developer test login",
+      summaryHint: "Expand only when needed",
+      defaultAccount: "The local test account is admin / admin.",
+      usernameLabel: "Developer username",
+      passwordLabel: "Developer password",
+      passwordPlaceholder: "Password",
+      login: "Log in"
+    }
+  }
+};
 const platformBrandRules: Array<[string, string]> = [
   ["naver", "naver"],
   ["github", "github"],
@@ -69,7 +398,19 @@ const platformBrandRules: Array<[string, string]> = [
   ["dribbble", "dribbble"]
 ];
 
-export function ScanExperience() {
+type ScanExperienceCopy = (typeof scanExperienceCopy)[Locale];
+type LocalizedLabelSets = {
+  category: Record<string, string>;
+  country: Record<string, string>;
+  risk: Record<string, string>;
+};
+
+function isLocale(value: string | null | undefined): value is Locale {
+  return value === "ko" || value === "en";
+}
+
+export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {}) {
+  const [locale, setLocale] = useState<Locale>(initialLocale ?? "ko");
   const [username, setUsername] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -89,8 +430,27 @@ export function ScanExperience() {
   const [devAdminUsername, setDevAdminUsername] = useState("admin");
   const [devAdminPassword, setDevAdminPassword] = useState("");
   const [devAdminMessage, setDevAdminMessage] = useState<string | null>(null);
+  const copy = scanExperienceCopy[locale];
+  const localizedLabels = {
+    category: categoryLabelsByLocale[locale],
+    country: countryLabelsByLocale[locale],
+    risk: riskLabelsByLocale[locale]
+  };
 
   useEffect(() => {
+    const queryLocale = new URLSearchParams(window.location.search).get("lang");
+    const routeLocale = window.location.pathname === "/en" || window.location.pathname.startsWith("/en/") ? "en" : null;
+    const savedLocale = window.localStorage.getItem(localeStorageKey);
+    const nextLocale = isLocale(queryLocale)
+      ? queryLocale
+      : isLocale(routeLocale)
+        ? routeLocale
+        : isLocale(savedLocale)
+          ? savedLocale
+          : initialLocale ?? "ko";
+
+    setLocale(nextLocale);
+
     const saved = window.localStorage.getItem("id-doppelganger-history");
     if (saved) {
       setHistory(JSON.parse(saved) as StoredScan[]);
@@ -129,18 +489,23 @@ export function ScanExperience() {
         }
       })
       .catch(() => undefined);
-  }, []);
+  }, [initialLocale]);
+
+  useEffect(() => {
+    document.documentElement.lang = locale === "en" ? "en" : "ko";
+    window.localStorage.setItem(localeStorageKey, locale);
+  }, [locale]);
 
   useEffect(() => {
     if (!isScanning) return;
 
     const timer = window.setInterval(() => {
       setProgress((value) => Math.min(96, value + 7));
-      setStepIndex((value) => Math.min(scanSteps.length - 1, value + 1));
+      setStepIndex((value) => Math.min(copy.scanSteps.length - 1, value + 1));
     }, 420);
 
     return () => window.clearInterval(timer);
-  }, [isScanning]);
+  }, [copy.scanSteps.length, isScanning]);
 
   useEffect(() => {
     if (!summary) return;
@@ -152,8 +517,17 @@ export function ScanExperience() {
     return () => window.clearTimeout(timer);
   }, [summary?.scanId]);
 
-  const usernameValidationMessage = useMemo(() => getUsernameValidationMessage(username), [username]);
+  const usernameValidationMessage = useMemo(() => getUsernameValidationMessage(username, locale), [locale, username]);
   const canSubmit = username.trim().length >= 3 && !usernameValidationMessage && acknowledged && !isScanning;
+
+  function changeLocale(nextLocale: Locale) {
+    setLocale(nextLocale);
+
+    const targetPath = nextLocale === "en" ? "/en" : "/";
+    if (window.location.pathname === "/" || window.location.pathname === "/en") {
+      window.history.replaceState(null, "", targetPath);
+    }
+  }
 
   async function submitScan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -331,42 +705,41 @@ export function ScanExperience() {
   return (
     <main className="app-shell">
       <header className="container topbar">
-        <a className="brand-mark" href="/" aria-label="ID 도플갱어 홈">
+        <a className="brand-mark" href={locale === "en" ? "/en" : "/"} aria-label={copy.brandHomeLabel}>
           <BrandIcon />
-          <span>ID 도플갱어</span>
+          <span>{copy.brandName}</span>
         </a>
-        <nav className="nav-links" aria-label="주요 링크">
-          <a href="#results">결과</a>
-          <a href="#pricing">가격</a>
-          <a href="/guides/id-rarity-test">SEO 가이드</a>
-          <a href="/toss">토스 인앱</a>
-        </nav>
+        <div className="topbar-actions">
+          <nav className="nav-links" aria-label={copy.navLabel}>
+            <a href="#results">{copy.nav.results}</a>
+            <a href="#pricing">{copy.nav.pricing}</a>
+            <a href="/guides/id-rarity-test">{copy.nav.guides}</a>
+            <a href="/toss">{copy.nav.toss}</a>
+          </nav>
+          <LanguageSwitch copy={copy} locale={locale} onChange={changeLocale} />
+        </div>
       </header>
 
       <section id="scan" className="container hero" aria-labelledby="hero-title">
         <div className="hero-copy">
           <span className="eyebrow">
             <Sparkles size={15} aria-hidden />
-            공개 아이디 사용 현황 테스트
+            {copy.hero.eyebrow}
           </span>
-          <h1 id="hero-title">내 아이디, 전세계에서 나만 쓰는 줄 알았어?</h1>
+          <h1 id="hero-title">{copy.hero.title}</h1>
           <p>
-            아이디 하나로 공개 계정 후보를 확인하세요.
+            {copy.hero.description}
           </p>
-          <div className="trust-strip" aria-label="안전 정책">
-            <span className="trust-chip">
-              <ShieldCheck size={15} aria-hidden /> 실명 검색 미지원
-            </span>
-            <span className="trust-chip">
-              <ShieldCheck size={15} aria-hidden /> 전화번호·이메일 차단
-            </span>
-            <span className="trust-chip">
-              <ShieldCheck size={15} aria-hidden /> 동일인 판정 안 함
-            </span>
+          <div className="trust-strip" aria-label={copy.hero.safetyLabel}>
+            {copy.hero.trust.map((item) => (
+              <span className="trust-chip" key={item}>
+                <ShieldCheck size={15} aria-hidden /> {item}
+              </span>
+            ))}
           </div>
         </div>
 
-        <form className="scan-panel" onSubmit={submitScan} aria-label="아이디 점검">
+        <form className="scan-panel" onSubmit={submitScan} aria-label={copy.form.scanLabel}>
           <div className="radar" aria-hidden>
             <div className="radar-core">
               {isScanning ? `${progress}%` : username.trim() || "username"}
@@ -374,13 +747,14 @@ export function ScanExperience() {
           </div>
 
           <div className="field-stack">
-            <label htmlFor="username">아이디 입력</label>
+            <label htmlFor="username">{copy.form.label}</label>
             <input
               id="username"
+              aria-label={copy.form.ariaLabel}
               className="id-input"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="아이디만 입력"
+              placeholder={copy.form.placeholder}
               autoComplete="off"
               inputMode="text"
               maxLength={30}
@@ -390,7 +764,7 @@ export function ScanExperience() {
                 {usernameValidationMessage}
               </p>
             ) : username.trim().startsWith("@") ? (
-              <p className="field-help">@ 없이 {username.trim().replace(/^@+/, "")}로 점검돼요.</p>
+              <p className="field-help">{copy.form.withoutAt(username.trim().replace(/^@+/, ""))}</p>
             ) : null}
           </div>
 
@@ -400,14 +774,14 @@ export function ScanExperience() {
               checked={acknowledged}
               onChange={(event) => setAcknowledged(event.target.checked)}
             />
-            <span>본인 아이디, 브랜드명, 사용 예정 닉네임 등 정당한 목적으로 검색해요.</span>
+            <span>{copy.form.acknowledgement}</span>
           </label>
 
           {isScanning ? (
             <div className="scan-loading-card" role="status" aria-live="polite">
               <div className="scan-loading-copy">
                 <ScanEyeLoader />
-                <p>{scanSteps[stepIndex]}</p>
+                <p>{copy.scanSteps[stepIndex]}</p>
               </div>
               <strong>{progress}%</strong>
             </div>
@@ -419,6 +793,11 @@ export function ScanExperience() {
             </div>
           ) : null}
 
+          <button className="primary-button" disabled={!canSubmit} type="submit">
+            {isScanning ? <ScanEyeLoader compact /> : <Search size={18} aria-hidden />}
+            {isScanning ? copy.form.submitting : copy.form.submit}
+          </button>
+
           {devAdminEnabled ? (
             <DevAdminPanel
               isActive={Boolean(devAdminToken)}
@@ -429,28 +808,28 @@ export function ScanExperience() {
               setPassword={setDevAdminPassword}
               setUsername={setDevAdminUsername}
               username={devAdminUsername}
+              copy={copy}
             />
           ) : null}
-
-          <button className="primary-button" disabled={!canSubmit} type="submit">
-            {isScanning ? <ScanEyeLoader compact /> : <Search size={18} aria-hidden />}
-            {isScanning ? "찾는 중" : "공개 후보 확인"}
-          </button>
         </form>
+
+        <p className="web-safety-note">
+          {copy.form.safetyNote}
+        </p>
       </section>
 
-      <section id="results" className="section light-section">
+      <section id="results" className="section light-section" data-has-summary={summary ? "true" : "false"}>
         <div className="container">
           <div className="section-header">
             <div>
               <h2 className="result-heading" ref={resultsTitleRef} tabIndex={-1}>
-                {summary ? `${summary.username}에서 발견된 공개 후보` : "아이디를 입력하면 결과가 바로 떠요"}
+                {copy.results.heading(summary)}
               </h2>
             </div>
             {summary ? (
               <button className="danger-button" type="button" onClick={() => deleteScan(summary.scanId)}>
                 <Trash2 size={17} aria-hidden />
-                기록 삭제
+                {copy.results.delete}
               </button>
             ) : null}
           </div>
@@ -462,9 +841,12 @@ export function ScanExperience() {
               onScanAgain={resetScanForNext}
               resultPanelRef={resultPanelRef}
               summary={summary}
+              copy={copy}
+              labels={localizedLabels}
+              locale={locale}
             />
           ) : (
-            <EmptyResultPreview />
+            <EmptyResultPreview copy={copy} />
           )}
         </div>
       </section>
@@ -473,21 +855,21 @@ export function ScanExperience() {
         <div className="container">
           <div className="section-header">
             <div>
-              <h2>가격</h2>
+              <h2>{copy.pricing.title}</h2>
             </div>
           </div>
           <div className="pricing-grid">
-            <PricingCard title="무료" price="0원" items={["빠른 점검", "후보 카드 미리보기", "잠긴 URL 미리보기"]} />
+            <PricingCard title={copy.pricing.freeTitle} price={copy.pricing.freePrice} items={copy.pricing.freeItems} />
             <PricingCard
               featured
-              title="정밀 리포트"
-              price="2,900원"
-              items={["전체 결과 URL", "위험도 분석", "HTML/PDF 리포트"]}
+              title={copy.pricing.reportTitle}
+              price={copy.pricing.reportPrice}
+              items={copy.pricing.reportItems}
             />
             <PricingCard
-              title="월간 모니터링"
-              price="3,900원/월"
-              items={["월 1회 자동 재점검", "새 후보 알림", "아이디 3개 모니터링"]}
+              title={copy.pricing.monitoringTitle}
+              price={copy.pricing.monitoringPrice}
+              items={copy.pricing.monitoringItems}
             />
           </div>
         </div>
@@ -498,24 +880,24 @@ export function ScanExperience() {
           <section className="panel" aria-labelledby="monitoring-title">
             <div className="section-header">
               <div>
-                <h2 id="monitoring-title">월간 자동 재점검</h2>
+                <h2 id="monitoring-title">{copy.monitoring.title}</h2>
               </div>
             </div>
             <form className="monitoring-form" onSubmit={submitMonitoring}>
               <div className="field-stack">
-                <label htmlFor="monitoring-usernames">모니터링할 아이디</label>
+                <label htmlFor="monitoring-usernames">{copy.monitoring.inputLabel}</label>
                 <input
                   id="monitoring-usernames"
                   className="id-input"
                   value={monitoringInput}
                   onChange={(event) => setMonitoringInput(event.target.value)}
-                  placeholder={summary?.username ?? (username.trim() || "쉼표로 여러 아이디 입력")}
+                  placeholder={summary?.username ?? (username.trim() || copy.monitoring.placeholder)}
                   autoComplete="off"
                 />
               </div>
               <button className="primary-button" type="submit" disabled={isSavingMonitoring}>
                 <Bell size={18} aria-hidden />
-                {isSavingMonitoring ? "등록 중" : "월간 재점검 등록"}
+                {isSavingMonitoring ? copy.monitoring.saving : copy.monitoring.submit}
               </button>
             </form>
             {monitoringMessage ? (
@@ -526,7 +908,7 @@ export function ScanExperience() {
           </section>
 
           <section className="panel" aria-labelledby="monitoring-status-title">
-            <h2 id="monitoring-status-title">모니터링 상태</h2>
+            <h2 id="monitoring-status-title">{copy.monitoring.statusTitle}</h2>
             {monitoring ? (
               <div className="monitoring-status">
                 <div className="monitoring-chip-list">
@@ -537,21 +919,25 @@ export function ScanExperience() {
                   ))}
                 </div>
                 <div className="mini-card">
-                  <p>다음 자동 재점검</p>
-                  <strong>{new Date(monitoring.nextRunAt).toLocaleDateString("ko-KR")}</strong>
+                  <p>{copy.monitoring.nextRun}</p>
+                  <strong>{new Date(monitoring.nextRunAt).toLocaleDateString(locale === "en" ? "en-US" : "ko-KR")}</strong>
                 </div>
                 <div className="mini-card">
-                  <p>최근 재점검</p>
-                  <strong>{monitoring.lastRunAt ? new Date(monitoring.lastRunAt).toLocaleDateString("ko-KR") : "아직 없음"}</strong>
+                  <p>{copy.monitoring.lastRun}</p>
+                  <strong>
+                    {monitoring.lastRunAt
+                      ? new Date(monitoring.lastRunAt).toLocaleDateString(locale === "en" ? "en-US" : "ko-KR")
+                      : copy.monitoring.noneYet}
+                  </strong>
                 </div>
                 <button className="danger-button" type="button" onClick={deleteMonitoring}>
                   <Trash2 size={17} aria-hidden />
-                  모니터링 해지
+                  {copy.monitoring.cancel}
                 </button>
               </div>
             ) : (
               <p style={{ color: "#6b7684", lineHeight: 1.65, margin: "14px 0 0" }}>
-                아직 등록된 월간 모니터링이 없어요. 무료 점검 후 같은 아이디를 바로 등록할 수 있어요.
+                {copy.monitoring.empty}
               </p>
             )}
           </section>
@@ -561,37 +947,37 @@ export function ScanExperience() {
       <section className="section light-section">
         <div className="container results-grid">
           <section className="panel" aria-labelledby="history-title">
-            <h2 id="history-title">최근 검색한 아이디</h2>
+            <h2 id="history-title">{copy.history.title}</h2>
             <div className="history-list" style={{ marginTop: 14 }}>
               {history.length === 0 ? (
-                <p style={{ color: "#6b7684", margin: 0 }}>이 브라우저에 저장된 검색 기록이 없어요.</p>
+                <p style={{ color: "#6b7684", margin: 0 }}>{copy.history.empty}</p>
               ) : (
                 history.map((item) => (
                   <div className="history-row" key={item.scanId}>
                     <div>
                       <strong>{item.username}</strong>
                       <span>
-                        후보 {item.foundCount}개 · 희소성 {item.rarityScore}점
+                        {copy.history.meta(item.foundCount, item.rarityScore)}
                       </span>
                     </div>
                     <div className="history-row-actions">
                       <button
-                        aria-label={`${item.username} 결과 다시 보기`}
+                        aria-label={copy.history.restoreAria(item.username)}
                         className="ghost-button"
                         type="button"
                         onClick={() => restoreScanFromHistory(item)}
                       >
                         <History size={16} aria-hidden />
-                        다시 보기
+                        {copy.history.restore}
                       </button>
                       <button
-                        aria-label={`${item.username} 기록 삭제`}
+                        aria-label={copy.history.deleteAria(item.username)}
                         className="ghost-button"
                         type="button"
                         onClick={() => deleteScan(item.scanId)}
                       >
                         <Trash2 size={16} aria-hidden />
-                        삭제
+                        {copy.history.delete}
                       </button>
                     </div>
                   </div>
@@ -600,20 +986,14 @@ export function ScanExperience() {
             </div>
           </section>
           <section className="panel" aria-labelledby="faq-title">
-            <h2 id="faq-title">FAQ</h2>
+            <h2 id="faq-title">{copy.faq.title}</h2>
             <ul className="faq-list" style={{ marginTop: 14 }}>
-              <li className="faq-item">
-                <strong>이게 사람 찾기인가요?</strong>
-                <span>아니요. 아이디 문자열의 공개 사용 현황만 확인해요.</span>
-              </li>
-              <li className="faq-item">
-                <strong>결과가 모두 같은 사람인가요?</strong>
-                <span>아니요. 동일인 여부를 판정하지 않아요.</span>
-              </li>
-              <li className="faq-item">
-                <strong>검색 기록을 지울 수 있나요?</strong>
-                <span>네. 무료 기록은 즉시 삭제할 수 있어요.</span>
-              </li>
+              {copy.faq.items.map(([question, answer]) => (
+                <li className="faq-item" key={question}>
+                  <strong>{question}</strong>
+                  <span>{answer}</span>
+                </li>
+              ))}
             </ul>
           </section>
         </div>
@@ -621,11 +1001,11 @@ export function ScanExperience() {
 
       <footer className="footer">
         <div className="container">
-          <span>© 2026 ID 도플갱어</span>
+          <span>© 2026 {copy.brandName}</span>
           <div className="footer-links">
-            <a href="/privacy">개인정보처리방침</a>
-            <a href="/terms">이용약관</a>
-            <a href="/responsible-use">책임 있는 사용</a>
+            <a href="/privacy">{copy.footer.privacy}</a>
+            <a href="/terms">{copy.footer.terms}</a>
+            <a href="/responsible-use">{copy.footer.responsibleUse}</a>
           </div>
         </div>
       </footer>
@@ -634,13 +1014,19 @@ export function ScanExperience() {
 }
 
 function ResultDashboard({
+  copy,
   devAdminToken,
+  labels,
+  locale,
   summary,
   onPrepareMonitoring,
   onScanAgain,
   resultPanelRef
 }: {
+  copy: ScanExperienceCopy;
   devAdminToken: string | null;
+  labels: LocalizedLabelSets;
+  locale: Locale;
   summary: ScanSummary;
   onPrepareMonitoring: () => void;
   onScanAgain: () => void;
@@ -651,7 +1037,7 @@ function ResultDashboard({
   const [detailAccess, setDetailAccess] = useState<DetailAccessState | null>(null);
   const [reportError, setReportError] = useState<string | null>(null);
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
-  const activeAccess = detailAccess ?? previewAccessFromSummary(summary);
+  const activeAccess = detailAccess ?? previewAccessFromSummary(summary, copy);
   const visibleResultCount = activeAccess.results.length;
   const lockedResultCount = activeAccess.lockedCount;
   const distribution = useMemo(() => {
@@ -669,13 +1055,13 @@ function ResultDashboard({
 
       try {
         const nextAccess = devAdminToken
-          ? await loadDevAdminResults(summary.scanId, devAdminToken)
-          : await loadFirstFreeOrPreviewResults(summary.scanId);
+          ? await loadDevAdminResults(summary.scanId, devAdminToken, copy)
+          : await loadFirstFreeOrPreviewResults(summary.scanId, copy);
 
         if (!cancelled) setDetailAccess(nextAccess);
       } catch (error) {
         if (!cancelled) {
-          setDetailAccess(previewAccessFromSummary(summary));
+          setDetailAccess(previewAccessFromSummary(summary, copy));
           setReportError(error instanceof Error ? error.message : "결과 접근 상태를 확인하지 못했어요.");
         }
       } finally {
@@ -688,7 +1074,7 @@ function ResultDashboard({
     return () => {
       cancelled = true;
     };
-  }, [devAdminToken, summary]);
+  }, [copy, devAdminToken, summary]);
 
   async function openFullReport() {
     if (detailAccess?.access === "FULL" && detailAccess.reportToken) {
@@ -725,7 +1111,7 @@ function ResultDashboard({
   }
 
   async function copyShareSummary() {
-    const shareText = buildShareSummary(summary);
+    const shareText = buildShareSummary(summary, locale);
 
     try {
       if (navigator.clipboard?.writeText) {
@@ -733,9 +1119,9 @@ function ResultDashboard({
       } else {
         copyTextFallback(shareText);
       }
-      setCopyMessage("공유용 요약을 복사했어요.");
+      setCopyMessage(copy.copyMessages.copied);
     } catch {
-      setCopyMessage("복사하지 못했어요. 브라우저 권한을 확인해 주세요.");
+      setCopyMessage(copy.copyMessages.failed);
     }
   }
 
@@ -745,33 +1131,33 @@ function ResultDashboard({
         <div className="result-first-header">
           <div>
             <span className="source-badge" data-source={summary.scanSource ?? "LOCAL_FALLBACK"}>
-              공개 후보
+              {copy.results.sourceBadge}
             </span>
             <h2 id="preview-title">
-              {summary.foundCount > 0
-                ? `${summary.username}에서 지금 잡힌 후보`
-                : `${summary.username} 공개 후보 없음`}
+              {copy.results.previewTitle(summary)}
             </h2>
           </div>
         </div>
         <ResultPreview
+          copy={copy}
           detailAccess={activeAccess}
           isLoadingFull={isLoadingFull}
           isLoadingResults={isLoadingDetailAccess}
+          labels={labels}
           onOpenFullReport={openFullReport}
         />
-        <div className="result-first-metrics" aria-label="결과 규모">
+        <div className="result-first-metrics" aria-label={copy.results.metricsLabel}>
           <span>
             <strong>{visibleResultCount}</strong>
-            먼저 공개
+            {copy.results.visible}
           </span>
           <span>
             <strong>{lockedResultCount}</strong>
-            잠긴 후보
+            {copy.results.locked}
           </span>
           <span>
             <strong>{summary.countryDistribution.KR ?? 0}</strong>
-            한국
+            {copy.results.korea}
           </span>
         </div>
         {reportError ? (
@@ -781,7 +1167,7 @@ function ResultDashboard({
         ) : null}
       </section>
 
-      <section className="action-strip" aria-label="다음 작업">
+      <section className="action-strip" aria-label={copy.results.nextActions}>
         <div>
           <div className="action-strip-title">
             <strong>{summary.username}</strong>
@@ -804,53 +1190,53 @@ function ResultDashboard({
             href={`/api/scans/${summary.scanId}/share.png`}
           >
             <Download size={16} aria-hidden />
-            공유 카드 저장
+            {copy.results.shareCard}
           </a>
           <button className="secondary-button" type="button" onClick={copyShareSummary}>
             <Copy size={16} aria-hidden />
-            결과 요약 복사
+            {copy.results.copySummary}
           </button>
           <button className="secondary-button" type="button" onClick={onPrepareMonitoring}>
             <Bell size={16} aria-hidden />
-            월간 재점검에 넣기
+            {copy.results.monitoringAdd}
           </button>
           <button className="ghost-button" type="button" onClick={onScanAgain}>
             <Search size={16} aria-hidden />
-            다른 아이디 점검
+            {copy.results.scanAgain}
           </button>
         </div>
       </section>
 
       {detailAccess?.access === "FULL" && detailAccess.maigretReportAvailable ? (
-        <OriginalHtmlReportPanel detailAccess={detailAccess} />
+        <OriginalHtmlReportPanel copy={copy} detailAccess={detailAccess} />
       ) : null}
 
-      <div className="results-grid analysis-grid" aria-label="점검 보조 분석">
+      <div className="results-grid analysis-grid" aria-label={copy.results.analysisLabel}>
         <section className="panel" aria-labelledby="distribution-title">
-          <h2 id="distribution-title">결과 해석</h2>
+          <h2 id="distribution-title">{copy.results.interpretation}</h2>
           <div className="distribution-grid" style={{ marginTop: 14 }}>
-            <MiniMetric label="검사 플랫폼" value={`${summary.checkedCount}개`} />
-            <MiniMetric label="확인 실패" value={`${summary.failedRate}%`} />
-            <MiniMetric label="한국 서비스" value={`${summary.countryDistribution.KR ?? 0}개`} />
+            <MiniMetric label={copy.results.checkedPlatforms} value={formatCount(summary.checkedCount, locale)} />
+            <MiniMetric label={copy.results.failedChecks} value={`${summary.failedRate}%`} />
+            <MiniMetric label={copy.results.koreanServices} value={formatCount(summary.countryDistribution.KR ?? 0, locale)} />
           </div>
-          <Distribution title="국가별 분포" entries={distribution.countries} labelMap={countryLabels} />
-          <Distribution title="카테고리별 분포" entries={distribution.categories} labelMap={categoryLabels} />
+          <Distribution locale={locale} title={copy.results.countries} entries={distribution.countries} labelMap={labels.country} />
+          <Distribution locale={locale} title={copy.results.categories} entries={distribution.categories} labelMap={labels.category} />
         </section>
 
         <section className="panel" aria-labelledby="score-title">
-          <h2 id="score-title">점수</h2>
+          <h2 id="score-title">{copy.results.score}</h2>
           <div className="score-stack" style={{ marginTop: 14 }}>
             <div className="score-main compact-score">
               <div style={{ textAlign: "center" }}>
                 <strong>{summary.doppelgangerScore}</strong>
-                <span>점</span>
+                <span>{locale === "en" ? "pts" : "점"}</span>
               </div>
             </div>
             <ul className="score-list">
-              <ScoreLine label="희소성" value={summary.rarityScore} />
-              <ScoreLine label="노출도" value={summary.exposureScore} />
-              <ScoreLine label="사칭 가능성" value={summary.impersonationScore} />
-              <ScoreLine label="방치 계정 위험" value={summary.cleanupScore} />
+              <ScoreLine label={copy.results.rarity} locale={locale} value={summary.rarityScore} />
+              <ScoreLine label={copy.results.exposure} locale={locale} value={summary.exposureScore} />
+              <ScoreLine label={copy.results.impersonation} locale={locale} value={summary.impersonationScore} />
+              <ScoreLine label={copy.results.cleanup} locale={locale} value={summary.cleanupScore} />
             </ul>
           </div>
         </section>
@@ -859,25 +1245,56 @@ function ResultDashboard({
   );
 }
 
-function EmptyResultPreview() {
+function LanguageSwitch({
+  copy,
+  locale,
+  onChange
+}: {
+  copy: ScanExperienceCopy;
+  locale: Locale;
+  onChange: (locale: Locale) => void;
+}) {
+  const options: Locale[] = ["ko", "en"];
+
+  return (
+    <div className="language-switch" role="group" aria-label={copy.languageLabel}>
+      {options.map((option) => (
+        <a
+          aria-current={locale === option ? "page" : undefined}
+          data-active={locale === option ? "true" : "false"}
+          href={option === "en" ? "/en" : "/"}
+          key={option}
+          onClick={(event) => {
+            event.preventDefault();
+            onChange(option);
+          }}
+        >
+          {copy.languageOptions[option]}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function EmptyResultPreview({ copy }: { copy: ScanExperienceCopy }) {
   return (
     <div className="dashboard-stack">
       <section className="panel result-first-panel empty-result-panel" aria-label="검색 전 결과 상태">
         <div className="empty-result-icon" aria-hidden>
           <Search size={24} />
         </div>
-        <h2>아직 검색한 아이디가 없어요</h2>
+        <h2>{copy.results.emptyTitle}</h2>
       </section>
     </div>
   );
 }
 
-function ScoreLine({ label, value }: { label: string; value: number }) {
+function ScoreLine({ label, locale, value }: { label: string; locale: Locale; value: number }) {
   return (
     <li className="score-item">
       <span>{label}</span>
       <span className="score-pill" data-tone={scoreTone(value)}>
-        {value}점
+        {formatScore(value, locale)}
       </span>
     </li>
   );
@@ -895,18 +1312,22 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 function Distribution({
   title,
   entries,
-  labelMap
+  labelMap,
+  locale
 }: {
   title: string;
   entries: [string, number][];
   labelMap: Record<string, string>;
+  locale: Locale;
 }) {
+  const displayEntries: [string, number][] = entries.length ? entries : [[locale === "en" ? "None" : "없음", 0]];
+
   return (
     <div style={{ marginTop: 18 }}>
       <h3 style={{ fontSize: 16 }}>{title}</h3>
       <div className="distribution-grid" style={{ marginTop: 10 }}>
-        {(entries.length ? entries : [["없음", 0]]).map(([key, value]) => (
-          <MiniMetric key={key} label={labelMap[key] ?? key} value={`${value}개`} />
+        {displayEntries.map(([key, value]) => (
+          <MiniMetric key={key} label={labelMap[key] ?? key} value={formatCount(value, locale)} />
         ))}
       </div>
     </div>
@@ -914,31 +1335,35 @@ function Distribution({
 }
 
 function ResultPreview({
+  copy,
   detailAccess,
   isLoadingFull,
   isLoadingResults,
+  labels,
   onOpenFullReport
 }: {
+  copy: ScanExperienceCopy;
   detailAccess: DetailAccessState;
   isLoadingFull: boolean;
   isLoadingResults: boolean;
+  labels: LocalizedLabelSets;
   onOpenFullReport: () => void;
 }) {
   const isFullAccess = detailAccess.access === "FULL";
-  const ctaLabel = isFullAccess ? "정밀 리포트 열기" : "전체 리포트 보기";
+  const ctaLabel = isFullAccess ? copy.preview.fullReport : copy.preview.checkout;
   const hiddenCount = Math.max(detailAccess.lockedCount, 0);
-  const paidPreviewLead = detailAccess.label === "무료 미리보기" ? "1회 무료 상세 결과를 이미 사용했어요. " : "";
+  const paidPreviewLead = detailAccess.label === copy.detailLabels.freePreview ? copy.preview.freeUsedLead : "";
   const hasResults = detailAccess.results.length > 0;
 
   return (
     <div className="result-list" data-result-count={detailAccess.results.length}>
       {hasResults ? (
         detailAccess.results.map((result, index) => (
-          <RichResultCard index={index} isFullAccess={isFullAccess} key={result.id} result={result} />
+          <RichResultCard copy={copy} index={index} isFullAccess={isFullAccess} key={result.id} labels={labels} result={result} />
         ))
       ) : (
         <div className="locked-results">
-          <span>무료 점검에서 공개 계정 후보가 발견되지 않았어요.</span>
+          <span>{copy.preview.noResults}</span>
           <CheckCircle2 size={18} aria-hidden />
         </div>
       )}
@@ -946,17 +1371,17 @@ function ResultPreview({
       {isLoadingResults ? (
         <div className="detail-access-status" role="status" aria-live="polite">
           <Radar size={17} aria-hidden />
-          <span>상세 결과 확인 중</span>
+          <span>{copy.preview.loading}</span>
         </div>
       ) : null}
 
       {!isFullAccess && hiddenCount > 0 ? (
-        <div className="locked-mosaic-list" aria-label="잠긴 상세 결과">
+        <div className="locked-mosaic-list" aria-label={copy.preview.lockedLabel}>
           {Array.from({ length: Math.min(5, hiddenCount) }).map((_, index) => (
             <div className="locked-result-mosaic" key={`locked-${index}`}>
               <div className="mosaic-content">
-                <strong>공개 계정 후보 #{detailAccess.results.length + index + 1}</strong>
-                <span>URL, 위험도, 정리 가이드 잠김</span>
+                <strong>{copy.preview.lockedResult(detailAccess.results.length + index + 1)}</strong>
+                <span>{copy.preview.lockedDescription}</span>
               </div>
               <LockKeyhole size={17} aria-hidden />
             </div>
@@ -967,27 +1392,39 @@ function ResultPreview({
       <div className="locked-results" data-open={isFullAccess}>
         <span>
           {isFullAccess
-            ? `${detailAccess.results.length}개 상세 결과가 열렸어요.`
+            ? copy.preview.fullOpen(detailAccess.results.length)
             : hiddenCount > 0
-              ? `${paidPreviewLead}상세 URL ${hiddenCount}개 잠김`
+              ? `${paidPreviewLead}${copy.preview.lockedCount(hiddenCount)}`
               : detailAccess.description}
         </span>
         <button className="secondary-button" type="button" onClick={onOpenFullReport} disabled={isLoadingFull}>
           {isFullAccess ? <Download size={16} aria-hidden /> : <CreditCard size={16} aria-hidden />}
-          {isLoadingFull ? "주문 만드는 중" : ctaLabel}
+          {isLoadingFull ? copy.preview.ordering : ctaLabel}
         </button>
       </div>
     </div>
   );
 }
 
-function RichResultCard({ result, isFullAccess, index = 0 }: { result: ScanResult; isFullAccess: boolean; index?: number }) {
+function RichResultCard({
+  copy,
+  result,
+  isFullAccess,
+  labels,
+  index = 0
+}: {
+  copy: ScanExperienceCopy;
+  result: ScanResult;
+  isFullAccess: boolean;
+  labels: LocalizedLabelSets;
+  index?: number;
+}) {
   const host = hostnameFromUrl(result.url);
   const visibleTags = (result.tags ?? []).slice(0, 4);
   const brandKey = platformBrandKey(result);
 
   return (
-    <article className="rich-result-card" data-brand={brandKey} aria-label={`${result.platform} 공개 계정 후보`}>
+    <article className="rich-result-card" data-brand={brandKey} aria-label={copy.preview.candidateAria(result.platform)}>
       <div className="result-card-media">
         <PlatformIcon result={result} />
         <ResultProfileImage result={result} />
@@ -995,20 +1432,20 @@ function RichResultCard({ result, isFullAccess, index = 0 }: { result: ScanResul
       <div className="result-card-body">
         <div className="result-card-title-row">
           <div>
-            <span className="result-rank-badge">#{index + 1} 발견됨</span>
+            <span className="result-rank-badge">{copy.preview.foundRank(index + 1)}</span>
             <h3>{result.platform}</h3>
             <p>
-              {categoryLabels[result.category]} · {countryLabels[result.country] ?? result.country}
+              {labels.category[result.category] ?? result.category} · {labels.country[result.country] ?? result.country}
               {host ? ` · ${host}` : ""}
             </p>
           </div>
           <span className="risk-badge" data-risk={result.riskLevel}>
-            {riskLabels[result.riskLevel]}
+            {labels.risk[result.riskLevel] ?? result.riskLevel}
           </span>
         </div>
 
         {visibleTags.length > 0 || result.rank || result.httpStatus ? (
-          <div className="result-card-meta" aria-label={`${result.platform} 메타데이터`}>
+          <div className="result-card-meta" aria-label={copy.preview.metadataAria(result.platform)}>
             {result.rank ? <span>Rank {result.rank}</span> : null}
             {result.httpStatus ? <span>HTTP {result.httpStatus}</span> : null}
             {visibleTags.map((tag) => (
@@ -1027,12 +1464,12 @@ function RichResultCard({ result, isFullAccess, index = 0 }: { result: ScanResul
           </>
         ) : (
           <>
-            <div className="masked-url-teaser" aria-label={`${result.platform} 잠긴 상세 URL 미리보기`}>
+            <div className="masked-url-teaser" aria-label={copy.preview.maskedAria(result.platform)}>
               <ExternalLink size={15} aria-hidden />
-              <span>{maskUrlPreview(result.url)}</span>
+              <span>{maskUrlPreview(result.url, copy)}</span>
               <LockKeyhole size={14} aria-hidden />
             </div>
-            <p className="preview-lock-copy">플랫폼 후보는 먼저 공개하고, 정확한 URL과 정리 가이드는 전체 리포트에서 열려요.</p>
+            <p className="preview-lock-copy">{copy.preview.lockCopy}</p>
           </>
         )}
       </div>
@@ -1070,7 +1507,7 @@ function ResultProfileImage({ result }: { result: ScanResult }) {
   );
 }
 
-function OriginalHtmlReportPanel({ detailAccess }: { detailAccess: DetailAccessState }) {
+function OriginalHtmlReportPanel({ copy, detailAccess }: { copy: ScanExperienceCopy; detailAccess: DetailAccessState }) {
   const reportUrl = maigretReportUrlFor(detailAccess);
 
   if (!reportUrl) return null;
@@ -1079,25 +1516,31 @@ function OriginalHtmlReportPanel({ detailAccess }: { detailAccess: DetailAccessS
     <section className="panel source-report-panel" aria-labelledby="source-report-title">
       <div className="source-report-launch">
         <div>
-          <h2 id="source-report-title">원본 HTML 리포트</h2>
+          <h2 id="source-report-title">{copy.sourceReport.title}</h2>
         </div>
         <div className="source-report-actions">
           <a className="secondary-button" href={reportUrl} target="_blank" rel="noopener noreferrer">
             <ExternalLink size={16} aria-hidden />
-            새 탭으로 보기
+            {copy.sourceReport.open}
           </a>
           <a className="ghost-button" download={detailAccess.maigretReportFilename} href={reportUrl}>
             <Download size={16} aria-hidden />
-            HTML 저장
+            {copy.sourceReport.save}
           </a>
         </div>
       </div>
-      <iframe className="source-report-frame" title="원본 HTML 리포트 미리보기" src={reportUrl} loading="lazy" />
+      <iframe className="source-report-frame" title={copy.sourceReport.iframeTitle} src={reportUrl} loading="lazy" />
     </section>
   );
 }
 
 function FullReport({ summary, results }: { summary: ScanSummary; results: ScanResult[] }) {
+  const labels = {
+    category: categoryLabelsByLocale.ko,
+    country: countryLabelsByLocale.ko,
+    risk: riskLabelsByLocale.ko
+  };
+
   return (
     <section style={{ marginTop: 18 }} aria-labelledby="full-report-title">
       <div className="section-header" style={{ marginBottom: 12 }}>
@@ -1119,7 +1562,7 @@ function FullReport({ summary, results }: { summary: ScanSummary; results: ScanR
               <p>{result.cleanupHint}</p>
             </div>
             <span className="risk-badge" data-risk={result.riskLevel}>
-              {riskLabels[result.riskLevel]}
+              {labels.risk[result.riskLevel]}
             </span>
           </article>
         ))}
@@ -1129,14 +1572,19 @@ function FullReport({ summary, results }: { summary: ScanSummary; results: ScanR
 }
 
 function downloadHtmlReport(summary: ScanSummary, results: ScanResult[]) {
+  const labels = {
+    category: categoryLabelsByLocale.ko,
+    country: countryLabelsByLocale.ko,
+    risk: riskLabelsByLocale.ko
+  };
   const rows = results
     .map(
       (result) => `<tr>
         <td>${escapeHtml(result.platform)}</td>
         <td>${escapeHtml(result.url)}</td>
-        <td>${escapeHtml(categoryLabels[result.category])}</td>
-        <td>${escapeHtml(countryLabels[result.country] ?? result.country)}</td>
-        <td>${escapeHtml(riskLabels[result.riskLevel])}</td>
+        <td>${escapeHtml(labels.category[result.category])}</td>
+        <td>${escapeHtml(labels.country[result.country] ?? result.country)}</td>
+        <td>${escapeHtml(labels.risk[result.riskLevel])}</td>
         <td>${escapeHtml(result.cleanupHint)}</td>
       </tr>`
     )
@@ -1176,8 +1624,25 @@ function downloadHtmlReport(summary: ScanSummary, results: ScanResult[]) {
   URL.revokeObjectURL(url);
 }
 
-function buildShareSummary(summary: ScanSummary) {
+function formatCount(value: number, locale: Locale) {
+  return locale === "en" ? `${value} ${value === 1 ? "item" : "items"}` : `${value}개`;
+}
+
+function formatScore(value: number, locale: Locale) {
+  return locale === "en" ? `${value} pts` : `${value}점`;
+}
+
+function buildShareSummary(summary: ScanSummary, locale: Locale) {
   const origin = window.location.origin;
+
+  if (locale === "en") {
+    return [
+      `${summary.username}: ${summary.foundCount} public account candidates`,
+      `${summary.previewResults.length} shown · ${Math.max(0, summary.foundCount - summary.previewResults.length)} detailed URLs locked`,
+      "Found accounts are not claimed to belong to the same person.",
+      `Check your username at ${origin}.`
+    ].join("\n");
+  }
 
   return [
     `${summary.username} 공개 계정 후보 ${summary.foundCount}개`,
@@ -1234,7 +1699,7 @@ function platformBrandKey(result: ScanResult) {
   return platformBrandRules.find(([pattern]) => haystack.includes(pattern))?.[1] ?? "generic";
 }
 
-function maskUrlPreview(value: string) {
+function maskUrlPreview(value: string, copy: ScanExperienceCopy) {
   try {
     const parsed = new URL(value);
     const host = parsed.hostname.replace(/^www\./, "");
@@ -1242,11 +1707,11 @@ function maskUrlPreview(value: string) {
     const visiblePrefix = pathPart.slice(0, Math.min(4, pathPart.length));
     return `${host}/${visiblePrefix}${"•".repeat(Math.max(4, Math.min(8, pathPart.length)))}`;
   } catch {
-    return "상세 URL 잠김";
+    return copy.preview.lockedUrlFallback;
   }
 }
 
-async function loadDevAdminResults(scanId: string, adminToken: string): Promise<DetailAccessState> {
+async function loadDevAdminResults(scanId: string, adminToken: string, copy: ScanExperienceCopy): Promise<DetailAccessState> {
   const response = await fetch(`/api/scans/${scanId}/results?access=full`, {
     headers: devAdminHeaders(adminToken)
   });
@@ -1258,21 +1723,21 @@ async function loadDevAdminResults(scanId: string, adminToken: string): Promise<
 
   return {
     ...(body as ResultsResponse),
-    label: "어드민 전체 결과",
-    description: "개발자 테스트 모드로 결제 없이 전체 결과를 보고 있어요.",
+    label: copy.detailLabels.adminFull,
+    description: copy.detailLabels.adminFullDescription,
     adminToken
   };
 }
 
-async function loadFirstFreeOrPreviewResults(scanId: string): Promise<DetailAccessState> {
+async function loadFirstFreeOrPreviewResults(scanId: string, copy: ScanExperienceCopy): Promise<DetailAccessState> {
   const ownerToken = window.localStorage.getItem(freeDetailOwnerTokenKey);
   const usedScanId = window.localStorage.getItem(freeDetailUsedScanIdKey);
 
   if (ownerToken && usedScanId && usedScanId !== scanId) {
     return loadPreviewResults(
       scanId,
-      "무료 미리보기",
-      "상세 URL 잠김"
+      copy.detailLabels.freePreview,
+      copy.detailLabels.lockedUrl
     );
   }
 
@@ -1295,8 +1760,8 @@ async function loadFirstFreeOrPreviewResults(scanId: string): Promise<DetailAcce
 
     return {
       ...(fullBody as ResultsResponse),
-      label: freeBody.reused ? "1회 무료 상세 결과 다시 보기" : "1회 무료 상세 결과",
-      description: "전체 결과 열림",
+      label: freeBody.reused ? copy.detailLabels.freeDetailAgain : copy.detailLabels.freeDetail,
+      description: copy.detailLabels.fullOpen,
       reportToken: freeBody.reportToken
     };
   }
@@ -1307,8 +1772,8 @@ async function loadFirstFreeOrPreviewResults(scanId: string): Promise<DetailAcce
 
   return loadPreviewResults(
     scanId,
-    "무료 미리보기",
-    freeBody?.error?.message ?? "상세 URL 잠김"
+    copy.detailLabels.freePreview,
+    freeBody?.error?.message ?? copy.detailLabels.lockedUrl
   );
 }
 
@@ -1327,7 +1792,7 @@ async function loadPreviewResults(scanId: string, label: string, description: st
   };
 }
 
-function previewAccessFromSummary(summary: ScanSummary): DetailAccessState {
+function previewAccessFromSummary(summary: ScanSummary, copy: ScanExperienceCopy): DetailAccessState {
   return {
     scanId: summary.scanId,
     access: "PREVIEW",
@@ -1335,8 +1800,8 @@ function previewAccessFromSummary(summary: ScanSummary): DetailAccessState {
     maigretReportAvailable: summary.maigretReportAvailable,
     maigretReportFilename: summary.maigretReportFilename,
     results: summary.previewResults,
-    label: "무료 미리보기",
-    description: "상세 URL 잠김"
+    label: copy.detailLabels.freePreview,
+    description: copy.detailLabels.lockedUrl
   };
 }
 
@@ -1345,6 +1810,7 @@ function devAdminHeaders(token: string | null | undefined): Record<string, strin
 }
 
 function DevAdminPanel({
+  copy,
   isActive,
   message,
   onLogin,
@@ -1354,6 +1820,7 @@ function DevAdminPanel({
   setUsername,
   username
 }: {
+  copy: ScanExperienceCopy;
   isActive: boolean;
   message: string | null;
   onLogin: () => void;
@@ -1367,34 +1834,37 @@ function DevAdminPanel({
     return (
       <div className="dev-admin-card" role="status">
         <div>
-          <strong>개발자 테스트 모드</strong>
-          <span>스캔 제한과 결제 잠금 없이 전체 결과를 확인합니다.</span>
+          <strong>{copy.devAdmin.activeTitle}</strong>
+          <span>{copy.devAdmin.activeDescription}</span>
           {message ? <span>{message}</span> : null}
         </div>
         <button className="ghost-button" type="button" onClick={onLogout}>
-          로그아웃
+          {copy.devAdmin.logout}
         </button>
       </div>
     );
   }
 
   return (
-    <div className="dev-admin-card">
+    <details className="dev-admin-card dev-admin-details">
+      <summary>
+        <strong>{copy.devAdmin.loginTitle}</strong>
+        <span>{copy.devAdmin.summaryHint}</span>
+      </summary>
       <div>
-        <strong>개발자 테스트 로그인</strong>
-        <span>로컬 테스트 기본 계정은 admin / admin 입니다.</span>
+        <span>{copy.devAdmin.defaultAccount}</span>
         {message ? <span role="alert">{message}</span> : null}
       </div>
       <div className="dev-admin-fields">
         <input
-          aria-label="개발자 아이디"
+          aria-label={copy.devAdmin.usernameLabel}
           className="id-input"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           autoComplete="username"
         />
         <input
-          aria-label="개발자 비밀번호"
+          aria-label={copy.devAdmin.passwordLabel}
           className="id-input"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
@@ -1403,13 +1873,13 @@ function DevAdminPanel({
           }}
           type="password"
           autoComplete="current-password"
-          placeholder="비밀번호"
+          placeholder={copy.devAdmin.passwordPlaceholder}
         />
         <button className="secondary-button" type="button" onClick={onLogin}>
-          로그인
+          {copy.devAdmin.login}
         </button>
       </div>
-    </div>
+    </details>
   );
 }
 
@@ -1422,14 +1892,30 @@ function escapeHtml(value: string) {
     .replaceAll("'", "&#039;");
 }
 
-function getUsernameValidationMessage(value: string) {
+function getUsernameValidationMessage(value: string, locale: Locale) {
   if (!value.trim()) return null;
 
   try {
     normalizeUsername(value);
     return null;
   } catch (error) {
-    return error instanceof Error ? error.message : "아이디를 다시 확인해 주세요.";
+    if (!(error instanceof Error)) {
+      return locale === "en" ? "Check the username again." : "아이디를 다시 확인해 주세요.";
+    }
+
+    if (locale === "ko") return error.message;
+
+    const englishMessages: Record<string, string> = {
+      "아이디를 입력해 주세요.": "Enter a username.",
+      "아이디는 3자 이상 30자 이하로 입력해 주세요.": "Use 3 to 30 characters.",
+      "아이디에는 영문, 숫자, 점, 밑줄, 하이픈만 사용할 수 있어요.": "Use letters, numbers, dots, underscores, or hyphens only.",
+      "이메일 검색은 지원하지 않아요.": "Email searches are not supported.",
+      "전화번호 검색은 지원하지 않아요.": "Phone number searches are not supported.",
+      "주민번호처럼 보이는 값은 검색할 수 없어요.": "Government ID-like values cannot be searched.",
+      "URL 검색은 지원하지 않아요.": "URL searches are not supported."
+    };
+
+    return englishMessages[error.message] ?? "Check the username again.";
   }
 }
 

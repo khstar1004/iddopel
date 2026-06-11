@@ -31,7 +31,7 @@ export const seoGuides = [
     scenario: "게임, 커뮤니티, SNS에서 오래 써온 아이디가 얼마나 겹치는지 빠르게 점검합니다.",
     resultCopy: "무료 점검은 발견된 공개 계정 후보를 먼저 보여주고, 희소성 점수와 국가·카테고리 분포는 아래에 정리합니다.",
     safetyCopy: "실명이나 연락처가 아니라 사용자가 입력한 아이디 문자열만 확인합니다.",
-    cta: "공개 후보 확인"
+    cta: "내 아이디 흔적 찾기"
   },
   {
     slug: "nickname-search",
@@ -89,7 +89,7 @@ export const seoGuides = [
     primaryKeyword: "디지털 풋프린트 점검",
     secondaryKeywords: ["아이디 노출 확인", "계정 점검", "공개 계정 후보"],
     scenario: "아이디 재사용으로 공개 계정 후보가 연결될 수 있는지 보안 점검 관점에서 확인합니다.",
-    resultCopy: "발견된 공개 후보를 먼저 확인하고, 희소성·노출도·사칭 가능성·방치 계정 위험은 아래에서 비교합니다.",
+    resultCopy: "발견된 공개 흔적을 먼저 확인하고, 희소성·노출도·사칭 가능성·방치 계정 위험은 아래에서 비교합니다.",
     safetyCopy: "전화번호, 이메일, 주민번호, 위치 추정, 동일인 확률 계산은 지원하지 않습니다.",
     cta: "노출 후보 확인"
   },
@@ -103,7 +103,7 @@ export const seoGuides = [
     scenario: "브랜드명이나 닉네임이 이미 쓰이는지만 보는 단계에서, 공개 계정 후보가 어떤 위험 신호인지까지 정리하고 싶을 때 적합합니다.",
     resultCopy: "ID 도플갱어는 발견 후보 수, 한국 서비스 후보, 카테고리 분포, 희소성·노출도 점수를 먼저 보여주고 정밀 리포트로 이어집니다.",
     safetyCopy: "가용성 확인과 공개 username 후보 점검만 다루며, 실명·전화번호·이메일 검색이나 동일인 판정은 제공하지 않습니다.",
-    cta: "공개 후보 확인",
+    cta: "내 아이디 흔적 찾기",
     comparison: {
       competitorName: "Namechk",
       sourceUrl: "https://namechk.com/",

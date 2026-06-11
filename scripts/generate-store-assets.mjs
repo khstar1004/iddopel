@@ -122,10 +122,10 @@ function featureGraphicSvg() {
   <circle cx="782" cy="250" r="44" fill="${colors.cyan}"/>
   <circle cx="782" cy="250" r="22" fill="${colors.ink}"/>
   <text x="72" y="148" fill="${colors.white}" class="title">ID 도플갱어</text>
-  <text x="74" y="208" fill="${colors.cyan}" class="body">공개 계정 후보 먼저 확인</text>
+  <text x="74" y="208" fill="${colors.cyan}" class="body">내 아이디가 남은 곳 먼저 확인</text>
   <text x="74" y="276" fill="#D7E8FF" class="small">아이디가 남아 있는 플랫폼 후보, 잠긴 상세 URL, 정리 가이드를 한 번에 확인하세요.</text>
   <rect x="74" y="330" width="256" height="58" rx="20" fill="${colors.blue}"/>
-  <text x="116" y="368" fill="${colors.white}" class="small">공개 후보 확인</text>
+  <text x="116" y="368" fill="${colors.white}" class="small">내 아이디 흔적 찾기</text>
 </svg>`;
 }
 
@@ -136,7 +136,7 @@ function screenshotSvg(width, height, screen) {
   const phoneY = Math.round(height * 0.16);
   const phoneHeight = Math.round(height * 0.68);
   const isTablet = width >= 1500;
-  const title = screen === "scan" ? "아이디 공개 후보 확인" : screen === "results" ? "잡힌 공개 후보 확인" : "결제 후 원본 리포트 확인";
+  const title = screen === "scan" ? "내 아이디, 어디에 남아 있을까?" : screen === "results" ? "아이디가 남은 곳 확인" : "결제 후 원본 리포트 확인";
   const subtitle = screen === "scan" ? "실명·전화번호·이메일은 검색하지 않아요" : screen === "results" ? "플랫폼 카드와 잠긴 상세 URL이 첫 화면에 떠요" : "조치 가이드, 전체 URL, HTML/PDF 리포트를 한 화면에서 확인해요";
 
   return `<?xml version="1.0" encoding="UTF-8"?>
@@ -158,12 +158,12 @@ function scanScreen(width, x, y, w, h) {
   const inputY = top + Math.round(h * 0.2);
   const buttonY = inputY + Math.round(h * 0.13);
   return `
-  <text x="${left}" y="${top}" fill="${colors.white}" class="phoneText" font-weight="800">아이디 공개 후보 확인</text>
+  <text x="${left}" y="${top}" fill="${colors.white}" class="phoneText" font-weight="800">내 아이디, 어디에 남아 있을까?</text>
   <text x="${left}" y="${top + Math.round(width * 0.055)}" fill="#B8C7D9" class="label">공개 플랫폼 후보를 빠르게 점검해요.</text>
   <rect x="${left}" y="${inputY}" width="${Math.round(w * 0.76)}" height="${Math.round(h * 0.085)}" rx="${Math.round(width * 0.018)}" fill="#151A22" stroke="#334155"/>
   <text x="${left + Math.round(width * 0.03)}" y="${inputY + Math.round(h * 0.055)}" fill="#E5EAF2" class="phoneText">@brand_id</text>
   <rect x="${left}" y="${buttonY}" width="${Math.round(w * 0.76)}" height="${Math.round(h * 0.085)}" rx="${Math.round(width * 0.02)}" fill="${colors.blue}"/>
-  <text x="${left + Math.round(w * 0.25)}" y="${buttonY + Math.round(h * 0.056)}" fill="${colors.white}" class="phoneText" font-weight="800">공개 후보 확인</text>
+  <text x="${left + Math.round(w * 0.18)}" y="${buttonY + Math.round(h * 0.056)}" fill="${colors.white}" class="phoneText" font-weight="800">내 아이디 흔적 찾기</text>
   <rect x="${left}" y="${buttonY + Math.round(h * 0.15)}" width="${Math.round(w * 0.76)}" height="${Math.round(h * 0.18)}" rx="${Math.round(width * 0.025)}" fill="#151A22"/>
   <text x="${left + Math.round(width * 0.03)}" y="${buttonY + Math.round(h * 0.205)}" fill="${colors.cyan}" class="label">책임 있는 사용</text>
   <text x="${left + Math.round(width * 0.03)}" y="${buttonY + Math.round(h * 0.255)}" fill="#C8D2DE" class="label">실명·전화번호·이메일 검색은 지원하지 않아요.</text>`;
@@ -177,8 +177,8 @@ function resultScreen(width, x, y, w, h) {
   const rowGap = Math.round(h * 0.155);
   const scoreTop = top + Math.round(h * 0.64);
   return `
-  <text x="${left}" y="${top}" fill="${colors.text}" class="phoneText" font-weight="800">지금 잡힌 후보</text>
-  <text x="${left}" y="${top + Math.round(width * 0.05)}" fill="${colors.muted}" class="label">공개 계정 후보 12개 발견</text>
+  <text x="${left}" y="${top}" fill="${colors.text}" class="phoneText" font-weight="800">아이디가 남은 곳</text>
+  <text x="${left}" y="${top + Math.round(width * 0.05)}" fill="${colors.muted}" class="label">공개 흔적 12개 발견</text>
   ${resultCard(left, top + Math.round(h * 0.10), resultCardW, resultCardH, "Instagram", "SNS · 글로벌 · instagram.com", "주의", "#FFD1D1")}
   ${resultCard(left, top + Math.round(h * 0.10) + rowGap, resultCardW, resultCardH, "Naver Blog", "블로그 · 한국 · blog.naver.com", "확인 필요", "#FFE7B8")}
   ${resultCard(left, top + Math.round(h * 0.10) + rowGap * 2, resultCardW, resultCardH, "GitHub", "개발자 · 글로벌 · github.com", "확인 필요", "#FFE7B8")}

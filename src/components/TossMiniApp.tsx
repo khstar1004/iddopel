@@ -105,8 +105,8 @@ export function TossMiniApp() {
         </header>
 
         <section className="toss-hero">
-          <h1 className="toss-title">아이디 공개 후보 확인</h1>
-          <p className="toss-subtitle">아이디 하나로 공개 후보를 바로 확인하세요.</p>
+          <h1 className="toss-title">내 아이디, 어디에 남아 있을까?</h1>
+          <p className="toss-subtitle">자주 쓰는 아이디의 공개 흔적을 바로 확인하세요.</p>
         </section>
 
         <form className="toss-card" onSubmit={submit}>
@@ -142,7 +142,7 @@ export function TossMiniApp() {
             <div className="scan-loading-card toss-loading-card" data-surface="light" role="status" aria-live="polite">
               <div className="scan-loading-copy">
                 <ScanEyeLoader />
-                <p>공개 후보 찾는 중</p>
+                <p>공개 흔적 찾는 중</p>
               </div>
             </div>
           ) : null}
@@ -155,7 +155,7 @@ export function TossMiniApp() {
 
           <button className="toss-button" disabled={!canSubmit} type="submit">
             {isLoading ? <ScanEyeLoader compact /> : null}
-            {isLoading ? "찾는 중" : "공개 후보 확인"}
+            {isLoading ? "찾는 중" : "내 아이디 흔적 찾기"}
           </button>
         </form>
 
@@ -163,11 +163,11 @@ export function TossMiniApp() {
           <section className="toss-card toss-result-panel" ref={resultPanelRef} tabIndex={-1} aria-label="점검 결과">
             <div className="toss-result-header">
               <span>{summary.foundCount}개 발견</span>
-              <h2>{summary.username}에서 잡힌 공개 후보</h2>
+              <h2>{summary.username}가 남아 있는 곳</h2>
             </div>
 
             <div className="toss-result-metrics" aria-label="결과 규모">
-              <Mini label="공개 후보" value={`${Math.min(summary.previewResults.length, 3)}개`} />
+              <Mini label="공개 흔적" value={`${Math.min(summary.previewResults.length, 3)}개`} />
               <Mini label="잠김" value={`${hiddenCount}개`} />
             </div>
 
@@ -180,8 +180,8 @@ export function TossMiniApp() {
                     <Check size={18} />
                   </div>
                   <div>
-                    <h3>공개 후보 없음</h3>
-                    <p>이번 빠른 점검에서는 바로 보여줄 공개 계정 후보가 없어요.</p>
+                    <h3>바로 보이는 흔적 없음</h3>
+                    <p>이번 빠른 점검에서는 바로 보여줄 공개 흔적이 없어요.</p>
                   </div>
                 </article>
               )}
@@ -193,7 +193,7 @@ export function TossMiniApp() {
               <div className="toss-lock-note">
                 <LockKeyhole size={16} aria-hidden />
                 <span>
-                  상세 URL 잠김 · 나머지 {hiddenCount}개 후보와 정리 가이드는 전체 리포트에서 열려요.
+                  상세 URL 잠김 · 나머지 {hiddenCount}개 흔적과 정리 가이드는 전체 리포트에서 열려요.
                 </span>
               </div>
             ) : summary.previewResults.length > 0 ? (
@@ -232,13 +232,13 @@ function TossLockedMosaicList({ count, startIndex }: { count: number; startIndex
   const visibleCount = Math.min(count, 5);
 
   return (
-    <div className="toss-locked-mosaic-list" aria-label={`잠긴 공개 후보 ${count}개`}>
+    <div className="toss-locked-mosaic-list" aria-label={`잠긴 공개 흔적 ${count}개`}>
       {Array.from({ length: visibleCount }).map((_, index) => (
-        <article className="toss-locked-card" key={`locked-${index}`} aria-label={`잠긴 공개 후보 ${startIndex + index}`}>
+        <article className="toss-locked-card" key={`locked-${index}`} aria-label={`잠긴 공개 흔적 ${startIndex + index}`}>
           <div className="toss-locked-icon" aria-hidden />
           <div className="toss-locked-body">
             <div>
-              <strong>공개 후보 #{startIndex + index}</strong>
+              <strong>공개 흔적 #{startIndex + index}</strong>
               <span>잠김</span>
             </div>
             <i className="mosaic-line mosaic-line-wide" aria-hidden />

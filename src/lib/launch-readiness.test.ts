@@ -144,9 +144,48 @@ STORE_PRODUCTION_ORIGIN=
 STORE_SUPPORT_EMAIL=support@YOUR_DOMAIN
 MOBILE_APP_ORIGIN=https://YOUR_PRODUCTION_DOMAIN
 MOBILE_PAYMENTS_ENABLED=false
+APPLE_BUNDLE_ID=com.iddoppelganger.app
+APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report
+APPLE_ENVIRONMENT=sandbox
 APPLE_KEY_ID=
 APPLE_ISSUER_ID=
 APPLE_PRIVATE_KEY=
+APPLE_REQUIRE_JWS_VERIFICATION=false
+APPLE_ROOT_CERTIFICATES_BASE64=
+APPLE_APP_APPLE_ID=
+GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app
+GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report
+GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=
+`;
+
+const completeLaunchEnv = `
+PRODUCTION_DOMAIN=YOUR_DOMAIN
+STORE_SUPPORT_EMAIL=support@YOUR_DOMAIN
+DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/DB
+DATABASE_SSL=true
+CRON_SECRET=your_32_plus_character_random_secret
+TOSS_CLIENT_KEY=YOUR_TOSS_CLIENT_KEY
+TOSS_SECRET_KEY=YOUR_TOSS_SECRET_KEY
+TOSS_SECURITY_KEY=YOUR_TOSS_SECURITY_KEY
+TOSS_CONSOLE_API_KEY=YOUR_TOSS_CONSOLE_API_KEY
+TOSS_CONSOLE_APP_ID=YOUR_TOSS_CONSOLE_APP_ID
+TOSS_MINI_APP_NAME=YOUR_TOSS_MINI_APP_NAME
+TOSS_ALLOWED_ORIGINS=https://YOUR_TOSS_APP_NAME.apps.tossmini.com
+TOSS_REVIEW_TEST_USERNAME=khstar104
+TOSS_REVIEW_SCENARIO=Enter the review username and run the flow.
+ALERT_WEBHOOK_URL=https://YOUR_ALERT_WEBHOOK
+ALERT_WEBHOOK_PROVIDER=slack
+ALERT_RUNBOOK_URL=https://YOUR_RUNBOOK_URL
+MOBILE_PAYMENTS_ENABLED=true
+APPLE_BUNDLE_ID=com.iddoppelganger.app
+APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report
+APPLE_ENVIRONMENT=production
+APPLE_KEY_ID=
+APPLE_ISSUER_ID=
+APPLE_PRIVATE_KEY=
+APPLE_APP_APPLE_ID=
+GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app
+GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=
 `;
 
@@ -165,6 +204,7 @@ describe("launch-readiness", () => {
       packageJson: { scripts: completeScripts },
       existingFiles: completeFiles,
       envExample: completeEnv,
+      launchEnvExample: completeLaunchEnv,
       readme: completeReadme,
       checklistMarkdown: "- [x] Local package\n- [ ] Production domain, SSL, DNS, alert routing",
       releaseCheck: false
@@ -182,6 +222,7 @@ describe("launch-readiness", () => {
       packageJson: { scripts: completeScripts },
       existingFiles: completeFiles,
       envExample: completeEnv,
+      launchEnvExample: completeLaunchEnv,
       readme: completeReadme,
       checklistMarkdown: "- [x] Local package\n- [ ] STORE_RELEASE_CHECK=true npm run store:verify passes",
       releaseCheck: true
@@ -197,6 +238,7 @@ describe("launch-readiness", () => {
       packageJson: { scripts: { ...completeScripts, verify: undefined } },
       existingFiles: completeFiles,
       envExample: completeEnv,
+      launchEnvExample: completeLaunchEnv,
       readme: completeReadme,
       checklistMarkdown: "- [x] Local package",
       releaseCheck: false
@@ -212,6 +254,7 @@ describe("launch-readiness", () => {
       packageJson: { scripts: completeScripts },
       existingFiles: completeFiles,
       envExample: completeEnv,
+      launchEnvExample: completeLaunchEnv,
       readme: completeReadme.replace("npm run android:debug", ""),
       checklistMarkdown: "- [x] Local package",
       releaseCheck: false

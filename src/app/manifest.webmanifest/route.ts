@@ -4,7 +4,7 @@ export function GET() {
   return NextResponse.json({
     name: "ID 도플갱어",
     short_name: "ID도플갱어",
-    description: "아이디 공개 계정 후보와 정밀 리포트",
+    description: "내 아이디 공개 흔적과 정밀 리포트",
     start_url: "/",
     display: "standalone",
     background_color: "#090A0F",

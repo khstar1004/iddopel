@@ -63,7 +63,7 @@ form.addEventListener("submit", async (event) => {
   } catch (error) {
     showToast(error instanceof Error ? error.message : "점검을 완료하지 못했어요.");
   } finally {
-    submit.textContent = "공개 후보 확인";
+    submit.textContent = "내 아이디 흔적 찾기";
     updateSubmitState();
   }
 });
@@ -225,7 +225,7 @@ function renderResult(result) {
   row.className = "result-row";
   row.innerHTML = `
     <div>
-      <span class="result-badge">공개 후보</span>
+      <span class="result-badge">공개 흔적</span>
       <h3></h3>
       <p class="locked-url"></p>
     </div>
@@ -242,8 +242,8 @@ function renderEmptyResult() {
   row.className = "result-row";
   row.innerHTML = `
     <div>
-      <span class="result-badge">공개 후보 없음</span>
-      <h3>이번 빠른 점검에서는 바로 보이는 후보가 없어요.</h3>
+      <span class="result-badge">공개 흔적 없음</span>
+      <h3>이번 빠른 점검에서는 바로 보이는 흔적이 없어요.</h3>
       <p class="locked-url">정밀 리포트에서는 전체 검사 기록을 확인할 수 있어요.</p>
     </div>
   `;
