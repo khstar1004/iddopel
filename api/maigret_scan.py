@@ -1,4 +1,6 @@
+import asyncio
 import json
+import logging
 import os
 import re
 import subprocess
@@ -51,6 +53,67 @@ class handler(BaseHTTPRequestHandler):
 
 
 def run_maigret(username, mode):
+    if os.environ.get("MAIGRET_EXECUTION_MODE") == "subprocess":
+        return run_maigret_subprocess(username, mode)
+
+    return run_maigret_in_process(username, mode)
+
+
+def run_maigret_in_process(username, mode):
+    top_sites = resolve_top_sites(mode)
+    site_timeout = positive_int(os.environ.get("MAIGRET_SITE_TIMEOUT_SECONDS"), 6)
+    max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 10)
+    parsing_enabled = os.environ.get("MAIGRET_EXTRACT_EXTENDED") != "false"
+
+    with tempfile.TemporaryDirectory(prefix="id-doppelganger-maigret-") as temp_dir:
+        from maigret.checking import maigret as check_username
+        from maigret.db_updater import BUNDLED_DB_PATH
+        from maigret.report import generate_report_context, save_html_report, save_json_report, sort_report_by_data_points
+        from maigret.sites import MaigretDatabase
+
+        os.environ.setdefault("HOME", tempfile.gettempdir())
+        os.environ.setdefault("XDG_CACHE_HOME", tempfile.gettempdir())
+        logger = logging.getLogger("id-doppelganger-maigret")
+        logger.addHandler(logging.NullHandler())
+        db = MaigretDatabase().load_from_path(BUNDLED_DB_PATH)
+        site_data = db.ranked_sites_dict(top=top_sites, disabled=False, id_type="username")
+        results = run_async(
+            check_username(
+                username=username,
+                site_dict=dict(site_data),
+                logger=logger,
+                timeout=site_timeout,
+                is_parsing_enabled=parsing_enabled,
+                id_type="username",
+                max_connections=max_connections,
+                no_progressbar=True,
+                retries=0,
+            )
+        )
+        results = sort_report_by_data_points(results)
+        safe_username = username.replace("/", "_")
+        report_json_path = str(Path(temp_dir) / f"report_{safe_username}_simple.json")
+        html_report_path = str(Path(temp_dir) / f"report_{safe_username}_plain.html")
+        save_json_report(report_json_path, safe_username, results, report_type="simple")
+        save_html_report(html_report_path, generate_report_context([(safe_username, "username", results)]))
+
+        report_json = Path(report_json_path).read_text(encoding="utf-8")
+        html_report = Path(html_report_path).read_text(encoding="utf-8")
+
+        return {
+            "ok": True,
+            "username": username,
+            "checkedCount": len(site_data),
+            "failedRate": 0,
+            "reportJson": report_json,
+            "htmlReport": {
+                "html": html_report,
+                "htmlFilename": Path(html_report_path).name,
+            },
+        }
+
+
+def run_maigret_subprocess(username, mode):
     top_sites = resolve_top_sites(mode)
     site_timeout = positive_int(os.environ.get("MAIGRET_SITE_TIMEOUT_SECONDS"), 6)
     process_timeout_ms = positive_int(os.environ.get("MAIGRET_PROCESS_TIMEOUT_MS"), 55000)
@@ -126,6 +189,18 @@ def run_maigret(username, mode):
             else None,
             "output": output[-4000:],
         }
+
+
+def run_async(coro):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    if loop and loop.is_running():
+        raise RuntimeError("Maigret scan cannot run inside an existing event loop.")
+
+    return asyncio.run(coro)
 
 
 def resolve_top_sites(mode):
