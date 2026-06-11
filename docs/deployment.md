@@ -52,14 +52,20 @@ TOSS_SECURITY_KEY="your-toss-security-key" \
 TOSS_CONSOLE_API_KEY="your-toss-console-api-key" \
 TOSS_CONSOLE_APP_ID="your-toss-console-app-id" \
 TOSS_MINI_APP_NAME="your-toss-mini-app-name" \
+TOSS_ALLOWED_ORIGINS="https://your-toss-mini-app-name.apps.tossmini.com,https://your-toss-mini-app-name.private-apps.tossmini.com" \
 ALERT_WEBHOOK_URL="https://your-alert-webhook.example" \
 ALERT_WEBHOOK_PROVIDER="slack" \
 ALERT_RUNBOOK_URL="https://your-runbook.example/id-doppelganger" \
 MOBILE_PAYMENTS_ENABLED="true" \
+APPLE_BUNDLE_ID="com.iddoppelganger.app" \
+APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" \
+APPLE_ENVIRONMENT="production" \
 APPLE_KEY_ID="your-apple-key-id" \
 APPLE_ISSUER_ID="your-apple-issuer-id" \
 APPLE_PRIVATE_KEY="your-app-store-connect-private-key-p8" \
 APPLE_APP_APPLE_ID="your-apple-app-id" \
+GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" \
+GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" \
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="your-google-play-service-account-json" \
 npm run release:prepare
 npm run deploy:verify
@@ -116,6 +122,9 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - `TOSS_SECRET_KEY`: Toss Payments API secret key
 - `TOSS_SECURITY_KEY`: Toss Payments 64-character security key for encrypted services or webhook signature verification when enabled
 - `TOSS_CONSOLE_API_KEY`: Apps in Toss console/AX release automation API key; keep it in the secret manager and never expose it to the client
+- `TOSS_CONSOLE_APP_ID`: Toss developer console app id
+- `TOSS_MINI_APP_NAME`: Toss mini app slug used to derive standard Toss origins
+- `TOSS_ALLOWED_ORIGINS`: comma-separated live and private `tossmini.com` origins
 - `ENABLE_MOCK_PAYMENTS`: keep `false` in production
 - `TELEMETRY_DISABLED`: keep unset or `false` for launch monitoring
 - `NEXT_PUBLIC_TELEMETRY_DISABLED`: keep unset or `false` so the browser reports page views, Core Web Vitals, and client errors
@@ -130,10 +139,15 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - `STORE_SUPPORT_EMAIL`: final store support email
 - `MOBILE_APP_ORIGIN`: production HTTPS API origin embedded into native shell config
 - `MOBILE_PAYMENTS_ENABLED`: set `true` for store release builds after Apple IAP and Google Play Billing products are created
+- `APPLE_BUNDLE_ID`: App Store bundle id, currently `com.iddoppelganger.app`
+- `APPLE_DETAILED_REPORT_PRODUCT_ID`: App Store one-time detailed report product id, currently `detailed_report`
+- `APPLE_ENVIRONMENT`: `sandbox` for TestFlight checks, `production` for live App Store verification
 - `APPLE_KEY_ID`: App Store Connect API key id for metadata upload and receipt verification
 - `APPLE_ISSUER_ID`: App Store Connect issuer id
 - `APPLE_PRIVATE_KEY`: App Store Connect `.p8` private key value
 - `APPLE_APP_APPLE_ID`: numeric Apple app id from App Store Connect
+- `GOOGLE_PLAY_PACKAGE_NAME`: Google Play package name, currently `com.iddoppelganger.app`
+- `GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID`: Google Play one-time detailed report product id, currently `detailed_report`
 - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`: Android Publisher service account JSON for Google Play release checks
 
 ## Runtime Assets

@@ -70,7 +70,7 @@
 - [ ] Set `CRON_SECRET` in production and confirm scheduled prune invocations
 - [ ] Confirm scheduled monthly monitoring invocations via `/api/cron/monitoring`
 - [ ] Deploy Docker image with `SCAN_PROVIDER=maigret` for real username scanning
-- [ ] Set `PAYMENT_PROVIDER=toss`, `SITE_URL`, `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, `TOSS_SECURITY_KEY`, and `TOSS_CONSOLE_API_KEY`
+- [ ] Set `PAYMENT_PROVIDER=toss`, `SITE_URL`, `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, `TOSS_SECURITY_KEY`, `TOSS_CONSOLE_API_KEY`, `TOSS_CONSOLE_APP_ID`, `TOSS_MINI_APP_NAME`, and `TOSS_ALLOWED_ORIGINS`
 - [ ] Run a Toss Payments test-key payment from checkout to `/reports/{scanId}`
 - [x] Browser smoke test at 320, 768, 1024, 1440 px
 - [ ] Security headers checked on the production domain
@@ -87,11 +87,11 @@
 - [x] `npm run deploy:verify` passes for the Docker Compose deployment package
 - [x] `npm run launch:readiness` summarizes local release gates and remaining external blockers
 - [x] `npm run toss:verify` passes for local Toss in-app submission readiness
-- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
+- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... TOSS_ALLOWED_ORIGINS=... ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_BUNDLE_ID=com.iddoppelganger.app APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report APPLE_ENVIRONMENT=production APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
 - [ ] Production `npm run launch:button -- --execute --ship` completes with real domain, database, Toss, store, alert, and mobile release values
 - [ ] `DEPLOY_RELEASE_CHECK=true npm run deploy:verify` passes with real production `deploy/compose/.env`
 - [ ] Production `sitemap.xml` and `robots.txt` checked after final `SITE_URL` deployment
-- [ ] `TOSS_RELEASE_CHECK=true npm run toss:verify` passes with Toss console app id and production review scenario
+- [ ] `TOSS_RELEASE_CHECK=true npm run toss:verify` passes with Toss console app id, live/private Toss origins, and production review scenario
 - [ ] `STORE_PRODUCTION_ORIGIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain npm run store:finalize` has been run before store upload
 - [ ] `STORE_RELEASE_CHECK=true APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run store:verify` passes with App Store Connect and Google Play credentials
 - [ ] `MOBILE_APP_ORIGIN=https://production-domain npm run mobile:configure` has been run for release

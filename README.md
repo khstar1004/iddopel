@@ -1,8 +1,8 @@
 # ID 도플갱어
 
-ID 도플갱어는 아이디 문자열이 공개 플랫폼 어디에서 후보로 잡히는지 먼저 보여주고, 희소성·노출도·사칭 가능성·방치 계정 위험은 마지막 참고 분석으로 정리하는 한국어 웹/앱 서비스입니다.
+ID 도플갱어는 아이디 문자열이 공개 플랫폼 어디에 남아 있는지 먼저 보여주고, 희소성·노출도·사칭 가능성·방치 계정 위험은 마지막 참고 분석으로 정리하는 한국어 웹/앱 서비스입니다.
 
-이 저장소는 웹 배포, Toss 인앱, App Store, Google Play 제출 준비물을 한 번에 관리합니다. 현재 로컬 패키지는 출시 후보로 검증 가능하지만, 실제 배포 버튼을 누르기 전에는 도메인, 결제 키, 스토어 계정, 네이티브 인앱상품 같은 외부 값이 필요합니다.
+이 저장소는 웹 배포, Toss 인앱, App Store, Google Play 제출 준비물을 한 번에 관리합니다. 현재 로컬 패키지는 출시 준비 상태로 검증 가능하지만, 실제 배포 버튼을 누르기 전에는 도메인, 결제 키, 스토어 계정, 네이티브 인앱상품 같은 외부 값이 필요합니다.
 
 ## Surfaces
 
@@ -110,14 +110,20 @@ TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" \
 TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" \
 TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" \
 TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" \
+TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" \
 ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" \
 ALERT_WEBHOOK_PROVIDER="slack" \
 ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" \
 MOBILE_PAYMENTS_ENABLED="true" \
+APPLE_BUNDLE_ID="com.iddoppelganger.app" \
+APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" \
+APPLE_ENVIRONMENT="production" \
 APPLE_KEY_ID="YOUR_APPLE_KEY_ID" \
 APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" \
 APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" \
 APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" \
+GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" \
+GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" \
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" \
 npm run release:prepare
 npm run deploy:verify
@@ -141,9 +147,13 @@ Before starting the stack, confirm real values in `deploy/compose/.env`:
 - `TOSS_SECURITY_KEY`
 - `TOSS_CONSOLE_API_KEY`
 - `TOSS_CONSOLE_APP_ID`
-- `TOSS_MINI_APP_NAME` or `TOSS_ALLOWED_ORIGINS`
+- `TOSS_MINI_APP_NAME`
+- `TOSS_ALLOWED_ORIGINS`
 - `MOBILE_APP_ORIGIN`
 - `MOBILE_PAYMENTS_ENABLED=true`
+- `APPLE_BUNDLE_ID=com.iddoppelganger.app`
+- `APPLE_DETAILED_REPORT_PRODUCT_ID`
+- `APPLE_ENVIRONMENT=production`
 - `ALERT_WEBHOOK_URL`
 - `ALERT_WEBHOOK_PROVIDER`
 - `ALERT_RUNBOOK_URL`
@@ -151,6 +161,8 @@ Before starting the stack, confirm real values in `deploy/compose/.env`:
 - `APPLE_ISSUER_ID`
 - `APPLE_PRIVATE_KEY`
 - `APPLE_APP_APPLE_ID`
+- `GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app`
+- `GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID`
 - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
 
 After the domain is live:
@@ -164,7 +176,7 @@ For Cloudtype, use the Dockerfile web/API service plus a separate Cloudtype Post
 That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss, store, mobile, Android, and release-readiness checks. The full manual sequence is:
 
 ```bash
-PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
+PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
 DEPLOY_RELEASE_CHECK=true npm run deploy:verify
 npm run assets:all
 npm run scan:maigret

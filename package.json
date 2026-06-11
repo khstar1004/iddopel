@@ -2,7 +2,7 @@
   "name": "id-doppelganger",
   "version": "0.1.0",
   "private": true,
-  "description": "ID 도플갱어 - 공개 username 후보 카드와 정밀 리포트",
+  "description": "ID 도플갱어 - 공개 username 흔적 카드와 정밀 리포트",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

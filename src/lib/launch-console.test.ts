@@ -150,14 +150,20 @@ describe("launch-console", () => {
       [tossSecretKey]: "short",
       [tossSecurityKey]: "not-64-hex",
       [tossConsoleApiKey]: "short",
+      TOSS_ALLOWED_ORIGINS: "https://bad.example.com",
       ALERT_WEBHOOK_URL: "http://hooks.example.com/launch",
       ALERT_WEBHOOK_PROVIDER: "pager",
       ALERT_RUNBOOK_URL: "https://localhost/runbook",
       MOBILE_PAYMENTS_ENABLED: "maybe",
+      APPLE_BUNDLE_ID: "com.other.app",
+      APPLE_DETAILED_REPORT_PRODUCT_ID: "invalid product",
+      APPLE_ENVIRONMENT: "live",
       APPLE_KEY_ID: "ABC",
       APPLE_ISSUER_ID: "short",
       [applePrivateKey]: "too-short",
       APPLE_APP_APPLE_ID: "app-id",
+      GOOGLE_PLAY_PACKAGE_NAME: "com.other.app",
+      GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "invalid product",
       [googlePlayServiceAccountJsonKey]: "{not-json"
     });
 
@@ -171,14 +177,20 @@ describe("launch-console", () => {
       [tossSecretKey]: expect.stringContaining("12자 이상"),
       [tossSecurityKey]: expect.stringContaining("64자 hex"),
       [tossConsoleApiKey]: expect.stringContaining("12자 이상"),
+      TOSS_ALLOWED_ORIGINS: expect.stringContaining("공개 tossmini.com Origin"),
       ALERT_WEBHOOK_URL: expect.stringContaining("HTTPS"),
       ALERT_WEBHOOK_PROVIDER: expect.stringContaining("generic, slack, discord"),
       ALERT_RUNBOOK_URL: expect.stringContaining("HTTPS"),
       MOBILE_PAYMENTS_ENABLED: expect.stringContaining("true 또는 false"),
+      APPLE_BUNDLE_ID: expect.stringContaining("com.iddoppelganger.app"),
+      APPLE_DETAILED_REPORT_PRODUCT_ID: expect.stringContaining("영문, 숫자"),
+      APPLE_ENVIRONMENT: expect.stringContaining("sandbox 또는 production"),
       APPLE_KEY_ID: expect.stringContaining("6자 이상"),
       APPLE_ISSUER_ID: expect.stringContaining("16자 이상"),
       [applePrivateKey]: expect.stringContaining("12자 이상"),
       APPLE_APP_APPLE_ID: expect.stringContaining("숫자"),
+      GOOGLE_PLAY_PACKAGE_NAME: expect.stringContaining("com.iddoppelganger.app"),
+      GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: expect.stringContaining("영문, 숫자"),
       [googlePlayServiceAccountJsonKey]: expect.stringContaining("JSON")
     });
   });
@@ -211,14 +223,21 @@ describe("launch-console", () => {
         [tossSecretKey]: "test_sk_123456789",
         [tossSecurityKey]: "a".repeat(64),
         [tossConsoleApiKey]: "toss-console-api-key-value",
+        TOSS_ALLOWED_ORIGINS:
+          "https://id-doppelganger.apps.tossmini.com,https://id-doppelganger.private-apps.tossmini.com",
         ALERT_WEBHOOK_URL: "https://hooks.verified-domain.kr/launch",
         ALERT_WEBHOOK_PROVIDER: "slack",
         ALERT_RUNBOOK_URL: "https://docs.verified-domain.kr/runbook",
         MOBILE_PAYMENTS_ENABLED: "true",
+        APPLE_BUNDLE_ID: "com.iddoppelganger.app",
+        APPLE_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
+        APPLE_ENVIRONMENT: "production",
         APPLE_KEY_ID: "ABC123DEFG",
         APPLE_ISSUER_ID: "00000000-0000-0000-0000-000000000000",
         [applePrivateKey]: "not-a-real-app-store-private-key",
         APPLE_APP_APPLE_ID: "1234567890",
+        GOOGLE_PLAY_PACKAGE_NAME: "com.iddoppelganger.app",
+        GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
         [googlePlayServiceAccountJsonKey]: JSON.stringify({ type: "service_account" })
       })
     ).toEqual({});
@@ -228,6 +247,14 @@ describe("launch-console", () => {
     expect(launchEnvFields.find((field) => field.key === "MOBILE_PAYMENTS_ENABLED")).toMatchObject({
       label: "네이티브 유료 리포트",
       placeholder: "true"
+    });
+    expect(launchEnvFields.find((field) => field.key === "APPLE_DETAILED_REPORT_PRODUCT_ID")).toMatchObject({
+      label: "Apple 상세 리포트 상품 ID",
+      placeholder: "detailed_report"
+    });
+    expect(launchEnvFields.find((field) => field.key === "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID")).toMatchObject({
+      label: "Google Play 상세 리포트 상품 ID",
+      placeholder: "detailed_report"
     });
   });
 
@@ -243,6 +270,10 @@ describe("launch-console", () => {
     expect(launchEnvFields.find((field) => field.key === tossConsoleApiKey)).toMatchObject({
       label: "Toss Console API Key",
       sensitive: true
+    });
+    expect(launchEnvFields.find((field) => field.key === "TOSS_ALLOWED_ORIGINS")).toMatchObject({
+      label: "Toss 허용 Origin",
+      sensitive: false
     });
   });
 });

@@ -64,7 +64,17 @@ const staleCopyChecks = [
     detail: "The free result strategy is result-first, with scores as supporting interpretation."
   },
   {
-    pattern: /점수는 마지막에 확인하세요|먼저 결과 후보를 보고|분포와 점수/g,
+    pattern: new RegExp(
+      [
+        "점수는 마지막",
+        "에 확인하세요",
+        "|먼저 결과 후보",
+        "를 보고",
+        "|분포와 ",
+        "점수"
+      ].join(""),
+      "g"
+    ),
     detail: "Keep product UI copy short and result-card-first without explanatory score ordering."
   },
   {

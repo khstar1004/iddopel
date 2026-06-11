@@ -17,7 +17,7 @@ import {
   Trash2,
   UserRound
 } from "lucide-react";
-import { FormEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, type MouseEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import {
   categoryLabelsByLocale,
   countryLabelsByLocale,
@@ -54,6 +54,7 @@ const monitoringOwnerTokenKey = "id-doppelganger-monitoring-owner-token";
 const freeDetailOwnerTokenKey = "id-doppelganger-free-detail-owner-token";
 const freeDetailUsedScanIdKey = "id-doppelganger-free-detail-used-scan-id";
 const devAdminTokenKey = "id-doppelganger-dev-admin-token";
+const devAdminLogoClickWindowMs = 2500;
 const localeStorageKey = "id-doppelganger-locale";
 const scanExperienceCopy = {
   ko: {
@@ -430,6 +431,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   const [devAdminUsername, setDevAdminUsername] = useState("admin");
   const [devAdminPassword, setDevAdminPassword] = useState("");
   const [devAdminMessage, setDevAdminMessage] = useState<string | null>(null);
+  const devAdminLogoClickRef = useRef({ count: 0, startedAt: 0 });
   const copy = scanExperienceCopy[locale];
   const localizedLabels = {
     category: categoryLabelsByLocale[locale],
@@ -474,21 +476,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
         .catch(() => undefined);
     }
 
-    const savedDevAdminToken = window.localStorage.getItem(devAdminTokenKey);
-    fetch("/api/dev/admin-session", {
-      headers: devAdminHeaders(savedDevAdminToken)
-    })
-      .then(async (response) => (response.ok ? response.json() : null))
-      .then((body) => {
-        if (!body?.enabled) return;
-        setDevAdminEnabled(true);
-        if (typeof body.username === "string") setDevAdminUsername(body.username);
-        if (body.authenticated && savedDevAdminToken) {
-          setDevAdminToken(savedDevAdminToken);
-          setDevAdminMessage("개발자 테스트 모드가 켜져 있어요.");
-        }
-      })
-      .catch(() => undefined);
   }, [initialLocale]);
 
   useEffect(() => {
@@ -526,6 +513,45 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     const targetPath = nextLocale === "en" ? "/en" : "/";
     if (window.location.pathname === "/" || window.location.pathname === "/en") {
       window.history.replaceState(null, "", targetPath);
+    }
+  }
+
+  function handleBrandClick(event: MouseEvent<HTMLAnchorElement>) {
+    event.preventDefault();
+
+    const now = Date.now();
+    const isSameSequence = now - devAdminLogoClickRef.current.startedAt <= devAdminLogoClickWindowMs;
+    const nextCount = isSameSequence ? devAdminLogoClickRef.current.count + 1 : 1;
+    devAdminLogoClickRef.current = {
+      count: nextCount,
+      startedAt: isSameSequence ? devAdminLogoClickRef.current.startedAt : now
+    };
+
+    if (nextCount < 5) return;
+
+    devAdminLogoClickRef.current = { count: 0, startedAt: 0 };
+    void unlockDevAdminPanel();
+  }
+
+  async function unlockDevAdminPanel() {
+    const savedDevAdminToken = window.localStorage.getItem(devAdminTokenKey);
+
+    try {
+      const response = await fetch("/api/dev/admin-session", {
+        headers: devAdminHeaders(savedDevAdminToken)
+      });
+      const body = response.ok ? await response.json() : null;
+
+      if (!body?.enabled) return;
+
+      setDevAdminEnabled(true);
+      if (typeof body.username === "string") setDevAdminUsername(body.username);
+      if (body.authenticated && savedDevAdminToken) {
+        setDevAdminToken(savedDevAdminToken);
+        setDevAdminMessage("개발자 테스트 모드가 켜져 있어요.");
+      }
+    } catch {
+      // Keep the easter egg silent on production builds where the dev endpoint is absent.
     }
   }
 
@@ -705,7 +731,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   return (
     <main className="app-shell">
       <header className="container topbar">
-        <a className="brand-mark" href={locale === "en" ? "/en" : "/"} aria-label={copy.brandHomeLabel}>
+        <a className="brand-mark" href={locale === "en" ? "/en" : "/"} aria-label={copy.brandHomeLabel} onClick={handleBrandClick}>
           <BrandIcon />
           <span>{copy.brandName}</span>
         </a>
@@ -1846,12 +1872,9 @@ function DevAdminPanel({
   }
 
   return (
-    <details className="dev-admin-card dev-admin-details">
-      <summary>
-        <strong>{copy.devAdmin.loginTitle}</strong>
-        <span>{copy.devAdmin.summaryHint}</span>
-      </summary>
+    <div className="dev-admin-card">
       <div>
+        <strong>{copy.devAdmin.loginTitle}</strong>
         <span>{copy.devAdmin.defaultAccount}</span>
         {message ? <span role="alert">{message}</span> : null}
       </div>
@@ -1879,7 +1902,7 @@ function DevAdminPanel({
           {copy.devAdmin.login}
         </button>
       </div>
-    </details>
+    </div>
   );
 }
 

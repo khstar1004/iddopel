@@ -27,7 +27,13 @@ const completeEnv = {
   TOSS_CONSOLE_API_KEY: "toss-console-api-key-value",
   TOSS_CONSOLE_APP_ID: "toss-console-app",
   TOSS_MINI_APP_NAME: "id-doppelganger",
+  TOSS_ALLOWED_ORIGINS: "https://id-doppelganger.apps.tossmini.com,https://id-doppelganger.private-apps.tossmini.com",
   MOBILE_PAYMENTS_ENABLED: "true",
+  APPLE_BUNDLE_ID: "com.iddoppelganger.app",
+  APPLE_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
+  APPLE_ENVIRONMENT: "production",
+  GOOGLE_PLAY_PACKAGE_NAME: "com.iddoppelganger.app",
+  GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
   ALERT_WEBHOOK_URL: "https://hooks.verified-domain.kr/launch",
   ALERT_WEBHOOK_PROVIDER: "slack",
   ALERT_RUNBOOK_URL: "https://docs.verified-domain.kr/runbooks/id-doppelganger"
@@ -100,6 +106,33 @@ describe("createProductionReleasePreparation", () => {
 
     expect(preparation.ready).toBe(false);
     expect(preparation.missing).toContain("MOBILE_PAYMENTS_ENABLED=true");
+  });
+
+  it("requires finalized native store identifiers before production preparation", () => {
+    const {
+      APPLE_BUNDLE_ID: _appleBundleId,
+      APPLE_DETAILED_REPORT_PRODUCT_ID: _appleProductId,
+      APPLE_ENVIRONMENT: _appleEnvironment,
+      GOOGLE_PLAY_PACKAGE_NAME: _googlePackageName,
+      GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: _googleProductId,
+      ...withoutNativeStoreIds
+    } = completeEnv;
+
+    const preparation = createProductionReleasePreparation({
+      env: withoutNativeStoreIds,
+      existingFiles
+    });
+
+    expect(preparation.ready).toBe(false);
+    expect(preparation.missing).toEqual(
+      expect.arrayContaining([
+        "APPLE_BUNDLE_ID=com.iddoppelganger.app",
+        "APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report",
+        "APPLE_ENVIRONMENT=production",
+        "GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app",
+        "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report"
+      ])
+    );
   });
 
   it("rejects placeholder production domains before writing release files", () => {

@@ -30,12 +30,21 @@ export const launchEnvFields: LaunchEnvField[] = [
   { key: "TOSS_CONSOLE_API_KEY", label: "Toss Console API Key", sensitive: true, placeholder: "Apps in Toss console API key" },
   { key: "TOSS_CONSOLE_APP_ID", label: "Toss Console App ID", sensitive: false, placeholder: "app_..." },
   { key: "TOSS_MINI_APP_NAME", label: "Toss Mini App Name", sensitive: false, placeholder: "id-doppelganger" },
+  {
+    key: "TOSS_ALLOWED_ORIGINS",
+    label: "Toss 허용 Origin",
+    sensitive: false,
+    placeholder: "https://id-doppelganger.apps.tossmini.com,https://id-doppelganger.private-apps.tossmini.com"
+  },
   { key: "TOSS_REVIEW_TEST_USERNAME", label: "Toss 심사용 아이디", sensitive: false, placeholder: "khstar104" },
   { key: "TOSS_REVIEW_SCENARIO", label: "Toss 심사 시나리오", sensitive: false, placeholder: "Enter the review username and run the flow." },
   { key: "ALERT_WEBHOOK_URL", label: "런칭 알림 Webhook", sensitive: true, placeholder: "https://hooks.yourdomain.kr/..." },
   { key: "ALERT_WEBHOOK_PROVIDER", label: "알림 Provider", sensitive: false, placeholder: "slack" },
   { key: "ALERT_RUNBOOK_URL", label: "장애 대응 Runbook URL", sensitive: false, placeholder: "https://docs.yourdomain.kr/runbook" },
   { key: "MOBILE_PAYMENTS_ENABLED", label: "네이티브 유료 리포트", sensitive: false, placeholder: "true" },
+  { key: "APPLE_BUNDLE_ID", label: "Apple Bundle ID", sensitive: false, placeholder: "com.iddoppelganger.app" },
+  { key: "APPLE_DETAILED_REPORT_PRODUCT_ID", label: "Apple 상세 리포트 상품 ID", sensitive: false, placeholder: "detailed_report" },
+  { key: "APPLE_ENVIRONMENT", label: "Apple 영수증 환경", sensitive: false, placeholder: "production" },
   { key: "APPLE_KEY_ID", label: "App Store Connect Key ID", sensitive: true, placeholder: "ABC123DEFG" },
   { key: "APPLE_ISSUER_ID", label: "App Store Connect Issuer ID", sensitive: true, placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
   {
@@ -46,6 +55,8 @@ export const launchEnvFields: LaunchEnvField[] = [
     multiline: true
   },
   { key: "APPLE_APP_APPLE_ID", label: "Apple App ID", sensitive: false, placeholder: "1234567890" },
+  { key: "GOOGLE_PLAY_PACKAGE_NAME", label: "Google Play Package", sensitive: false, placeholder: "com.iddoppelganger.app" },
+  { key: "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID", label: "Google Play 상세 리포트 상품 ID", sensitive: false, placeholder: "detailed_report" },
   {
     key: "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
     label: "Google Play Service Account JSON",
@@ -136,15 +147,21 @@ export function validateLaunchEnvValues(values: Record<string, string>) {
   validateMinimumLength(values.TOSS_SECRET_KEY, "TOSS_SECRET_KEY", "Toss Payments Secret Key", 12, errors);
   validatePattern(values.TOSS_SECURITY_KEY, "TOSS_SECURITY_KEY", "Toss Payments Security Key", /^[a-f0-9]{64}$/i, "64자 hex 보안 키여야 해요.", errors);
   validateMinimumLength(values.TOSS_CONSOLE_API_KEY, "TOSS_CONSOLE_API_KEY", "Toss Console API Key", 12, errors);
+  validateTossAllowedOrigins(values.TOSS_ALLOWED_ORIGINS, errors);
   validateHttpsUrl(values.ALERT_WEBHOOK_URL, "ALERT_WEBHOOK_URL", "런칭 알림 Webhook", errors);
   validateWebhookProvider(values.ALERT_WEBHOOK_PROVIDER, errors);
   validateHttpsUrl(values.ALERT_RUNBOOK_URL, "ALERT_RUNBOOK_URL", "장애 대응 Runbook URL", errors);
   validateBoolean(values.MOBILE_PAYMENTS_ENABLED, "MOBILE_PAYMENTS_ENABLED", errors);
   validateSlug(values.TOSS_MINI_APP_NAME, "TOSS_MINI_APP_NAME", "Toss Mini App Name", errors);
+  validatePattern(values.APPLE_BUNDLE_ID, "APPLE_BUNDLE_ID", "Apple Bundle ID", /^com\.iddoppelganger\.app$/, "com.iddoppelganger.app 이어야 해요.", errors);
+  validateSlug(values.APPLE_DETAILED_REPORT_PRODUCT_ID, "APPLE_DETAILED_REPORT_PRODUCT_ID", "Apple 상세 리포트 상품 ID", errors);
+  validateAppleEnvironment(values.APPLE_ENVIRONMENT, errors);
   validateMinimumLength(values.APPLE_KEY_ID, "APPLE_KEY_ID", "App Store Connect Key ID", 6, errors);
   validateMinimumLength(values.APPLE_ISSUER_ID, "APPLE_ISSUER_ID", "App Store Connect Issuer ID", 16, errors);
   validateMinimumLength(values.APPLE_PRIVATE_KEY, "APPLE_PRIVATE_KEY", "App Store Connect Private Key", 12, errors);
   validateNumeric(values.APPLE_APP_APPLE_ID, "APPLE_APP_APPLE_ID", "Apple App ID", errors);
+  validatePattern(values.GOOGLE_PLAY_PACKAGE_NAME, "GOOGLE_PLAY_PACKAGE_NAME", "Google Play Package", /^com\.iddoppelganger\.app$/, "com.iddoppelganger.app 이어야 해요.", errors);
+  validateSlug(values.GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID, "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID", "Google Play 상세 리포트 상품 ID", errors);
   validateJsonObject(values.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON, "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "Google Play Service Account JSON", errors);
   validateNoLaunchPlaceholders(values, errors);
 
@@ -235,6 +252,48 @@ function validateWebhookProvider(value: string | undefined, errors: Record<strin
   if (!input) return;
   if (!["generic", "slack", "discord"].includes(input)) {
     errors.ALERT_WEBHOOK_PROVIDER = "알림 Provider는 generic, slack, discord 중 하나여야 해요.";
+  }
+}
+
+function validateTossAllowedOrigins(value: string | undefined, errors: Record<string, string>) {
+  const input = String(value || "").trim();
+  if (!input) return;
+
+  const origins = input
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const normalizedHosts = [];
+  for (const origin of origins) {
+    try {
+      const parsed = new URL(origin);
+      if (parsed.protocol !== "https:" || isLocalHostname(parsed.hostname)) {
+        errors.TOSS_ALLOWED_ORIGINS = "Toss 허용 Origin은 실제 HTTPS Origin이어야 해요.";
+        return;
+      }
+      normalizedHosts.push(parsed.hostname);
+    } catch {
+      errors.TOSS_ALLOWED_ORIGINS = "Toss 허용 Origin은 쉼표로 구분한 HTTPS Origin 목록이어야 해요.";
+      return;
+    }
+  }
+
+  if (!normalizedHosts.some((host) => host.endsWith(".apps.tossmini.com"))) {
+    errors.TOSS_ALLOWED_ORIGINS = "공개 tossmini.com Origin을 포함해야 해요.";
+    return;
+  }
+
+  if (!normalizedHosts.some((host) => host.endsWith(".private-apps.tossmini.com"))) {
+    errors.TOSS_ALLOWED_ORIGINS = "QR/비공개 테스트용 private-apps.tossmini.com Origin을 포함해야 해요.";
+  }
+}
+
+function validateAppleEnvironment(value: string | undefined, errors: Record<string, string>) {
+  const input = String(value || "").trim();
+  if (!input) return;
+  if (!["sandbox", "production"].includes(input)) {
+    errors.APPLE_ENVIRONMENT = "Apple 영수증 환경은 sandbox 또는 production 이어야 해요.";
   }
 }
 

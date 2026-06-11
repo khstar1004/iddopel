@@ -72,11 +72,18 @@ describe("buildLaunchButtonPlan", () => {
     expect(env).toMatchObject({
       APP_STORE_CONNECT_KEY_ID: "ABC123DEFG",
       APP_STORE_CONNECT_ISSUER_ID: "00000000-0000-0000-0000-000000000000",
+      TOSS_ALLOWED_ORIGINS:
+        "https://id-doppelganger.apps.tossmini.com,https://id-doppelganger.private-apps.tossmini.com",
       SITE_URL: "https://id.verified-domain.kr",
       PRODUCTION_BASE_URL: "https://id.verified-domain.kr",
       SMOKE_BASE_URL: "https://id.verified-domain.kr",
       STORE_PRODUCTION_ORIGIN: "https://id.verified-domain.kr",
       MOBILE_APP_ORIGIN: "https://id.verified-domain.kr",
+      APPLE_BUNDLE_ID: "com.iddoppelganger.app",
+      APPLE_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
+      APPLE_ENVIRONMENT: "production",
+      GOOGLE_PLAY_PACKAGE_NAME: "com.iddoppelganger.app",
+      GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
       SCAN_PROVIDER: "maigret",
       PAYMENT_PROVIDER: "toss",
       ENABLE_MOCK_PAYMENTS: "false"
@@ -104,6 +111,7 @@ describe("buildLaunchButtonPlan", () => {
         "TOSS_SECRET_KEY",
         "TOSS_SECURITY_KEY",
         "TOSS_CONSOLE_API_KEY",
+        "TOSS_ALLOWED_ORIGINS",
         "DATABASE_URL",
         "CRON_SECRET",
         "ALERT_WEBHOOK_URL",
@@ -190,6 +198,16 @@ describe("buildLaunchButtonPlan", () => {
     expect(serialized).not.toContain("C:/local/bin");
     expect(serialized).not.toContain("APPDATA");
     expect(serialized).not.toContain("LOCAL_ONLY_DEBUG_VALUE");
+  });
+
+  it("keeps derived public launch values visible in the dry-run report", () => {
+    const env = buildLaunchEnvironment({ fileEnv: completeFileEnv, env: {} });
+    const report = createPublicLaunchReport(buildLaunchButtonPlan({ env, ship: true }));
+    const serialized = JSON.stringify(report);
+
+    expect(serialized).toContain("https://id-doppelganger.apps.tossmini.com");
+    expect(serialized).toContain("com.iddoppelganger.app");
+    expect(serialized).toContain("detailed_report");
   });
 });
 

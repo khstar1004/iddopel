@@ -17,7 +17,13 @@ const requiredExternalValues = [
   "TOSS_CONSOLE_API_KEY",
   "TOSS_CONSOLE_APP_ID",
   "TOSS_MINI_APP_NAME",
+  "TOSS_ALLOWED_ORIGINS",
   "MOBILE_PAYMENTS_ENABLED=true",
+  "APPLE_BUNDLE_ID=com.iddoppelganger.app",
+  "APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report",
+  "APPLE_ENVIRONMENT=production",
+  "GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app",
+  "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report",
   "ALERT_WEBHOOK_URL",
   "ALERT_RUNBOOK_URL"
 ];
@@ -91,7 +97,7 @@ export function renderDeployEnv(values) {
     MOBILE_PAYMENTS_ENABLED: values.MOBILE_PAYMENTS_ENABLED || "false",
     APPLE_BUNDLE_ID: values.APPLE_BUNDLE_ID || "com.iddoppelganger.app",
     APPLE_DETAILED_REPORT_PRODUCT_ID: values.APPLE_DETAILED_REPORT_PRODUCT_ID || "detailed_report",
-    APPLE_ENVIRONMENT: values.APPLE_ENVIRONMENT || "sandbox",
+    APPLE_ENVIRONMENT: values.APPLE_ENVIRONMENT || "production",
     APPLE_KEY_ID: values.APPLE_KEY_ID || "",
     APPLE_ISSUER_ID: values.APPLE_ISSUER_ID || "",
     "APPLE_PRIVATE_KEY": values.APPLE_PRIVATE_KEY || "",

@@ -47,7 +47,33 @@ describe("verify-toss-submission", () => {
 
     expect(report.ok).toBe(false);
     expect(report.releaseFailures).toContainEqual(expect.objectContaining({ name: "Env TOSS_MINI_APP_NAME" }));
+    expect(report.releaseFailures).toContainEqual(expect.objectContaining({ name: "Env TOSS_ALLOWED_ORIGINS" }));
     expect(report.releaseFailures).toContainEqual(expect.objectContaining({ name: "Env SITE_URL" }));
+  });
+
+  it("passes release credential checks when Toss origins and payment keys are finalized", () => {
+    const report = createTossSubmissionReport({
+      files: completeFiles,
+      packageJson: completePackage,
+      releaseCheck: true,
+      env: {
+        TOSS_CONSOLE_API_KEY: "toss-console-api-key-value",
+        TOSS_CONSOLE_APP_ID: "app-id",
+        TOSS_MINI_APP_NAME: "id-doppelganger",
+        TOSS_ALLOWED_ORIGINS:
+          "https://id-doppelganger.apps.tossmini.com,https://id-doppelganger.private-apps.tossmini.com",
+        SITE_URL: "https://id.verified-domain.kr",
+        PAYMENT_PROVIDER: "toss",
+        TOSS_CLIENT_KEY: "test_ck_123456789",
+        TOSS_SECRET_KEY: "test_sk_123456789",
+        TOSS_SECURITY_KEY: "a".repeat(64),
+        TOSS_REVIEW_TEST_USERNAME: "khstar104",
+        TOSS_REVIEW_SCENARIO: "Enter the review username and run the scan."
+      }
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.releaseFailures).toEqual([]);
   });
 
   it("fails locally if unsafe people-search copy appears in the Toss surface", () => {

@@ -21,7 +21,8 @@ const launchRequirementGroups = [
       "TOSS_SECURITY_KEY",
       "TOSS_CONSOLE_API_KEY",
       "TOSS_CONSOLE_APP_ID",
-      "TOSS_MINI_APP_NAME"
+      "TOSS_MINI_APP_NAME",
+      "TOSS_ALLOWED_ORIGINS"
     ]
   },
   {
@@ -29,10 +30,15 @@ const launchRequirementGroups = [
     label: "App Store / Google Play",
     keys: [
       "MOBILE_PAYMENTS_ENABLED",
+      "APPLE_BUNDLE_ID",
+      "APPLE_DETAILED_REPORT_PRODUCT_ID",
+      "APPLE_ENVIRONMENT",
       "APPLE_KEY_ID",
       "APPLE_ISSUER_ID",
       "APPLE_PRIVATE_KEY",
       "APPLE_APP_APPLE_ID",
+      "GOOGLE_PLAY_PACKAGE_NAME",
+      "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID",
       "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
     ]
   }

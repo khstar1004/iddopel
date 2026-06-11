@@ -159,7 +159,7 @@ async function buildLaunchConsoleState(options: LaunchConsoleOptions) {
   return {
     envFileExists,
     fileEnv,
-    envStatus: createLaunchEnvStatus(fileEnv),
+    envStatus: createLaunchEnvStatus(launchEnv),
     launchEnv,
     plan,
     report

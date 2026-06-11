@@ -16,6 +16,7 @@ const prepareRequiredKeys = [
   "TOSS_CONSOLE_API_KEY",
   "TOSS_CONSOLE_APP_ID",
   "TOSS_MINI_APP_NAME",
+  "TOSS_ALLOWED_ORIGINS",
   "ALERT_WEBHOOK_URL",
   "ALERT_RUNBOOK_URL"
 ];
@@ -26,10 +27,15 @@ const shipRequiredValues = {
 };
 const storeReleaseRequiredKeys = [
   "CRON_SECRET",
+  "APPLE_BUNDLE_ID",
+  "APPLE_DETAILED_REPORT_PRODUCT_ID",
+  "APPLE_ENVIRONMENT",
   "APPLE_KEY_ID",
   "APPLE_ISSUER_ID",
   "APPLE_PRIVATE_KEY",
   "APPLE_APP_APPLE_ID",
+  "GOOGLE_PLAY_PACKAGE_NAME",
+  "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID",
   "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
 ];
 
@@ -72,11 +78,16 @@ const publicLaunchEnvKeys = new Set([
   "APPLE_KEY_ID",
   "APPLE_ISSUER_ID",
   "APPLE_PRIVATE_KEY",
+  "APPLE_BUNDLE_ID",
+  "APPLE_DETAILED_REPORT_PRODUCT_ID",
+  "APPLE_ENVIRONMENT",
   "APPLE_APP_APPLE_ID",
   "APP_STORE_CONNECT_KEY_ID",
   "APP_STORE_CONNECT_ISSUER_ID",
   "APP_STORE_CONNECT_API_KEY_P8",
   "APP_STORE_CONNECT_APPLE_ID",
+  "GOOGLE_PLAY_PACKAGE_NAME",
+  "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID",
   "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
   "DEPLOY_RELEASE_CHECK",
   "STORE_RELEASE_CHECK",
@@ -147,6 +158,19 @@ export function buildLaunchEnvironment({ fileEnv = {}, env = {} } = {}) {
   merged.ALERT_WEBHOOK_TIMEOUT_MS ||= "1500";
   merged.TOSS_REVIEW_TEST_USERNAME ||= "khstar104";
   merged.TOSS_REVIEW_SCENARIO ||= "Enter the review username, acknowledge legitimate purpose, run the free scan, then open the detailed report checkout.";
+
+  if (!merged.TOSS_ALLOWED_ORIGINS && merged.TOSS_MINI_APP_NAME && /^[a-z0-9-]+$/.test(merged.TOSS_MINI_APP_NAME)) {
+    merged.TOSS_ALLOWED_ORIGINS = [
+      `https://${merged.TOSS_MINI_APP_NAME}.apps.tossmini.com`,
+      `https://${merged.TOSS_MINI_APP_NAME}.private-apps.tossmini.com`
+    ].join(",");
+  }
+
+  merged.APPLE_BUNDLE_ID ||= "com.iddoppelganger.app";
+  merged.APPLE_DETAILED_REPORT_PRODUCT_ID ||= "detailed_report";
+  merged.APPLE_ENVIRONMENT ||= "production";
+  merged.GOOGLE_PLAY_PACKAGE_NAME ||= "com.iddoppelganger.app";
+  merged.GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID ||= "detailed_report";
 
   merged.APP_STORE_CONNECT_KEY_ID ||= merged.APPLE_KEY_ID;
   merged.APP_STORE_CONNECT_ISSUER_ID ||= merged.APPLE_ISSUER_ID;

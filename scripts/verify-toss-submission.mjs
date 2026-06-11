@@ -89,6 +89,7 @@ export function createTossSubmissionReport({ files, packageJson, env = process.e
     addReleaseCheck("Env TOSS_CONSOLE_API_KEY", value(env, "TOSS_CONSOLE_API_KEY").length >= 12, "Set the Apps in Toss console API key for AX/console release automation.");
     addReleaseCheck("Env TOSS_CONSOLE_APP_ID", Boolean(value(env, "TOSS_CONSOLE_APP_ID")), "Set the Toss developer console app id.");
     addReleaseCheck("Env TOSS_MINI_APP_NAME", /^[a-z0-9-]+$/.test(value(env, "TOSS_MINI_APP_NAME")), "Set the Toss mini app name used for tossmini.com origins.");
+    addReleaseCheck("Env TOSS_ALLOWED_ORIGINS", hasFinalTossOrigins(value(env, "TOSS_ALLOWED_ORIGINS")), "Set both live and private tossmini.com Origins.");
     addReleaseCheck("Env SITE_URL", isHttpsUrl(value(env, "SITE_URL")), "Set SITE_URL to the production HTTPS origin.");
     addReleaseCheck("Env PAYMENT_PROVIDER", value(env, "PAYMENT_PROVIDER") === "toss", "Set PAYMENT_PROVIDER=toss for Toss/web checkout.");
     addReleaseCheck("Env TOSS_CLIENT_KEY", /^test_ck_|^live_ck_/.test(value(env, "TOSS_CLIENT_KEY")), "Set the Toss Payments client key.");
@@ -159,6 +160,25 @@ function isHttpsUrl(input) {
   } catch {
     return false;
   }
+}
+
+function hasFinalTossOrigins(input) {
+  const origins = input
+    .split(",")
+    .map((origin) => {
+      try {
+        return new URL(origin.trim());
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+
+  return (
+    origins.some((origin) => origin.protocol === "https:" && origin.hostname.endsWith(".apps.tossmini.com")) &&
+    origins.some((origin) => origin.protocol === "https:" && origin.hostname.endsWith(".private-apps.tossmini.com")) &&
+    !/YOUR_|example/i.test(input)
+  );
 }
 
 function isMainModule() {
