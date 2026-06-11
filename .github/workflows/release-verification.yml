@@ -57,7 +57,7 @@ jobs:
         run: npm run e2e
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
@@ -114,13 +114,13 @@ jobs:
         run: ./gradlew bundleRelease
 
       - name: Upload Android debug artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
 
       - name: Upload Android release bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-release-aab
           path: android/app/build/outputs/bundle/release/*.aab
