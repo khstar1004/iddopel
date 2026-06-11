@@ -45,7 +45,7 @@ describe("buildShareCardSvg", () => {
     expect(svg).toContain('height="630"');
     expect(svg).toContain("creator&lt;id&gt;");
     expect(svg).toContain("68점");
-    expect(svg).toContain("공개 계정 후보 7개");
+    expect(svg).toContain("공개 흔적 7개");
     expect(svg).toContain("id.example.com");
     expect(svg).not.toContain("https://github.com");
     expect(svg).not.toContain("Do not leak");

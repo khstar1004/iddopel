@@ -14,10 +14,10 @@ export function buildShareCardSvg(summary: ScanSummary, options: ShareCardOption
   const topCountries = topDistribution(summary.countryDistribution, countryLabels);
   const topCategories = topDistribution(summary.categoryDistribution, categoryLabels);
   const rarityCopy = summary.rarityScore >= 75 ? "꽤 희귀한 아이디" : summary.rarityScore >= 45 ? "어느 정도 쓰이는 아이디" : "이미 많이 쓰이는 아이디";
-  const sourceCopy = "공개 후보 결과";
+  const sourceCopy = "아이디 흔적 결과";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${cardWidth}" height="${cardHeight}" viewBox="0 0 ${cardWidth} ${cardHeight}">
-  <desc>${escapeXml(`${summary.username}의 ID 도플갱어 점수 ${summary.doppelgangerScore}점, 공개 계정 후보 ${summary.foundCount}개`)}</desc>
+  <desc>${escapeXml(`${summary.username}의 ID 도플갱어 점수 ${summary.doppelgangerScore}점, 공개 흔적 ${summary.foundCount}개`)}</desc>
   <rect width="${cardWidth}" height="${cardHeight}" fill="#090A0F"/>
   <rect x="54" y="50" width="1092" height="530" rx="28" fill="#111821" stroke="#243244" stroke-width="2"/>
   <path d="M88 536 H1112" stroke="#1E2B38" stroke-width="2"/>
@@ -31,7 +31,7 @@ export function buildShareCardSvg(summary: ScanSummary, options: ShareCardOption
   <text x="86" y="262" fill="#A7AAB8" font-family="Pretendard, Inter, Arial, sans-serif" font-size="24" font-weight="700">내 아이디, 전세계에서 나만 쓰는 줄 알았어?</text>
   <g transform="translate(86 310)">
     ${metricCard(0, "ID 도플갱어 점수", `${summary.doppelgangerScore}점`, "#00D4FF")}
-    ${metricCard(272, "공개 계정 후보", `${summary.foundCount}개`, "#2DD4BF")}
+    ${metricCard(272, "공개 흔적", `${summary.foundCount}개`, "#2DD4BF")}
     ${metricCard(544, "희소성", `${summary.rarityScore}점`, "#FFB020")}
   </g>
   <g transform="translate(86 460)">
@@ -39,7 +39,7 @@ export function buildShareCardSvg(summary: ScanSummary, options: ShareCardOption
     ${pill(230, `국가 ${escapeXml(topCountries)}`)}
     ${pill(500, `카테고리 ${escapeXml(topCategories)}`)}
   </g>
-  <text x="86" y="558" fill="#D9E2EF" font-family="Pretendard, Inter, Arial, sans-serif" font-size="23" font-weight="800">${escapeXml(rarityCopy)} · 동일인 판정이 아닌 공개 username 후보 신호</text>
+  <text x="86" y="558" fill="#D9E2EF" font-family="Pretendard, Inter, Arial, sans-serif" font-size="23" font-weight="800">${escapeXml(rarityCopy)} · 동일인 판정이 아닌 공개 username 흔적</text>
   <text x="1114" y="558" text-anchor="end" fill="#8B95A1" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="800">${escapeXml(host)}</text>
 </svg>`;
 }

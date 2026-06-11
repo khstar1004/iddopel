@@ -6,9 +6,9 @@ Last updated: 2026-06-11
 
 **Main tagline:** 내 아이디, 전세계에서 나만 쓰는 줄 알았어?
 
-**Plain tagline:** 아이디 하나로 잡힌 공개 계정 후보를 먼저 확인하세요.
+**Plain tagline:** 내 아이디, 어디에 남아 있을까?
 
-**Brand/creator tagline:** 활동명 쓰기 전, 공개 계정 후보부터 점검하세요.
+**Brand/creator tagline:** 활동명 쓰기 전, 겹치는 공개 흔적부터 확인하세요.
 
 **Safety tagline:** 사람 찾기가 아니라, username 문자열 점검입니다.
 
@@ -18,17 +18,17 @@ Last updated: 2026-06-11
 
 Headline: 내 아이디, 어디까지 남아 있을까?
 
-Subheadline: 자주 쓰는 아이디를 입력하면 어느 플랫폼에 공개 후보가 잡히는지 카드로 먼저 보여주고, 점수는 마지막 참고 분석으로 정리합니다.
+Subheadline: 자주 쓰는 아이디를 입력하면 어느 플랫폼에 흔적이 남아 있는지 카드로 먼저 보여주고, 점수는 마지막 참고 분석으로 정리합니다.
 
-CTA: 공개 후보 확인
+CTA: 내 아이디 흔적 찾기
 
 ### Variant B: Creator
 
 Headline: 새 활동명 쓰기 전에 먼저 점검하세요
 
-Subheadline: SNS, 블로그, 커뮤니티에서 같은 username 후보가 보이는지 확인하고 사칭 가능성 신호와 계정 선점 우선순위를 정리하세요.
+Subheadline: SNS, 블로그, 커뮤니티에서 같은 username 흔적이 보이는지 확인하고 사칭 가능성 신호와 계정 선점 우선순위를 정리하세요.
 
-CTA: 활동명 후보 점검
+CTA: 활동명 겹침 확인
 
 ### Variant C: Brand
 
@@ -64,13 +64,13 @@ The first version is Korean-first and works as a web/PWA flow, with app-store-re
 
 ## Korean Community Post
 
-제목: 아이디 하나로 공개 계정 후보를 점검하는 한국어 서비스를 만들었습니다
+제목: 내 아이디가 어디에 남아 있는지 보여주는 한국어 서비스를 만들었습니다
 
 본문:
 
 오래 쓰던 아이디나 새로 정한 닉네임이 다른 공개 플랫폼에서 얼마나 겹치는지 궁금할 때가 있습니다. 그래서 `ID 도플갱어`를 만들었습니다.
 
-아이디 문자열을 입력하면 공개 계정 후보 카드가 먼저 뜨고, 희소성·노출도·사칭 가능성·방치 계정 위험 점수는 마지막 참고 분석으로 정리됩니다.
+아이디 문자열을 입력하면 공개 흔적 카드가 먼저 뜨고, 희소성·노출도·사칭 가능성·방치 계정 위험 점수는 마지막 참고 분석으로 정리됩니다.
 
 중요한 제한도 분명히 두었습니다.
 
@@ -81,7 +81,7 @@ The first version is Korean-first and works as a web/PWA flow, with app-store-re
 
 출시 전 피드백을 받고 싶습니다. 특히 "사람 찾기"로 오해되지 않으면서도 기능이 한 번에 이해되는 표현인지 봐주시면 좋겠습니다.
 
-CTA: 공개 후보 확인
+CTA: 내 아이디 흔적 찾기
 
 ## LinkedIn Posts
 
@@ -122,24 +122,24 @@ It does not identify people. It checks username strings and keeps the result fra
 
 ## Press Blurb
 
-ID 도플갱어는 아이디 문자열의 공개 사용 현황을 점검하는 한국어 웹/앱 서비스다. 사용자가 입력한 아이디, 닉네임, 활동명, 브랜드명의 공개 계정 후보를 먼저 보여주고, 희소성·노출도·사칭 가능성·방치 계정 위험은 마지막 참고 분석으로 정리한다. 서비스는 실명, 전화번호, 이메일, 위치, 사진, 게시글 내용, 동일인 확률을 다루지 않으며, 결과를 공개 username 사용 후보로만 해석하도록 설계됐다.
+ID 도플갱어는 아이디 문자열의 공개 사용 현황을 점검하는 한국어 웹/앱 서비스다. 사용자가 입력한 아이디, 닉네임, 활동명, 브랜드명의 공개 흔적을 먼저 보여주고, 희소성·노출도·사칭 가능성·방치 계정 위험은 마지막 참고 분석으로 정리한다. 서비스는 실명, 전화번호, 이메일, 위치, 사진, 게시글 내용, 동일인 확률을 다루지 않으며, 결과를 공개 username 사용 흔적으로만 해석하도록 설계됐다.
 
 ## Store Listing Improvements
 
 Apple subtitle candidate, 30 chars max:
 
-- 공개 계정 후보 점검
-- 닉네임·사칭 후보 점검
-- 공개 계정 후보 점검
+- 공개 흔적 점검
+- 닉네임 겹침·사칭 신호 점검
+- 공개 흔적 점검
 
 Google short description candidate, 80 chars max:
 
-- 아이디 하나로 잡힌 공개 계정 후보를 먼저 확인하세요.
+- 아이디 하나로 남아 있는 공개 흔적을 먼저 확인하세요.
 
 Screenshot captions:
 
 1. 아이디 입력 후 정당한 목적 확인
-2. 공개 후보 카드와 잠긴 상세 URL
+2. 공개 흔적 카드와 잠긴 상세 URL
 3. 전체 URL과 조치 가이드는 정밀 리포트에서
 4. 실명·전화번호·이메일 검색은 지원하지 않음
 

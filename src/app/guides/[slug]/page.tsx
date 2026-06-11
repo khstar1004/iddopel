@@ -177,7 +177,7 @@ export default async function GuidePage({ params }: GuidePageProps) {
           <section className="panel">
             <h2>리포트 구성</h2>
             <ul className="guide-list" style={{ marginTop: 14 }}>
-              {["ID 도플갱어 점수", "공개 계정 후보 수", "국가·카테고리 분포", "방치 계정 정리 가이드"].map((item) => (
+              {["ID 도플갱어 점수", "공개 흔적 수", "국가·카테고리 분포", "방치 계정 정리 가이드"].map((item) => (
                 <li key={item}>
                   <span>{item}</span>
                   <CheckCircle2 size={16} aria-hidden />

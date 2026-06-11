@@ -79,7 +79,7 @@ function buildJsonLd(origin: string) {
         applicationCategory: "UtilitiesApplication",
         operatingSystem: "Web, Android, iOS",
         inLanguage: "ko-KR",
-        description: "아이디 문자열이 공개 플랫폼 어디에서 후보로 잡히는지 빠르게 확인하는 한국어 서비스입니다.",
+        description: "아이디 문자열이 공개 플랫폼 어디에 남아 있는지 빠르게 확인하는 한국어 서비스입니다.",
         offers: {
           "@type": "Offer",
           price: "0",

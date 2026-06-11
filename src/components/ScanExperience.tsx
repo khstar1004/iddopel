@@ -86,7 +86,7 @@ const scanExperienceCopy = {
       submit: "내 아이디 흔적 찾기",
       submitting: "찾는 중"
     },
-    scanSteps: ["공개 프로필 확인 중", "한국 서비스 확인 중", "SNS·블로그 확인 중", "후보 정리 중"],
+    scanSteps: ["공개 프로필 확인 중", "한국 서비스 확인 중", "SNS·블로그 확인 중", "흔적 정리 중"],
     results: {
       heading: (summary: ScanSummary | null) => summary ? `${summary.username}로 찾은 공개 흔적` : "아이디를 입력하면 결과가 바로 떠요",
       delete: "기록 삭제",
@@ -96,7 +96,7 @@ const scanExperienceCopy = {
         summary.foundCount > 0 ? `${summary.username}가 남아 있는 곳` : `${summary.username} 공개 흔적 없음`,
       metricsLabel: "결과 규모",
       visible: "먼저 공개",
-      locked: "잠긴 후보",
+      locked: "잠긴 URL",
       korea: "한국",
       nextActions: "다음 작업",
       shareCard: "공유 카드 저장",
@@ -122,30 +122,30 @@ const scanExperienceCopy = {
       noResults: "무료 점검에서 바로 보이는 공개 흔적이 없어요.",
       loading: "상세 결과 확인 중",
       lockedLabel: "잠긴 상세 결과",
-      lockedResult: (index: number) => `공개 계정 후보 #${index}`,
+      lockedResult: (index: number) => `잠긴 공개 흔적 #${index}`,
       lockedDescription: "URL, 위험도, 정리 가이드 잠김",
       fullOpen: (count: number) => `${count}개 상세 결과가 열렸어요.`,
       freeUsedLead: "1회 무료 상세 결과를 이미 사용했어요. ",
       lockedCount: (count: number) => `상세 URL ${count}개 잠김`,
       ordering: "주문 만드는 중",
       foundRank: (index: number) => `#${index} 발견됨`,
-      candidateAria: (platform: string) => `${platform} 공개 계정 후보`,
+      candidateAria: (platform: string) => `${platform} 공개 흔적`,
       metadataAria: (platform: string) => `${platform} 메타데이터`,
       maskedAria: (platform: string) => `${platform} 잠긴 상세 URL 미리보기`,
       lockedUrlFallback: "상세 URL 잠김",
-      lockCopy: "플랫폼 후보는 먼저 공개하고, 정확한 URL과 정리 가이드는 전체 리포트에서 열려요."
+      lockCopy: "공개 흔적은 먼저 보여주고, 정확한 URL과 정리 가이드는 전체 리포트에서 열려요."
     },
     pricing: {
       title: "가격",
       freeTitle: "무료",
       freePrice: "0원",
-      freeItems: ["빠른 점검", "후보 카드 미리보기", "잠긴 URL 미리보기"],
+      freeItems: ["빠른 점검", "공개 흔적 미리보기", "잠긴 URL 미리보기"],
       reportTitle: "정밀 리포트",
       reportPrice: "2,900원",
       reportItems: ["전체 결과 URL", "위험도 분석", "HTML/PDF 리포트"],
       monitoringTitle: "월간 모니터링",
       monitoringPrice: "3,900원/월",
-      monitoringItems: ["월 1회 자동 재점검", "새 후보 알림", "아이디 3개 모니터링"]
+      monitoringItems: ["월 1회 자동 재점검", "새 흔적 알림", "아이디 3개 모니터링"]
     },
     monitoring: {
       title: "월간 자동 재점검",
@@ -163,7 +163,7 @@ const scanExperienceCopy = {
     history: {
       title: "최근 검색한 아이디",
       empty: "이 브라우저에 저장된 검색 기록이 없어요.",
-      meta: (foundCount: number, rarityScore: number) => `후보 ${foundCount}개 · 희소성 ${rarityScore}점`,
+      meta: (foundCount: number, rarityScore: number) => `흔적 ${foundCount}개 · 희소성 ${rarityScore}점`,
       restoreAria: (username: string) => `${username} 결과 다시 보기`,
       deleteAria: (username: string) => `${username} 기록 삭제`,
       restore: "다시 보기",
@@ -1603,7 +1603,7 @@ function downloadHtmlReport(summary: ScanSummary, results: ScanResult[]) {
 </head>
 <body>
   <h1>${escapeHtml(summary.username)} ID 도플갱어 리포트</h1>
-  <p>공개 계정 후보 ${summary.foundCount}개 · 희소성 ${summary.rarityScore}점 · 노출도 ${summary.exposureScore}점</p>
+  <p>공개 흔적 ${summary.foundCount}개 · 희소성 ${summary.rarityScore}점 · 노출도 ${summary.exposureScore}점</p>
   <p>이 결과는 아이디 문자열의 공개 사용 현황이며, 발견된 계정들이 동일인이라는 뜻은 아니에요.</p>
   <table>
     <thead>
@@ -1637,7 +1637,7 @@ function buildShareSummary(summary: ScanSummary, locale: Locale) {
 
   if (locale === "en") {
     return [
-      `${summary.username}: ${summary.foundCount} public account candidates`,
+      `${summary.username}: ${summary.foundCount} public username traces`,
       `${summary.previewResults.length} shown · ${Math.max(0, summary.foundCount - summary.previewResults.length)} detailed URLs locked`,
       "Found accounts are not claimed to belong to the same person.",
       `Check your username at ${origin}.`
@@ -1645,8 +1645,8 @@ function buildShareSummary(summary: ScanSummary, locale: Locale) {
   }
 
   return [
-    `${summary.username} 공개 계정 후보 ${summary.foundCount}개`,
-    `열린 후보 ${summary.previewResults.length}개 · 잠긴 상세 URL ${Math.max(0, summary.foundCount - summary.previewResults.length)}개`,
+    `${summary.username} 공개 흔적 ${summary.foundCount}개`,
+    `먼저 열린 결과 ${summary.previewResults.length}개 · 잠긴 상세 URL ${Math.max(0, summary.foundCount - summary.previewResults.length)}개`,
     "발견된 계정들이 동일인이라는 뜻은 아니에요.",
     `${origin}에서 내 아이디도 점검해보세요.`
   ].join("\n");

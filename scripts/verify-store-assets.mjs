@@ -60,7 +60,7 @@ const expectedText = [
   "fastlane/metadata/ko-KR/marketing_url.txt"
 ];
 
-const resultFirstCopy = ["공개 후보 확인", "지금 잡힌 후보", "상세 URL 잠김", "원본 HTML/PDF 저장"];
+const resultFirstCopy = ["내 아이디 흔적 찾기", "아이디가 남은 곳", "상세 URL 잠김", "원본 HTML/PDF 저장"];
 
 const secondResultFirstGeneratorSnippets = [
   'renderScreenshot("iphone-6.7-02-results.png"',

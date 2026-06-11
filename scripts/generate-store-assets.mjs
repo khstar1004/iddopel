@@ -123,7 +123,7 @@ function featureGraphicSvg() {
   <circle cx="782" cy="250" r="22" fill="${colors.ink}"/>
   <text x="72" y="148" fill="${colors.white}" class="title">ID 도플갱어</text>
   <text x="74" y="208" fill="${colors.cyan}" class="body">내 아이디가 남은 곳 먼저 확인</text>
-  <text x="74" y="276" fill="#D7E8FF" class="small">아이디가 남아 있는 플랫폼 후보, 잠긴 상세 URL, 정리 가이드를 한 번에 확인하세요.</text>
+  <text x="74" y="276" fill="#D7E8FF" class="small">아이디가 남아 있는 공개 흔적, 잠긴 상세 URL, 정리 가이드를 한 번에 확인하세요.</text>
   <rect x="74" y="330" width="256" height="58" rx="20" fill="${colors.blue}"/>
   <text x="116" y="368" fill="${colors.white}" class="small">내 아이디 흔적 찾기</text>
 </svg>`;
@@ -159,7 +159,7 @@ function scanScreen(width, x, y, w, h) {
   const buttonY = inputY + Math.round(h * 0.13);
   return `
   <text x="${left}" y="${top}" fill="${colors.white}" class="phoneText" font-weight="800">내 아이디, 어디에 남아 있을까?</text>
-  <text x="${left}" y="${top + Math.round(width * 0.055)}" fill="#B8C7D9" class="label">공개 플랫폼 후보를 빠르게 점검해요.</text>
+  <text x="${left}" y="${top + Math.round(width * 0.055)}" fill="#B8C7D9" class="label">공개 프로필 흔적을 빠르게 점검해요.</text>
   <rect x="${left}" y="${inputY}" width="${Math.round(w * 0.76)}" height="${Math.round(h * 0.085)}" rx="${Math.round(width * 0.018)}" fill="#151A22" stroke="#334155"/>
   <text x="${left + Math.round(width * 0.03)}" y="${inputY + Math.round(h * 0.055)}" fill="#E5EAF2" class="phoneText">@brand_id</text>
   <rect x="${left}" y="${buttonY}" width="${Math.round(w * 0.76)}" height="${Math.round(h * 0.085)}" rx="${Math.round(width * 0.02)}" fill="${colors.blue}"/>
@@ -199,7 +199,7 @@ function reportScreen(width, x, y, w, h) {
   <rect x="${left}" y="${top + Math.round(h * 0.12)}" width="${Math.round(w * 0.78)}" height="${Math.round(h * 0.095)}" rx="${Math.round(width * 0.022)}" fill="${colors.blue}"/>
   <text x="${left + Math.round(w * 0.21)}" y="${top + Math.round(h * 0.182)}" fill="${colors.white}" class="phoneText" font-weight="800">PDF 리포트 다운로드</text>
   <rect x="${left}" y="${top + Math.round(h * 0.27)}" width="${Math.round(w * 0.78)}" height="${Math.round(h * 0.32)}" rx="${Math.round(width * 0.025)}" fill="${colors.white}" stroke="${colors.line}"/>
-  <text x="${left + Math.round(width * 0.03)}" y="${top + Math.round(h * 0.335)}" fill="${colors.text}" class="phoneText" font-weight="800">발견된 플랫폼 후보</text>
+  <text x="${left + Math.round(width * 0.03)}" y="${top + Math.round(h * 0.335)}" fill="${colors.text}" class="phoneText" font-weight="800">발견된 공개 흔적</text>
   <text x="${left + Math.round(width * 0.03)}" y="${top + Math.round(h * 0.395)}" fill="${colors.muted}" class="label">결제 토큰으로만 접근 가능한 리포트</text>
   <line x1="${left + Math.round(width * 0.03)}" y1="${top + Math.round(h * 0.45)}" x2="${left + Math.round(w * 0.72)}" y2="${top + Math.round(h * 0.45)}" stroke="${colors.line}" stroke-width="2"/>
   <text x="${left + Math.round(width * 0.03)}" y="${top + Math.round(h * 0.515)}" fill="${colors.text}" class="label">전체 URL, 방치 계정 정리, 원본 HTML/PDF 저장</text>`;

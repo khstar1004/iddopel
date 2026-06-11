@@ -37,7 +37,7 @@ export function buildHtmlReport(scan: ScanJob, results: ScanResult[]) {
   <h1>${escapeHtml(scan.username)} ID 도플갱어 리포트</h1>
   <p class="notice">이 결과는 아이디 문자열의 공개 사용 현황이며, 발견된 계정들이 동일인이라는 뜻은 아니에요.</p>
   <section class="summary">
-    <div class="metric"><span>공개 계정 후보</span><strong>${scan.foundCount}개</strong></div>
+    <div class="metric"><span>공개 흔적</span><strong>${scan.foundCount}개</strong></div>
     <div class="metric"><span>희소성</span><strong>${scan.rarityScore}점</strong></div>
     <div class="metric"><span>노출도</span><strong>${scan.exposureScore}점</strong></div>
     <div class="metric"><span>사칭 가능성</span><strong>${scan.impersonationScore}점</strong></div>

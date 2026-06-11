@@ -8,7 +8,7 @@ ID 도플갱어의 첫 90일 홍보 전략은 paid ads가 아니라 **검색 가
 
 The three bets:
 
-1. **Free scan as acquisition loop**: the homepage scan is the lead magnet. Every channel points to "아이디 하나 넣고 공개 후보 확인."
+1. **Free scan as acquisition loop**: the homepage scan is the lead magnet. Every channel points to "아이디 하나 넣고 내 흔적 찾기."
 2. **Korean search capture**: own Korean intent around 아이디 희소성 테스트, 닉네임 검색, 사칭 계정 확인, 브랜드명 계정 확인, 디지털 풋프린트 점검.
 3. **Trust-first positioning**: never market as people search. The safer and clearer the boundary, the easier app stores, communities, and creators will accept it.
 
@@ -37,9 +37,9 @@ The three bets:
 
 **Positioning non-negotiables:**
 
-- Say "공개 계정 후보", not "동일인 계정".
+- Say "공개 username 흔적", not "동일인 계정".
 - Say "점검", not "추적".
-- Say "사칭 가능성 후보", not "사칭범 찾기".
+- Say "사칭 가능성 신호", not "사칭범 찾기".
 - Block and avoid real name, phone, email, resident-number-like values, location, photos, and post-content claims.
 
 ## Current State
@@ -102,12 +102,12 @@ Activation goal: the first scan must feel useful before any paywall.
 
 Improve:
 
-- Hero CTA should stay outcome-specific: "공개 계정 후보 확인" or "내 아이디 노출 점검".
+- Hero CTA should stay outcome-specific: "내 아이디 흔적 찾기" or "아이디 노출 점검".
 - The purpose checkbox is not just compliance; it reassures legitimate users.
 - After summary, immediately show one next step by persona:
   - Individual: "오래된 계정 정리하기"
-  - Creator: "사칭 후보 우선 확인하기"
-  - Brand: "공식 계정 선점 후보 정리하기"
+  - Creator: "사칭 신호 우선 확인하기"
+  - Brand: "공식 계정 선점 플랫폼 정리하기"
 
 ### Retention
 
@@ -121,7 +121,7 @@ Retention goal: make repeated checking legitimate and bounded.
 
 Referral goal: make users share the tool without exposing sensitive results.
 
-- Shareable output should be generic: "내 아이디 공개 후보 점검" rather than sharing found accounts.
+- Shareable output should be generic: "내 아이디 공개 흔적 점검" rather than sharing found accounts.
 - Add a safe share card later: score bands only, no URLs, no platform list if privacy-sensitive.
 - Creator angle: "활동명 정하기 전에 확인하는 체크리스트."
 

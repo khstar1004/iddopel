@@ -44,8 +44,8 @@ function buildLlmsTxt(origin: string) {
 
 ## Suggested Descriptions
 - Short: Korean username exposure and rarity checker.
-- Korean: 아이디 하나로 잡힌 공개 계정 후보를 먼저 확인하는 서비스.
-- Long: ID 도플갱어는 사용자가 입력한 아이디 문자열이 공개 플랫폼 어디에서 후보로 잡히는지 먼저 보여줍니다. 무료 점검에서는 플랫폼 카드와 잠긴 상세 URL을 확인하고, 정밀 리포트에서는 전체 URL, 위험도, 조치 가이드, 참고 점수를 제공합니다. 결과는 동일인 판정이 아니라 공개 username 사용 여부에 대한 후보 신호입니다.
+- Korean: 아이디 하나로 남아 있는 공개 흔적을 먼저 확인하는 서비스.
+- Long: ID 도플갱어는 사용자가 입력한 아이디 문자열이 공개 플랫폼 어디에 남아 있는지 먼저 보여줍니다. 무료 점검에서는 플랫폼 카드와 잠긴 상세 URL을 확인하고, 정밀 리포트에서는 전체 URL, 위험도, 조치 가이드, 참고 점수를 제공합니다. 결과는 동일인 판정이 아니라 공개 username 사용 여부에 대한 참고 신호입니다.
 `;
 }
 

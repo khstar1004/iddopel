@@ -66,7 +66,7 @@ function drawScores(doc: PDFKit.PDFDocument, scan: ScanJob) {
   const gap = 8;
   const cardWidth = (pageWidth - margin * 2 - gap * 3) / 4;
   const cards = [
-    ["공개 계정 후보", `${scan.foundCount}개`],
+    ["공개 흔적", `${scan.foundCount}개`],
     ["희소성", `${scan.rarityScore}점`],
     ["노출도", `${scan.exposureScore}점`],
     ["사칭 가능성", `${scan.impersonationScore}점`]
@@ -83,11 +83,11 @@ function drawScores(doc: PDFKit.PDFDocument, scan: ScanJob) {
 }
 
 function drawResultList(doc: PDFKit.PDFDocument, results: ScanResult[]) {
-  doc.fillColor("#191f28").fontSize(14).text("발견된 공개 사용 후보", { width: pageWidth - margin * 2 });
+  doc.fillColor("#191f28").fontSize(14).text("발견된 공개 흔적", { width: pageWidth - margin * 2 });
   doc.moveDown(0.5);
 
   if (results.length === 0) {
-    doc.fillColor("#6b7684").fontSize(10).text("현재 발견된 공개 사용 후보가 없어요.");
+    doc.fillColor("#6b7684").fontSize(10).text("현재 발견된 공개 흔적이 없어요.");
     return;
   }
 

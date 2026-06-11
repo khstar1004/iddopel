@@ -27,7 +27,7 @@ Before a broad launch, collect at least:
 5. What would make a report trustworthy enough to act on?
 6. What would make this product feel unsafe or creepy?
 7. If you got a score and preview for free, what would make a paid detailed report worth it?
-8. Which phrase feels most natural: 아이디 노출 점검, 닉네임 검색, 디지털 풋프린트 점검, 사칭 계정 후보 확인, 브랜드명 계정 확인?
+8. Which phrase feels most natural: 내 아이디 흔적 찾기, 아이디 노출 점검, 닉네임 겹침 확인, 디지털 풋프린트 점검, 브랜드명 계정 확인?
 
 ## Online Research Sources
 

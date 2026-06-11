@@ -87,11 +87,11 @@ export function ReportPageClient() {
             </div>
             <div className="report-count-strip" aria-label="정밀 리포트 결과 요약">
               <span>
-                공개 계정 후보
+                공개 흔적
                 <strong>{report.results.length}개</strong>
               </span>
               <span>
-                잠긴 후보
+                잠긴 URL
                 <strong>{report.lockedCount}개</strong>
               </span>
             </div>
@@ -115,7 +115,7 @@ export function ReportPageClient() {
           <div className="analysis-section report-result-heading">
             <div>
               <span className="source-badge" data-source="PUBLIC_SCAN">전체 결과 열림</span>
-              <h2>발견된 플랫폼 후보</h2>
+              <h2>아이디가 남은 플랫폼</h2>
               <p>프로필 카드, 실제 URL, 정리 가이드를 한 화면에서 바로 확인할 수 있어요.</p>
             </div>
           </div>

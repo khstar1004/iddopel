@@ -29,7 +29,7 @@ await renderCard({
   height: 630,
   theme: "light",
   title: ["아이디는", "기억보다 오래 남습니다"],
-  subtitle: ["공개 계정 후보와 잠긴 상세 URL을", "점수보다 먼저 확인하세요."],
+  subtitle: ["내 아이디가 남은 곳과 잠긴 상세 URL을", "점수보다 먼저 확인하세요."],
   eyebrow: "ID 도플갱어",
   chips: ["username 문자열 점검", "동일인 판정 아님", "정밀 리포트"],
   shots: [
@@ -45,9 +45,9 @@ await renderCard({
   height: 1080,
   theme: "dark",
   title: ["활동명 확정 전", "30초 점검"],
-  subtitle: ["새 이름 공개 전,", "후보 신호를 먼저 확인합니다."],
+  subtitle: ["새 이름 공개 전,", "공개 흔적을 먼저 확인합니다."],
   eyebrow: "CREATOR HANDLE CHECK",
-  chips: ["공개 후보", "상세 URL 잠김", "정밀 리포트"],
+  chips: ["공개 흔적", "상세 URL 잠김", "정밀 리포트"],
   shots: [
     { file: screenshot.results, x: 662, y: 410, w: 248, h: 538, rotate: 4 },
     { file: screenshot.scan, x: 484, y: 482, w: 218, h: 474, rotate: -6 }
@@ -61,9 +61,9 @@ await renderCard({
   height: 1080,
   theme: "warm",
   title: ["브랜드명 공개 전", "계정 선점 리스크 체크"],
-  subtitle: ["같은 username 후보를 확인하고", "공식 계정 확보 우선순위를 정하세요."],
+  subtitle: ["같은 username이 남은 곳을 확인하고", "공식 계정 확보 우선순위를 정하세요."],
   eyebrow: "PRE-LAUNCH BRAND CHECK",
-  chips: ["브랜드명", "계정 선점", "사칭 후보"],
+  chips: ["브랜드명", "계정 선점", "사칭 신호"],
   shots: [
     { file: screenshot.report, x: 668, y: 388, w: 250, h: 542, rotate: 4 },
     { file: screenshot.results, x: 496, y: 474, w: 218, h: 474, rotate: -6 }
@@ -77,10 +77,10 @@ await renderCard({
   height: 760,
   theme: "light",
   title: ["Username risk check,", "without people-search"],
-  subtitle: ["Check public username candidates first,", "then unlock full URLs and action reports."],
+  subtitle: ["Find where a username shows up first,", "then unlock full URLs and action reports."],
   eyebrow: "ID Doppelganger",
   chips: ["Korean-first", "Not identity proof", "Actionable report"],
-  safety: "Public candidate signals only. No identity matching.",
+  safety: "Public username traces only. No identity matching.",
   shots: [
     { file: screenshot.scan, x: 744, y: 76, w: 220, h: 478, rotate: -5 },
     { file: screenshot.results, x: 930, y: 112, w: 236, h: 512, rotate: 5 }
@@ -97,7 +97,7 @@ await renderStep({
 
 await renderStep({
   name: "product-hunt-02-results-1270x760.png",
-  title: ["2. Public candidates", "first"],
+  title: ["2. Public traces", "first"],
   subtitle: ["Platform cards appear before", "score summaries and full URLs."],
   file: screenshot.results
 });
@@ -166,7 +166,7 @@ function buildCardSvg({ width, height, theme, title, subtitle, eyebrow, chips, a
   let chipCursor = left;
   const chipMarkup = chips
     .map((chip, index) => {
-      const w = Math.max(132, chip.length * (isWide ? 13 : 14) + 34);
+      const w = Math.max(132, estimateTextWidth(chip, isWide ? 13 : 14, isWide ? 22 : 24) + 34);
       const x = chipCursor;
       chipCursor += w + 16;
       return `<g transform="translate(${x}, ${chipY})"><rect width="${w}" height="46" rx="8" fill="${index === 0 ? accent : palette.panel}" stroke="${index === 0 ? accent : palette.line}" stroke-width="1.5"/><text x="17" y="30" font-family="${fontFamily}" font-size="20" fill="${index === 0 ? "#06111D" : palette.ink}">${escapeXml(chip)}</text></g>`;
@@ -176,7 +176,7 @@ function buildCardSvg({ width, height, theme, title, subtitle, eyebrow, chips, a
     .map((line, index) => `<text x="${left}" y="${subtitleY + index * (isWide ? 38 : 44)}" font-family="${fontFamily}" font-size="${isWide ? 27 : 30}" fill="${palette.muted}" letter-spacing="0">${escapeXml(line)}</text>`)
     .join("");
   const safetyY = subtitleY + subtitleLines.length * (isWide ? 38 : 44) + 22;
-  const safetyText = safety ?? (isWide ? "결과는 공개 후보 신호이며, 동일인 증거가 아닙니다." : "결과는 동일인 증거가 아닙니다.");
+  const safetyText = safety ?? (isWide ? "결과는 공개 username 흔적이며, 동일인 증거가 아닙니다." : "결과는 동일인 증거가 아닙니다.");
   const safetyMarkup = `<text x="${left}" y="${safetyY}" font-family="${fontFamily}" font-size="${isWide ? 22 : 24}" fill="${palette.muted}" letter-spacing="0">${escapeXml(safetyText)}</text>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
@@ -227,7 +227,7 @@ async function renderStep({ name, title, subtitle, file }) {
   ${subtitleMarkup}
   <rect x="92" y="414" width="366" height="58" rx="8" fill="#08111F"/>
   <text x="116" y="452" font-family="${fontFamily}" font-size="24" fill="#FFFFFF">ID Doppelganger</text>
-  <text x="92" y="562" font-family="${fontFamily}" font-size="24" fill="#4A5568">Public username candidates only.</text>
+  <text x="92" y="562" font-family="${fontFamily}" font-size="24" fill="#4A5568">Public username traces only.</text>
   <text x="92" y="604" font-family="${fontFamily}" font-size="24" fill="#4A5568">No identity matching. No people search.</text>
 </svg>`;
 
@@ -247,7 +247,7 @@ async function renderOnePager() {
   <text x="212" y="193" font-family="${fontFamily}" font-size="34" fill="#08111F">ID 도플갱어</text>
   <text x="150" y="360" font-family="${fontFamily}" font-size="92" font-weight="800" fill="#08111F">아이디는 기억보다</text>
   <text x="150" y="468" font-family="${fontFamily}" font-size="92" font-weight="800" fill="#08111F">오래 남습니다</text>
-  <text x="150" y="560" font-family="${fontFamily}" font-size="38" fill="#4A5568">공개 계정 후보, 잠긴 상세 URL, 정리 가이드를</text>
+  <text x="150" y="560" font-family="${fontFamily}" font-size="38" fill="#4A5568">공개 흔적, 잠긴 상세 URL, 정리 가이드를</text>
   <text x="150" y="616" font-family="${fontFamily}" font-size="38" fill="#4A5568">점검하는 한국어 username 리스크 서비스.</text>
   <rect x="150" y="690" width="462" height="66" rx="8" fill="#08111F"/>
   <text x="182" y="735" font-family="${fontFamily}" font-size="29" fill="#FFFFFF">username 문자열 점검</text>
@@ -256,12 +256,12 @@ async function renderOnePager() {
   <rect x="150" y="1034" width="580" height="500" rx="12" fill="#F5F7FB" stroke="#D8E0EA"/>
   <text x="204" y="1132" font-family="${fontFamily}" font-size="42" font-weight="800" fill="#08111F">주요 사용 장면</text>
   <text x="204" y="1238" font-family="${fontFamily}" font-size="33" fill="#2D3748">1. 오래된 아이디 공개 노출 점검</text>
-  <text x="204" y="1306" font-family="${fontFamily}" font-size="33" fill="#2D3748">2. 크리에이터 활동명 후보 확인</text>
+  <text x="204" y="1306" font-family="${fontFamily}" font-size="33" fill="#2D3748">2. 크리에이터 활동명 겹침 확인</text>
   <text x="204" y="1374" font-family="${fontFamily}" font-size="33" fill="#2D3748">3. 브랜드명 공식 계정 선점</text>
-  <text x="204" y="1442" font-family="${fontFamily}" font-size="33" fill="#2D3748">4. 사칭 후보 검토와 신고 준비</text>
+  <text x="204" y="1442" font-family="${fontFamily}" font-size="33" fill="#2D3748">4. 사칭 신호 검토와 신고 준비</text>
   <rect x="150" y="1604" width="1300" height="146" rx="12" fill="#08111F"/>
   <text x="204" y="1668" font-family="${fontFamily}" font-size="33" fill="#FFFFFF">서비스 URL: [PUBLIC_URL]</text>
-  <text x="204" y="1728" font-family="${fontFamily}" font-size="28" fill="#C9D6E2">문의: khstar1004@yonsei.ac.kr · 결과는 공개 username 후보 신호입니다.</text>
+  <text x="204" y="1728" font-family="${fontFamily}" font-size="28" fill="#C9D6E2">문의: khstar1004@yonsei.ac.kr · 결과는 공개 username 참고 신호입니다.</text>
 </svg>`;
 
   await sharp(Buffer.from(svg))
@@ -303,4 +303,8 @@ function escapeXml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function estimateTextWidth(value, asciiWidth, wideWidth) {
+  return [...String(value)].reduce((width, char) => width + (char.charCodeAt(0) > 127 ? wideWidth : asciiWidth), 0);
 }

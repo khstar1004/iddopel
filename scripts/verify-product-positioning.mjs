@@ -38,7 +38,7 @@ const requiredContent = [
   },
   {
     file: "plan.md",
-    snippets: ["공개 후보 확인", "발견된 공개 후보를 먼저", "점수는 마지막"]
+    snippets: ["내 아이디 흔적 찾기", "발견된 공개 흔적을 먼저", "점수는 마지막"]
   },
   {
     file: "simillarservice.md",

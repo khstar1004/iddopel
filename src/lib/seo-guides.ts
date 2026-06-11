@@ -29,69 +29,69 @@ export const seoGuides = [
     primaryKeyword: "아이디 희소성 테스트",
     secondaryKeywords: ["아이디 검색", "아이디 노출 확인", "디지털 풋프린트"],
     scenario: "게임, 커뮤니티, SNS에서 오래 써온 아이디가 얼마나 겹치는지 빠르게 점검합니다.",
-    resultCopy: "무료 점검은 발견된 공개 계정 후보를 먼저 보여주고, 희소성 점수와 국가·카테고리 분포는 아래에 정리합니다.",
+    resultCopy: "무료 점검은 발견된 공개 흔적을 먼저 보여주고, 희소성 점수와 국가·카테고리 분포는 아래에 정리합니다.",
     safetyCopy: "실명이나 연락처가 아니라 사용자가 입력한 아이디 문자열만 확인합니다.",
     cta: "내 아이디 흔적 찾기"
   },
   {
     slug: "nickname-search",
-    title: "닉네임 검색 | 공개 계정 후보 점검",
+    title: "닉네임 검색 | 공개 흔적 점검",
     h1: "새 닉네임 쓰기 전에 먼저 검색하세요",
-    description: "활동명이나 닉네임 후보가 주요 플랫폼에서 이미 쓰이는지 공개 계정 후보를 점검하세요.",
+    description: "활동명이나 닉네임이 주요 플랫폼에 이미 남아 있는지 공개 흔적으로 확인하세요.",
     primaryKeyword: "닉네임 검색",
     secondaryKeywords: ["활동명 검색", "아이디 찾기", "계정 점검"],
-    scenario: "크리에이터명, 게임 닉네임, 커뮤니티 활동명을 정하기 전에 중복 후보를 확인합니다.",
+    scenario: "크리에이터명, 게임 닉네임, 커뮤니티 활동명을 정하기 전에 겹치는 흔적을 확인합니다.",
     resultCopy: "SNS, 블로그, 개발자, 커뮤니티 카테고리로 나눠 어떤 표면에서 겹치는지 보여줍니다.",
-    safetyCopy: "결과는 동일인 판정이 아니라 공개 username 사용 여부에 대한 후보 신호입니다.",
-    cta: "닉네임 후보 점검"
+    safetyCopy: "결과는 동일인 판정이 아니라 공개 username 사용 여부에 대한 참고 신호입니다.",
+    cta: "닉네임 겹침 확인"
   },
   {
     slug: "old-account-check",
     title: "옛날 계정 찾기 | 방치 계정 노출 점검",
     h1: "10년 전 만든 계정, 아직 살아있을지도 모릅니다",
-    description: "오래전에 쓰던 아이디로 남아 있는 공개 계정 후보와 방치 계정 위험을 확인하세요.",
+    description: "오래전에 쓰던 아이디로 남아 있는 공개 흔적과 방치 계정 위험을 확인하세요.",
     primaryKeyword: "옛날 계정 찾기",
     secondaryKeywords: ["방치 계정", "흑역사 계정", "계정 정리"],
-    scenario: "예전에 쓰던 닉네임이나 아이디를 입력해 블로그, 포럼, 프로필성 사이트 후보를 확인합니다.",
+    scenario: "예전에 쓰던 닉네임이나 아이디를 입력해 블로그, 포럼, 프로필성 사이트에 남은 흔적을 확인합니다.",
     resultCopy: "정밀 리포트는 전체 URL, 위험도, 방치 계정 정리 가이드를 제공합니다.",
     safetyCopy: "게시글 내용, 프로필 사진, 위치 정보는 수집하거나 요약하지 않습니다.",
     cta: "방치 계정 점검"
   },
   {
     slug: "brand-username-check",
-    title: "브랜드명 계정 확인 | 사칭 후보 모니터링",
+    title: "브랜드명 계정 확인 | 사칭 신호 모니터링",
     h1: "브랜드명 계정 선점 상태를 확인하세요",
     description: "브랜드명, 서비스명, 프로젝트명이 주요 공개 플랫폼에서 사용 중인지 점검하세요.",
     primaryKeyword: "브랜드명 계정 확인",
     secondaryKeywords: ["브랜드 보호", "사칭 계정 확인", "계정 선점"],
-    scenario: "출시 전 브랜드명이나 제품명을 입력해 공식 계정 선점이 필요한 플랫폼 후보를 정리합니다.",
+    scenario: "출시 전 브랜드명이나 제품명을 입력해 공식 계정 선점이 필요한 플랫폼을 정리합니다.",
     resultCopy: "국가·카테고리 분포와 사칭 가능성 점수로 우선 확인할 플랫폼을 좁힙니다.",
-    safetyCopy: "브랜드 보호와 계정 선점 점검 목적에 맞춰 공개 계정 후보만 표시합니다.",
+    safetyCopy: "브랜드 보호와 계정 선점 점검 목적에 맞춰 공개 username 흔적만 표시합니다.",
     cta: "브랜드명 점검"
   },
   {
     slug: "impersonation-check",
     title: "사칭 계정 확인 | 공개 아이디 노출 점검",
-    h1: "내 활동명으로 보이는 계정 후보를 점검하세요",
-    description: "활동명 또는 브랜드명과 같은 공개 username 후보를 확인하고 사칭 가능성 점수를 받아보세요.",
+    h1: "내 활동명으로 보이는 계정을 점검하세요",
+    description: "활동명 또는 브랜드명과 같은 공개 username 흔적을 확인하고 사칭 가능성 점수를 받아보세요.",
     primaryKeyword: "사칭 계정 확인",
     secondaryKeywords: ["아이디 노출 확인", "브랜드 보호", "공개 계정 검색"],
-    scenario: "크리에이터, 소상공인, 팀 계정이 비슷한 username 후보를 빠르게 확인합니다.",
+    scenario: "크리에이터, 소상공인, 팀 계정과 비슷한 username 흔적을 빠르게 확인합니다.",
     resultCopy: "정밀 리포트는 발견 플랫폼, URL, 위험도, 신고 준비에 필요한 정리 가이드를 제공합니다.",
     safetyCopy: "발견된 계정들이 같은 사람이라는 의미가 아니며, 괴롭힘이나 추적 목적 사용을 금지합니다.",
-    cta: "사칭 후보 점검"
+    cta: "사칭 신호 점검"
   },
   {
     slug: "digital-footprint-check",
     title: "디지털 풋프린트 점검 | 아이디 노출 확인",
     h1: "인터넷은 네 아이디를 기억합니다",
-    description: "하나의 아이디가 여러 공개 플랫폼에 남긴 사용 흔적 후보를 점수와 분포로 확인하세요.",
+    description: "하나의 아이디가 여러 공개 플랫폼에 남긴 사용 흔적을 점수와 분포로 확인하세요.",
     primaryKeyword: "디지털 풋프린트 점검",
-    secondaryKeywords: ["아이디 노출 확인", "계정 점검", "공개 계정 후보"],
-    scenario: "아이디 재사용으로 공개 계정 후보가 연결될 수 있는지 보안 점검 관점에서 확인합니다.",
+    secondaryKeywords: ["아이디 노출 확인", "계정 점검", "공개 흔적"],
+    scenario: "아이디 재사용으로 공개 흔적이 연결될 수 있는지 보안 점검 관점에서 확인합니다.",
     resultCopy: "발견된 공개 흔적을 먼저 확인하고, 희소성·노출도·사칭 가능성·방치 계정 위험은 아래에서 비교합니다.",
     safetyCopy: "전화번호, 이메일, 주민번호, 위치 추정, 동일인 확률 계산은 지원하지 않습니다.",
-    cta: "노출 후보 확인"
+    cta: "노출 흔적 확인"
   },
   {
     slug: "namechk-alternative",
@@ -100,9 +100,9 @@ export const seoGuides = [
     description: "Namechk처럼 username 사용 여부를 확인하되, 한국어 결과 화면과 희소성·노출도 점수, 안전한 공유 카드를 함께 제공합니다.",
     primaryKeyword: "Namechk 대안",
     secondaryKeywords: ["Namechk alternative", "username checker", "아이디 중복 확인"],
-    scenario: "브랜드명이나 닉네임이 이미 쓰이는지만 보는 단계에서, 공개 계정 후보가 어떤 위험 신호인지까지 정리하고 싶을 때 적합합니다.",
-    resultCopy: "ID 도플갱어는 발견 후보 수, 한국 서비스 후보, 카테고리 분포, 희소성·노출도 점수를 먼저 보여주고 정밀 리포트로 이어집니다.",
-    safetyCopy: "가용성 확인과 공개 username 후보 점검만 다루며, 실명·전화번호·이메일 검색이나 동일인 판정은 제공하지 않습니다.",
+    scenario: "브랜드명이나 닉네임이 이미 쓰이는지만 보는 단계에서, 공개 흔적이 어떤 위험 신호인지까지 정리하고 싶을 때 적합합니다.",
+    resultCopy: "ID 도플갱어는 발견된 흔적 수, 한국 서비스, 카테고리 분포, 희소성·노출도 점수를 먼저 보여주고 정밀 리포트로 이어집니다.",
+    safetyCopy: "가용성 확인과 공개 username 흔적 점검만 다루며, 실명·전화번호·이메일 검색이나 동일인 판정은 제공하지 않습니다.",
     cta: "내 아이디 흔적 찾기",
     comparison: {
       competitorName: "Namechk",
@@ -114,23 +114,23 @@ export const seoGuides = [
       idDoppelgangerAdvantages: [
         "한국어 사용자를 위한 결과 문장, 위험도 배지, 정리 가이드를 제공합니다.",
         "단순 사용 가능 여부가 아니라 희소성·노출도·사칭 가능성·방치 계정 위험을 점수화합니다.",
-        "공유 카드에는 플랫폼 URL을 빼고 점수/후보 수만 담아 바이럴과 안전성을 같이 챙깁니다."
+        "공유 카드에는 플랫폼 URL을 빼고 점수/흔적 수만 담아 바이럴과 안전성을 같이 챙깁니다."
       ],
       bestForCompetitor: "도메인과 여러 소셜 핸들의 사용 가능 여부를 빠르게 확인하려는 브랜드 네이밍 작업",
-      bestForIdDoppelganger: "한국어 사용자에게 결과를 보여주고, 공개 계정 후보를 점수·분포·정리 가이드로 설명해야 하는 경우",
+      bestForIdDoppelganger: "한국어 사용자에게 결과를 보여주고, 공개 흔적을 점수·분포·정리 가이드로 설명해야 하는 경우",
       honestLimit: "도메인 구매 가능 여부 자체가 핵심이면 전문 도메인/가용성 체크 도구가 더 직접적입니다."
     }
   },
   {
     slug: "whatsmyname-alternative",
-    title: "WhatsMyName 대안 | 공개 username 후보 리포트",
+    title: "WhatsMyName 대안 | 공개 username 흔적 리포트",
     h1: "WhatsMyName 대안: OSINT 목록을 소비자용 리포트로",
     description: "WhatsMyName류 username enumeration 흐름을 한국어 UX, 1회 무료 상세 결과, 안전한 paywall 리포트로 재구성합니다.",
     primaryKeyword: "WhatsMyName 대안",
     secondaryKeywords: ["WhatsMyName alternative", "username OSINT", "공개 계정 검색"],
     scenario: "보안/OSINT 도구의 raw hit list보다 일반 사용자가 이해할 수 있는 점수, 분포, 조치 가이드가 필요할 때 사용합니다.",
-    resultCopy: "무료 화면에서 일부 후보를 먼저 보여주고, 전체 URL·위험도·HTML/PDF 리포트는 권한 확인 후 제공합니다.",
-    safetyCopy: "공개 username 후보만 다루며, 발견된 계정들이 동일인이라는 뜻이 아니라고 모든 결과 표면에서 고지합니다.",
+    resultCopy: "무료 화면에서 일부 결과를 먼저 보여주고, 전체 URL·위험도·HTML/PDF 리포트는 권한 확인 후 제공합니다.",
+    safetyCopy: "공개 username 흔적만 다루며, 발견된 계정들이 동일인이라는 뜻이 아니라고 모든 결과 표면에서 고지합니다.",
     cta: "공개 아이디 점검",
     comparison: {
       competitorName: "WhatsMyName",
@@ -155,7 +155,7 @@ export const seoGuides = [
     h1: "OSINT 아이디 스캔 대안: dossier보다 안전한 소비자 리포트",
     description: "폭넓은 username 검색을 한국어 안전 문구, 점수 카드, 결제 리포트, 공유 카드가 있는 서비스 UX로 감쌉니다.",
     primaryKeyword: "OSINT 아이디 스캔 대안",
-    secondaryKeywords: ["username dossier", "아이디 리포트", "공개 계정 후보"],
+    secondaryKeywords: ["username dossier", "아이디 리포트", "공개 흔적"],
     scenario: "폭넓은 검색 결과를 앱 심사와 한국어 사용자에게 맞는 보안 점검 경험으로 제공하고 싶을 때 적합합니다.",
     resultCopy: "원본 HTML 리포트도 권한 확인 후 열 수 있고, 프론트 화면에서는 플랫폼 아이콘과 프로필 fallback을 카드로 보여줍니다.",
     safetyCopy: "프로필 사진 원본 수집이나 게시글 요약 없이 공개 username 사용 현황만 표시하고 동일인 판정은 하지 않습니다.",
@@ -185,9 +185,9 @@ export const seoGuides = [
     primaryKeyword: "Username 스캔 API 대안",
     secondaryKeywords: ["exposure score", "username OSINT API", "username 리포트"],
     scenario: "API/Actor 실행 결과를 그대로 쓰는 대신, 사용자에게 보여줄 프론트·리포트·paywall·토스 인앱까지 필요할 때 적합합니다.",
-    resultCopy: "결과 화면은 발견 계정 후보를 맨 앞에 보여주고, 점수 분석과 분포는 아래에 배치해 사용자가 궁금한 것을 먼저 보게 합니다.",
+    resultCopy: "결과 화면은 발견된 계정을 맨 앞에 보여주고, 점수 분석과 분포는 아래에 배치해 사용자가 궁금한 것을 먼저 보게 합니다.",
     safetyCopy: "위험 신호는 참고 점수로만 표현하며, 이메일·전화번호·위치 추정·동일인 확률 계산은 제품 범위에서 제외합니다.",
-    cta: "노출 후보 확인",
+    cta: "노출 흔적 확인",
     comparison: {
       competitorName: "Username 스캔 API",
       sourceUrl: "https://apify.com/apivault_labs/maigret-username-osint",
@@ -212,8 +212,8 @@ export const seoGuides = [
     description: "FootprintIQ처럼 노출 위험과 정리 가이드를 강조하되, ID 도플갱어는 아이디 문자열, 한국어 UX, 토스/앱 출시 흐름에 집중합니다.",
     primaryKeyword: "FootprintIQ 대안",
     secondaryKeywords: ["FootprintIQ alternative", "digital footprint checker", "아이디 노출 점검"],
-    scenario: "디지털 풋프린트 전반이 아니라 username 재사용, 방치 계정, 사칭 후보를 한국어 서비스로 보여주고 싶을 때 사용합니다.",
-    resultCopy: "무료 점검은 후보 수와 점수, 정밀 리포트는 전체 URL·정리 가이드·PDF/HTML 저장으로 나뉩니다.",
+    scenario: "디지털 풋프린트 전반이 아니라 username 재사용, 방치 계정, 사칭 신호를 한국어 서비스로 보여주고 싶을 때 사용합니다.",
+    resultCopy: "무료 점검은 공개 흔적 수와 점수, 정밀 리포트는 전체 URL·정리 가이드·PDF/HTML 저장으로 나뉩니다.",
     safetyCopy: "아이디 문자열 외의 이메일·전화번호·실명 기반 탐색은 지원하지 않아 제품 범위를 username 공개 사용 현황으로 제한합니다.",
     cta: "아이디 노출 점검",
     comparison: {
@@ -229,7 +229,7 @@ export const seoGuides = [
         "공유 카드는 URL 없는 점수 카드로 만들어 바이럴 노출과 악용 리스크를 동시에 낮춥니다."
       ],
       bestForCompetitor: "이메일 breach, data broker, phone lookup까지 포함한 넓은 디지털 풋프린트 점검을 원하는 경우",
-      bestForIdDoppelganger: "아이디 재사용과 공개 계정 후보를 한국어 바이럴 테스트처럼 보여주고 싶은 경우",
+      bestForIdDoppelganger: "아이디 재사용과 공개 흔적을 한국어 바이럴 테스트처럼 보여주고 싶은 경우",
       honestLimit: "이메일 유출, 데이터 브로커, 전화번호 lookup까지 필요한 보안 상품이라면 더 넓은 footprint 도구가 적합합니다."
     }
   }

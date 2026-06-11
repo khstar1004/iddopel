@@ -260,7 +260,7 @@ function renderLockedTeaser(count) {
     </div>
     <span>잠김</span>
   `;
-  row.querySelector("h3").textContent = `${count}개 상세 후보가 더 있어요`;
+  row.querySelector("h3").textContent = `${count}개 상세 URL이 더 있어요`;
   return row;
 }
 

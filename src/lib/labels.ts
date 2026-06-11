@@ -5,7 +5,7 @@ export type Locale = "ko" | "en";
 export const purposeLabels: Record<ScanPurpose, string> = {
   SELF_CHECK: "내 아이디 점검",
   BRAND_CHECK: "브랜드/활동명 점검",
-  NICKNAME_CHECK: "새 닉네임 후보 확인"
+  NICKNAME_CHECK: "새 닉네임 겹침 확인"
 };
 
 export const categoryLabels: Record<PlatformCategory, string> = {
