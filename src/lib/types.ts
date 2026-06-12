@@ -76,6 +76,8 @@ export interface ScanSummary extends ScoreBundle {
   scanSource?: ScanSource;
   maigretReportAvailable?: boolean;
   maigretReportFilename?: string;
+  fullResults?: ScanResult[];
+  sourceReportHtml?: string;
   createdAt: string;
   finishedAt: string | null;
   expiresAt: string;

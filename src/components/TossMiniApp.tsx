@@ -6,6 +6,7 @@ import { categoryLabels, countryLabels, riskLabels } from "@/lib/labels";
 import type { ScanResult, ScanSummary } from "@/lib/types";
 import { normalizeUsername } from "@/lib/validation";
 import { BrandIcon } from "./BrandIcon";
+import { getOrCreateFreeScanOwnerToken } from "./client-tokens";
 import { ScanEyeLoader } from "./ScanEyeLoader";
 
 const platformBrandRules: Array<[string, string]> = [
@@ -24,6 +25,7 @@ export function TossMiniApp() {
   const [username, setUsername] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [summary, setSummary] = useState<ScanSummary | null>(null);
+  const [showFullReport, setShowFullReport] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isOrdering, setIsOrdering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,12 +49,17 @@ export function TossMiniApp() {
     setIsLoading(true);
     setError(null);
     setSummary(null);
+    setShowFullReport(false);
 
     try {
       const normalizedUsername = normalizeUsername(username);
+      const scanOwnerToken = getOrCreateFreeScanOwnerToken();
       const response = await fetch("/api/scans", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-scan-owner-token": scanOwnerToken
+        },
         body: JSON.stringify({ username: normalizedUsername, purpose: "SELF_CHECK", mode: "quick" })
       });
       const body = await response.json();
@@ -71,6 +78,13 @@ export function TossMiniApp() {
 
   async function startCheckout() {
     if (!summary) return;
+
+    if (summary.fullResults) {
+      setShowFullReport(true);
+      window.setTimeout(() => resultPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+      return;
+    }
+
     setIsOrdering(true);
     setError(null);
 
@@ -94,7 +108,12 @@ export function TossMiniApp() {
     }
   }
 
-  const hiddenCount = summary ? Math.max(0, summary.foundCount - summary.previewResults.slice(0, 3).length) : 0;
+  const visibleResults = summary
+    ? showFullReport && summary.fullResults
+      ? summary.fullResults
+      : summary.previewResults.slice(0, 3)
+    : [];
+  const hiddenCount = summary && !showFullReport ? Math.max(0, summary.foundCount - visibleResults.length) : 0;
 
   return (
     <main className="toss-shell">
@@ -167,13 +186,13 @@ export function TossMiniApp() {
             </div>
 
             <div className="toss-result-metrics" aria-label="결과 규모">
-              <Mini label="공개 흔적" value={`${Math.min(summary.previewResults.length, 3)}개`} />
+              <Mini label="공개 흔적" value={`${visibleResults.length}개`} />
               <Mini label="잠김" value={`${hiddenCount}개`} />
             </div>
 
             <div className="toss-result-list">
-              {summary.previewResults.length > 0 ? (
-                summary.previewResults.slice(0, 3).map((result) => <TossResultCard key={result.id} result={result} />)
+              {visibleResults.length > 0 ? (
+                visibleResults.map((result) => <TossResultCard isFullAccess={showFullReport} key={result.id} result={result} />)
               ) : (
                 <article className="toss-result-card">
                   <div className="toss-result-icon" aria-hidden>
@@ -203,9 +222,9 @@ export function TossMiniApp() {
               </div>
             ) : null}
 
-            <button className="toss-button" type="button" onClick={startCheckout} disabled={isOrdering}>
+            <button className="toss-button" type="button" onClick={startCheckout} disabled={isOrdering || showFullReport}>
               <CreditCard size={18} aria-hidden />
-              {isOrdering ? "결제를 준비하고 있어요" : "전체 리포트 보기"}
+              {showFullReport ? "전체 리포트 열림" : isOrdering ? "결제를 준비하고 있어요" : "전체 리포트 보기"}
             </button>
 
             <div className="toss-score-summary" aria-label="점수 요약">
@@ -251,7 +270,7 @@ function TossLockedMosaicList({ count, startIndex }: { count: number; startIndex
   );
 }
 
-function TossResultCard({ result }: { result: ScanResult }) {
+function TossResultCard({ isFullAccess, result }: { isFullAccess: boolean; result: ScanResult }) {
   const host = hostnameFromUrl(result.url);
   const brandKey = platformBrandKey(result);
 
@@ -271,7 +290,7 @@ function TossResultCard({ result }: { result: ScanResult }) {
           {categoryLabels[result.category]} · {countryLabels[result.country] ?? result.country}
           {host ? ` · ${host}` : ""}
         </p>
-        <small>상세 URL 잠김</small>
+        <small>{isFullAccess ? result.url : "상세 URL 잠김"}</small>
       </div>
     </article>
   );

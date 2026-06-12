@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { handleApiError, jsonError, readJson } from "@/lib/api";
+import { consumeBetaScanQuota } from "@/lib/beta-scan-quota";
 import { isDevAdminRequest } from "@/lib/dev-admin";
-import { assertRateLimit, rateLimitKey } from "@/lib/rate-limit";
+import { publicScanResponse } from "@/lib/scan-response";
 import { createStoredScan } from "@/lib/scan-store";
-import { publicSummary } from "@/lib/scanner";
 import { createTossPreflightResponse, rejectDisallowedTossCors, withTossCors } from "@/lib/toss-cors";
 import { parseCreateScanInput } from "@/lib/validation";
 
@@ -19,21 +19,44 @@ export async function POST(request: Request) {
   if (corsError) return corsError;
 
   try {
-    if (!isDevAdminRequest(request)) {
-      try {
-        assertRateLimit(rateLimitKey(request, "anonymous"), 12, 60 * 60 * 1000);
-      } catch (error) {
-        const seconds = error instanceof Error && error.message.startsWith("RATE_LIMIT:")
-          ? error.message.split(":")[1]
-          : "3600";
-        return withTossCors(request, jsonError("RATE_LIMITED", `${seconds}초 후 다시 점검할 수 있어요.`, 429));
-      }
+    const isAdminRequest = isDevAdminRequest(request);
+    const quota = isAdminRequest
+      ? null
+      : await consumeBetaScanQuota(request, request.headers.get("x-scan-owner-token"));
+
+    if (quota && !quota.allowed) {
+      const retryAfterSeconds = String(quota.retryAfterSeconds ?? 3600);
+      const response = jsonError(
+        "BETA_FREE_SCAN_LIMITED",
+        `베타 무료검색은 ${quota.limit}회까지 가능해요. ${retryAfterSeconds}초 후 다시 시도해 주세요.`,
+        429,
+        {
+          limit: quota.limit,
+          used: quota.used,
+          remaining: quota.remaining,
+          resetAt: quota.resetAt
+        }
+      );
+      response.headers.set("Retry-After", retryAfterSeconds);
+      setQuotaHeaders(response, quota);
+      return withTossCors(request, response);
     }
 
     const input = parseCreateScanInput(await readJson(request));
     const job = await createStoredScan(input, { origin: new URL(request.url).origin });
-    return withTossCors(request, NextResponse.json(publicSummary(job), { status: 201 }));
+    const response = NextResponse.json(publicScanResponse(job), { status: 201 });
+    if (quota) setQuotaHeaders(response, quota);
+    return withTossCors(request, response);
   } catch (error) {
     return withTossCors(request, handleApiError(error));
   }
+}
+
+function setQuotaHeaders(
+  response: NextResponse,
+  quota: { limit: number; remaining: number; resetAt: string }
+) {
+  response.headers.set("x-beta-free-scan-limit", String(quota.limit));
+  response.headers.set("x-beta-free-scans-remaining", String(quota.remaining));
+  response.headers.set("x-beta-free-scan-reset-at", quota.resetAt);
 }

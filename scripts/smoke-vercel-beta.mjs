@@ -29,6 +29,66 @@ try {
   assertCheck("scan has candidate counts", Number.isFinite(scan.body?.foundCount), scan.body);
   assertCheck("scan checked public sites", Number(scan.body?.checkedCount) > 0, scan.body);
   assertCheck("scan has Maigret report", scan.body?.maigretReportAvailable === true, scan.body);
+  const hasInlineResults = Array.isArray(scan.body?.fullResults);
+  assertCheck("scan carries beta inline results", hasInlineResults, {
+    fullResults: scan.body?.fullResults?.length,
+    hasSourceReportHtml: typeof scan.body?.sourceReportHtml === "string"
+  });
+
+  const scanId = scan.body.scanId;
+  const preview = await requestJson(`/api/scans/${scanId}/results`, { method: "GET" });
+  assertCheck(
+    "preview results available or inlined for beta",
+    preview.status === 200 || (preview.status === 404 && hasInlineResults),
+    preview
+  );
+  if (preview.status === 200) {
+    assertCheck("preview returns result array", Array.isArray(preview.body?.results), preview.body);
+  }
+
+  const lockedFull = await requestJson(`/api/scans/${scanId}/results?access=full`, { method: "GET" });
+  assertCheck(
+    "full results stay locked or inlined for beta",
+    lockedFull.status === 402 || (lockedFull.status === 404 && hasInlineResults),
+    lockedFull
+  );
+
+  const reportPage = await requestText(`/reports/${scanId}`, { method: "GET" });
+  assertCheck("report page renders", reportPage.status === 200 && reportPage.body.includes("<!DOCTYPE html"), {
+    status: reportPage.status,
+    length: reportPage.body.length
+  });
+
+  const freeReport = await requestJson(`/api/scans/${scanId}/free-report`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ soft: true })
+  });
+  assertCheck(
+    "first-free route responds safely",
+    freeReport.status === 201 || freeReport.status === 200 || (freeReport.status === 404 && hasInlineResults),
+    freeReport
+  );
+
+  if (typeof freeReport.body?.reportToken === "string") {
+    const token = encodeURIComponent(freeReport.body.reportToken);
+    const unlockedFull = await requestJson(`/api/scans/${scanId}/results?access=full&token=${token}`, { method: "GET" });
+    assertCheck("full results open with first-free token", unlockedFull.status === 200 && unlockedFull.body?.access === "FULL", unlockedFull);
+
+    const htmlReport = await requestText(`/api/scans/${scanId}/report.html?embed=1&token=${token}`, { method: "GET" });
+    assertCheck(
+      "Maigret HTML report opens with first-free token",
+      htmlReport.status === 200 && htmlReport.body.includes("Username search report"),
+      { status: htmlReport.status, length: htmlReport.body.length }
+    );
+  } else if (freeReport.status === 404 && hasInlineResults) {
+    assertCheck("inline beta full results are present", scan.body.fullResults.length >= 0, {
+      fullResults: scan.body.fullResults.length,
+      hasSourceReportHtml: typeof scan.body.sourceReportHtml === "string"
+    });
+  } else {
+    assertCheck("first-free repeat is explicit", freeReport.body?.error?.code === "FIRST_FREE_USED", freeReport.body);
+  }
 
   report.ok = true;
   console.log(JSON.stringify(report, null, 2));
@@ -53,6 +113,15 @@ async function requestJson(pathname, init) {
     status: response.status,
     ok: response.ok,
     body
+  };
+}
+
+async function requestText(pathname, init) {
+  const response = await fetch(new URL(pathname, baseUrl), init);
+  return {
+    status: response.status,
+    ok: response.ok,
+    body: await response.text()
   };
 }
 

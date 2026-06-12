@@ -28,6 +28,7 @@ import {
 import type { PublicMonitoringSubscription, ScanResult, ScanSummary } from "@/lib/types";
 import { normalizeUsername } from "@/lib/validation";
 import { BrandIcon } from "./BrandIcon";
+import { devAdminTokenKey, getOrCreateFreeScanOwnerToken } from "./client-tokens";
 import { ScanEyeLoader } from "./ScanEyeLoader";
 
 interface StoredScan extends ScanSummary {
@@ -48,12 +49,12 @@ interface DetailAccessState extends ResultsResponse {
   description: string;
   reportToken?: string;
   adminToken?: string;
+  sourceReportHtml?: string;
 }
 
 const monitoringOwnerTokenKey = "id-doppelganger-monitoring-owner-token";
 const freeDetailOwnerTokenKey = "id-doppelganger-free-detail-owner-token";
 const freeDetailUsedScanIdKey = "id-doppelganger-free-detail-used-scan-id";
-const devAdminTokenKey = "id-doppelganger-dev-admin-token";
 const devAdminLogoClickWindowMs = 2500;
 const localeStorageKey = "id-doppelganger-locale";
 const scanExperienceCopy = {
@@ -478,6 +479,22 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
         .catch(() => undefined);
     }
 
+    const savedDevAdminToken = window.localStorage.getItem(devAdminTokenKey);
+    if (savedDevAdminToken) {
+      fetch("/api/dev/admin-session", {
+        headers: devAdminHeaders(savedDevAdminToken)
+      })
+        .then((response) => response.ok ? response.json() : null)
+        .then((body) => {
+          if (body?.authenticated) {
+            setDevAdminToken(savedDevAdminToken);
+          } else {
+            window.localStorage.removeItem(devAdminTokenKey);
+          }
+        })
+        .catch(() => undefined);
+    }
+
   }, [initialLocale]);
 
   useEffect(() => {
@@ -532,7 +549,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     if (nextCount < 5) return;
 
     devAdminLogoClickRef.current = { count: 0, startedAt: 0 };
-    void unlockDevAdminPanel();
+    window.location.href = "/admin";
   }
 
   async function unlockDevAdminPanel() {
@@ -567,9 +584,14 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
 
     try {
       const normalizedUsername = normalizeUsername(username);
+      const scanOwnerToken = getOrCreateFreeScanOwnerToken();
       const response = await fetch("/api/scans", {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...devAdminHeaders(devAdminToken) },
+        headers: {
+          "Content-Type": "application/json",
+          "x-scan-owner-token": scanOwnerToken,
+          ...devAdminHeaders(devAdminToken)
+        },
         body: JSON.stringify({ username: normalizedUsername, purpose: "SELF_CHECK", mode: "quick" })
       });
 
@@ -627,7 +649,8 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   }
 
   function saveHistory(nextSummary: ScanSummary) {
-    const item: StoredScan = { ...nextSummary, savedAt: new Date().toISOString() };
+    const { sourceReportHtml: _sourceReportHtml, ...summaryForStorage } = nextSummary;
+    const item: StoredScan = { ...summaryForStorage, savedAt: new Date().toISOString() };
     const next = [item, ...history.filter((entry) => entry.scanId !== item.scanId)].slice(0, 5);
     setHistory(next);
     window.localStorage.setItem("id-doppelganger-history", JSON.stringify(next));
@@ -1084,7 +1107,7 @@ function ResultDashboard({
       try {
         const nextAccess = devAdminToken
           ? await loadDevAdminResults(summary.scanId, devAdminToken, copy)
-          : await loadFirstFreeOrPreviewResults(summary.scanId, copy);
+          : await loadFirstFreeOrPreviewResults(summary, copy);
 
         if (!cancelled) setDetailAccess(nextAccess);
       } catch (error) {
@@ -1105,6 +1128,11 @@ function ResultDashboard({
   }, [copy, devAdminToken, summary]);
 
   async function openFullReport() {
+    if (detailAccess?.access === "FULL" && detailAccess.sourceReportHtml) {
+      downloadHtmlReport(summary, detailAccess.results);
+      return;
+    }
+
     if (detailAccess?.access === "FULL" && detailAccess.reportToken) {
       window.location.href = `/reports/${summary.scanId}?token=${encodeURIComponent(detailAccess.reportToken)}`;
       return;
@@ -1542,8 +1570,21 @@ function ResultProfileImage({ result }: { result: ScanResult }) {
 
 function OriginalHtmlReportPanel({ copy, detailAccess }: { copy: ScanExperienceCopy; detailAccess: DetailAccessState }) {
   const reportUrl = maigretReportUrlFor(detailAccess);
+  const [inlineReportUrl, setInlineReportUrl] = useState<string | null>(null);
 
-  if (!reportUrl) return null;
+  useEffect(() => {
+    if (!detailAccess.sourceReportHtml) {
+      setInlineReportUrl(null);
+      return;
+    }
+
+    const blobUrl = URL.createObjectURL(new Blob([detailAccess.sourceReportHtml], { type: "text/html;charset=utf-8" }));
+    setInlineReportUrl(blobUrl);
+    return () => URL.revokeObjectURL(blobUrl);
+  }, [detailAccess.sourceReportHtml]);
+
+  if (!reportUrl && !detailAccess.sourceReportHtml) return null;
+  const openUrl = reportUrl ?? inlineReportUrl ?? undefined;
 
   return (
     <section className="panel source-report-panel" aria-labelledby="source-report-title">
@@ -1552,17 +1593,23 @@ function OriginalHtmlReportPanel({ copy, detailAccess }: { copy: ScanExperienceC
           <h2 id="source-report-title">{copy.sourceReport.title}</h2>
         </div>
         <div className="source-report-actions">
-          <a className="secondary-button" href={reportUrl} target="_blank" rel="noopener noreferrer">
+          <a className="secondary-button" href={openUrl} target="_blank" rel="noopener noreferrer" aria-disabled={!openUrl}>
             <ExternalLink size={16} aria-hidden />
             {copy.sourceReport.open}
           </a>
-          <a className="ghost-button" download={detailAccess.maigretReportFilename} href={reportUrl}>
+          <a className="ghost-button" download={detailAccess.maigretReportFilename} href={openUrl}>
             <Download size={16} aria-hidden />
             {copy.sourceReport.save}
           </a>
         </div>
       </div>
-      <iframe className="source-report-frame" title={copy.sourceReport.iframeTitle} src={reportUrl} loading="lazy" />
+      <iframe
+        className="source-report-frame"
+        title={copy.sourceReport.iframeTitle}
+        src={reportUrl ?? undefined}
+        srcDoc={detailAccess.sourceReportHtml}
+        loading="lazy"
+      />
     </section>
   );
 }
@@ -1762,12 +1809,14 @@ async function loadDevAdminResults(scanId: string, adminToken: string, copy: Sca
   };
 }
 
-async function loadFirstFreeOrPreviewResults(scanId: string, copy: ScanExperienceCopy): Promise<DetailAccessState> {
+async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExperienceCopy): Promise<DetailAccessState> {
+  const inlineAccess = inlineFullAccessFromSummary(summary, copy);
+  const scanId = summary.scanId;
   const ownerToken = window.localStorage.getItem(freeDetailOwnerTokenKey);
   const usedScanId = window.localStorage.getItem(freeDetailUsedScanIdKey);
 
   if (ownerToken && usedScanId && usedScanId !== scanId) {
-    return loadPreviewResults(
+    return inlineAccess ?? loadPreviewResults(
       scanId,
       copy.detailLabels.freePreview,
       copy.detailLabels.lockedUrl
@@ -1788,6 +1837,7 @@ async function loadFirstFreeOrPreviewResults(scanId: string, copy: ScanExperienc
     const fullBody = await fullResponse.json();
 
     if (!fullResponse.ok) {
+      if (inlineAccess) return inlineAccess;
       throw new Error(fullBody?.error?.message ?? "무료 상세 결과를 불러오지 못했어요.");
     }
 
@@ -1804,14 +1854,14 @@ async function loadFirstFreeOrPreviewResults(scanId: string, copy: ScanExperienc
   }
 
   if (freeBody?.error?.code === "WEB_PAYWALL_ENABLED") {
-    return loadPreviewResults(
+    return inlineAccess ?? loadPreviewResults(
       scanId,
       copy.detailLabels.paywallPreview,
       freeBody?.error?.message ?? copy.detailLabels.lockedUrl
     );
   }
 
-  return loadPreviewResults(
+  return inlineAccess ?? loadPreviewResults(
     scanId,
     copy.detailLabels.freePreview,
     freeBody?.error?.message ?? copy.detailLabels.lockedUrl
@@ -1843,6 +1893,22 @@ function previewAccessFromSummary(summary: ScanSummary, copy: ScanExperienceCopy
     results: summary.previewResults,
     label: copy.detailLabels.freePreview,
     description: copy.detailLabels.lockedUrl
+  };
+}
+
+function inlineFullAccessFromSummary(summary: ScanSummary, copy: ScanExperienceCopy): DetailAccessState | null {
+  if (!summary.fullResults) return null;
+
+  return {
+    scanId: summary.scanId,
+    access: "FULL",
+    lockedCount: 0,
+    maigretReportAvailable: summary.maigretReportAvailable,
+    maigretReportFilename: summary.maigretReportFilename,
+    results: summary.fullResults,
+    label: copy.detailLabels.freeDetail,
+    description: copy.detailLabels.fullOpen,
+    sourceReportHtml: summary.sourceReportHtml
   };
 }
 

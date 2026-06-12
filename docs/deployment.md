@@ -106,7 +106,7 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - Keep Vercel as the frontend and add a separate scan worker service in a later slice.
 - Use `SCAN_PROVIDER=mock` only for demos and smoke tests.
 
-For the public Vercel beta, keep `SCAN_PROVIDER=maigret`. Vercel installs Maigret from `requirements.txt` and the Node scan route calls the Python function at `/api/maigret_scan` for real CLI output. `vercel.json` also points the JSON stores at `/tmp` so the first scan response can complete on Vercel. That storage is not durable and is not a substitute for Postgres; stable detailed reports, orders, monitoring, and deletion audits still require `DATABASE_URL`.
+For the public Vercel beta, keep `SCAN_PROVIDER=maigret`. Vercel installs Maigret from `requirements.txt` and the Node scan route calls the Python function at `/api/maigret_scan` for real CLI output. `vercel.json` also points the JSON stores at `/tmp` so the first scan response can complete on Vercel, sets `INLINE_SCAN_ARTIFACTS=true` so the browser can render details even when later serverless functions cannot read the same `/tmp` file, and sets beta free searches to 5 per browser/IP over 24 hours by default. Change that number from `/admin` after signing in with the developer admin account. That storage is not durable and is not a substitute for Postgres; stable detailed reports, orders, monitoring, quota settings, and deletion audits still require `DATABASE_URL`.
 
 After each Vercel beta deployment, run:
 
@@ -122,6 +122,10 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MONITORING_CRON_LIMIT`: maximum monitoring subscriptions processed by one `/api/cron/monitoring` run
 - `SITE_URL`: production origin used for Toss success/fail URLs
 - `SCAN_PROVIDER`: `maigret` for Vercel, Docker, and Cloudtype real scans. `mock` must be used only for private smoke tests and demos.
+- `BETA_FREE_SCAN_LIMIT`: default non-admin free search quota, `5` for beta.
+- `BETA_FREE_SCAN_WINDOW_HOURS`: quota window in hours, `24` for beta.
+- `BETA_SCAN_SETTINGS_STORE_PATH`: file path for `/admin` quota settings when Postgres is absent.
+- `BETA_SCAN_USAGE_STORE_PATH`: file path for beta free search usage counts when Postgres is absent.
 - `MAIGRET_BIN`: CLI binary path, usually `maigret`
 - `MAIGRET_TOP_SITES_QUICK`: free scan scope, default `100`
 - `MAIGRET_TOP_SITES_DEEP`: paid/deep scan scope, default `500`
@@ -129,6 +133,7 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_MAX_CONNECTIONS`: Maigret concurrent connection limit; keep it low on Vercel serverless functions
 - `MAIGRET_EXTRACT_EXTENDED`: set `false` on Vercel to reduce Maigret memory and network pressure
 - `MAIGRET_API_SECRET`: optional shared secret for the Node scan route to call the Python Maigret function with `x-maigret-api-secret`
+- `INLINE_SCAN_ARTIFACTS`: `true` only for Vercel beta without Postgres; keep false when durable report storage and paid web reports are enabled
 - `PAYMENT_PROVIDER`: `toss` for production payments
 - `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` for beta so the one-time free detailed report remains available; set `true` after Toss checkout is ready to require checkout for detailed web reports
 - `TOSS_CLIENT_KEY`: Toss Payments client key for payment-window SDK compatibility and merchant verification
