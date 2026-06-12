@@ -9,7 +9,7 @@
 - [x] Privacy, terms, and responsible-use pages
 - [x] Postgres-ready scan persistence with local file fallback
 - [x] 24-hour non-member retention timestamp and prune script
-- [x] Protected `/api/cron/prune` endpoint and Vercel hourly cron schedule
+- [x] Protected `/api/cron/prune` and `/api/cron/monitoring` endpoints with Vercel daily cron schedules
 - [x] Maigret CLI adapter with deterministic fallback
 - [x] Docker production path that installs Maigret CLI
 - [x] Docker Compose production package for Postgres, migration, app, Caddy HTTPS proxy, and retention prune job

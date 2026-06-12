@@ -119,6 +119,13 @@ export const requiredFiles = [
   "vercel.json"
 ];
 
+export const requiredVercelCronPaths = ["/api/cron/prune", "/api/cron/monitoring"];
+
+export const requiredVercelEnvValues = {
+  SCAN_PROVIDER: "maigret",
+  MONITORING_CRON_LIMIT: "3"
+};
+
 export const requiredEnvExampleKeys = [
   "DATABASE_URL",
   "DATABASE_SSL",
@@ -269,6 +276,7 @@ export function createReadinessReport({
   envExample,
   launchEnvExample = "",
   readme = "",
+  vercelConfig = {},
   checklistMarkdown,
   releaseCheck = false,
   now = new Date()
@@ -286,6 +294,27 @@ export function createReadinessReport({
 
   for (const file of requiredFiles) {
     addCheck(checks, localFailures, `Required file ${file}`, existingFiles.has(file), `${file} must exist.`);
+  }
+
+  const vercelCronPaths = getVercelCronPaths(vercelConfig);
+  for (const cronPath of requiredVercelCronPaths) {
+    addCheck(
+      checks,
+      localFailures,
+      `Vercel cron ${cronPath}`,
+      vercelCronPaths.has(cronPath),
+      `vercel.json must schedule ${cronPath}.`
+    );
+  }
+
+  for (const [key, expectedValue] of Object.entries(requiredVercelEnvValues)) {
+    addCheck(
+      checks,
+      localFailures,
+      `Vercel env ${key}`,
+      vercelConfig?.env?.[key] === expectedValue,
+      `vercel.json must set ${key}=${expectedValue}.`
+    );
   }
 
   for (const command of requiredReadmeCommands) {
@@ -353,19 +382,14 @@ export function createReadinessReport({
   };
 }
 
-function addCheck(checks, failures, name, ok, detail) {
-  const check = { name, ok, detail };
-  checks.push(check);
-  if (!ok) failures.push({ name, detail });
-}
-
 async function main() {
-  const [packageJson, envExample, launchEnvExample, checklistMarkdown, existingFiles] = await Promise.all([
+  const [packageJson, envExample, launchEnvExample, checklistMarkdown, existingFiles, vercelConfig] = await Promise.all([
     readJson("package.json"),
     readFile(".env.example", "utf-8"),
     readFile(".env.launch.example", "utf-8"),
     readFile("docs/launch-checklist.md", "utf-8"),
-    findExistingFiles(requiredFiles)
+    findExistingFiles(requiredFiles),
+    readJson("vercel.json")
   ]);
   const readme = await readFile("README.md", "utf-8").catch(() => "");
 
@@ -375,12 +399,28 @@ async function main() {
     envExample,
     launchEnvExample,
     readme,
+    vercelConfig,
     checklistMarkdown,
     releaseCheck: process.env.LAUNCH_RELEASE_CHECK === "true"
   });
 
   console.log(JSON.stringify(report, null, 2));
   if (!report.ok) process.exit(1);
+}
+
+function addCheck(checks, failures, name, ok, detail) {
+  const check = { name, ok, detail };
+  checks.push(check);
+  if (!ok) failures.push({ name, detail });
+}
+
+function getVercelCronPaths(vercelConfig) {
+  if (!Array.isArray(vercelConfig?.crons)) return new Set();
+  return new Set(
+    vercelConfig.crons
+      .map((cron) => (cron && typeof cron.path === "string" ? cron.path : null))
+      .filter(Boolean)
+  );
 }
 
 async function readJson(path) {

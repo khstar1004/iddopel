@@ -21,7 +21,7 @@
 - Verify: `npm run verify`
 - Postgres migration: `DATABASE_URL=postgres://... npm run db:migrate`; Vercel/Neon aliases such as `POSTGRES_URL=postgres://... npm run db:migrate` also work.
 - Retention prune: `npm run retention:prune`
-- Cron endpoint: `GET /api/cron/prune` with `Authorization: Bearer $CRON_SECRET`
+- Cron endpoints: `GET /api/cron/prune` and `GET /api/cron/monitoring` with `Authorization: Bearer $CRON_SECRET`
 - Create paid report order: `POST /api/orders`
 - Confirm Toss payment: `POST /api/payments/confirm`
 - Mock payment for local smoke tests only: `POST /api/payments/mock/confirm` with `ENABLE_MOCK_PAYMENTS=true`
@@ -33,7 +33,7 @@
 - `src/lib/*.test.ts`: pure logic tests
 - `db/schema.sql`: production Postgres schema
 - `scripts`: database migration and retention operations
-- `vercel.json`: hourly retention cron schedule
+- `vercel.json`: daily retention and monthly-monitoring cron schedules
 - `Dockerfile`: production container image with Maigret installed
 - `src/lib/commerce*.ts`: paid report order and entitlement storage
 - `docs`: launch, policy, app-store, Toss submission artifacts

@@ -218,6 +218,17 @@ GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=
 `;
 
+const completeVercelConfig = {
+  env: {
+    SCAN_PROVIDER: "maigret",
+    MONITORING_CRON_LIMIT: "3"
+  },
+  crons: [
+    { path: "/api/cron/prune", schedule: "0 0 * * *" },
+    { path: "/api/cron/monitoring", schedule: "0 1 * * *" }
+  ]
+};
+
 describe("launch-readiness", () => {
   it("parses checked and unchecked checklist items with line numbers", () => {
     const items = parseChecklistItems(["# Launch", "- [x] Local package", "- [ ] Production domain"].join("\n"));
@@ -235,6 +246,7 @@ describe("launch-readiness", () => {
       envExample: completeEnv,
       launchEnvExample: completeLaunchEnv,
       readme: completeReadme,
+      vercelConfig: completeVercelConfig,
       checklistMarkdown: "- [x] Local package\n- [ ] Production domain, SSL, DNS, alert routing",
       releaseCheck: false
     });
@@ -253,6 +265,7 @@ describe("launch-readiness", () => {
       envExample: completeEnv,
       launchEnvExample: completeLaunchEnv,
       readme: completeReadme,
+      vercelConfig: completeVercelConfig,
       checklistMarkdown: "- [x] Local package\n- [ ] STORE_RELEASE_CHECK=true npm run store:verify passes",
       releaseCheck: true
     });
@@ -269,6 +282,7 @@ describe("launch-readiness", () => {
       envExample: completeEnv,
       launchEnvExample: completeLaunchEnv,
       readme: completeReadme,
+      vercelConfig: completeVercelConfig,
       checklistMarkdown: "- [x] Local package",
       releaseCheck: false
     });
@@ -285,6 +299,7 @@ describe("launch-readiness", () => {
       envExample: completeEnv,
       launchEnvExample: completeLaunchEnv,
       readme: completeReadme.replace("npm run android:debug", ""),
+      vercelConfig: completeVercelConfig,
       checklistMarkdown: "- [x] Local package",
       releaseCheck: false
     });
@@ -300,11 +315,31 @@ describe("launch-readiness", () => {
       envExample: completeEnv,
       launchEnvExample: completeLaunchEnv,
       readme: completeReadme,
+      vercelConfig: completeVercelConfig,
       checklistMarkdown: "- [x] Local package",
       releaseCheck: false
     });
 
     expect(report.ok).toBe(false);
     expect(report.localFailures).toContainEqual(expect.objectContaining({ name: "Package script store:finalize" }));
+  });
+
+  it("fails default mode when Vercel omits the monitoring cron", () => {
+    const report = createReadinessReport({
+      packageJson: { scripts: completeScripts },
+      existingFiles: completeFiles,
+      envExample: completeEnv,
+      launchEnvExample: completeLaunchEnv,
+      readme: completeReadme,
+      vercelConfig: {
+        ...completeVercelConfig,
+        crons: [{ path: "/api/cron/prune", schedule: "0 0 * * *" }]
+      },
+      checklistMarkdown: "- [x] Local package",
+      releaseCheck: false
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.localFailures).toContainEqual(expect.objectContaining({ name: "Vercel cron /api/cron/monitoring" }));
   });
 });

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
 import { pruneExpiredScans } from "@/lib/scan-store";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
 
