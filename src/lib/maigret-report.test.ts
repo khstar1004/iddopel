@@ -6,6 +6,7 @@ describe("sanitizeMaigretHtmlReport", () => {
     const sanitized = sanitizeMaigretHtmlReport(`<!doctype html>
       <html>
         <head>
+          <title>khstar104 -- Maigret username search report</title>
           <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
         </head>
         <body>
@@ -17,7 +18,8 @@ describe("sanitizeMaigretHtmlReport", () => {
         </body>
       </html>`);
 
-    expect(sanitized).toContain("Username search report for khstar104");
+    expect(sanitized).toContain("khstar104 -- ID 도플갱어 리포트");
+    expect(sanitized).toContain("ID 도플갱어 리포트: khstar104");
     expect(sanitized).toContain("Generated 2026-06-11 05:03:17");
     expect(sanitized).toContain("https://blog.naver.com/khstar104");
     expect(sanitized).toContain("rel=\"noopener noreferrer\"");

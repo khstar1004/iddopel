@@ -175,7 +175,7 @@ npm run release:production
 
 For Vercel beta, the repository `vercel.json` sets `SCAN_PROVIDER=maigret`, installs Maigret from `requirements.txt`, and routes scans through the Python function at `/api/maigret_scan` with serverless-safe Maigret limits. It also uses `/tmp` JSON stores so the first scan response does not fail on a read-only serverless filesystem, sets `INLINE_SCAN_ARTIFACTS=true` so the browser can render result details without cross-function `/tmp` persistence, and limits beta free searches to 5 per browser/IP over 24 hours by default. Change that number in `/admin`. It keeps mock payment confirmation disabled and leaves the web detailed-report paywall off. Set `MAIGRET_API_SECRET` in Vercel to protect the Python function from direct public use. `/tmp` is not durable; use Postgres for stable detailed reports, orders, monitoring, quota settings, and deletion audits. For Cloudtype, use the Dockerfile web/API service plus a separate Cloudtype PostgreSQL service. The native apps are still built and submitted through App Store Connect / Google Play; they point at the Cloudtype HTTPS origin via `MOBILE_APP_ORIGIN`. See [docs/cloudtype-deployment.md](docs/cloudtype-deployment.md).
 
-After a Vercel beta deployment, verify the real scan path:
+After a Vercel beta deployment, verify the public beta surface. This checks security headers, policy pages, sitemap/robots/manifest, the real scan path, beta inline report rendering, and that the embedded source report is product-branded instead of exposing scanner vendor text:
 
 ```bash
 SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta

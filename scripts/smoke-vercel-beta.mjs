@@ -6,8 +6,55 @@ const report = {
   username,
   checks: []
 };
+const ownerToken = `smoke-owner-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+const requiredHeaders = [
+  "content-security-policy",
+  "strict-transport-security",
+  "x-content-type-options",
+  "x-frame-options",
+  "referrer-policy",
+  "permissions-policy"
+];
 
 try {
+  const home = await requestText("/", { method: "GET" });
+  assertCheck("home page renders", home.status === 200 && home.body.includes("ID 도플갱어"), {
+    status: home.status,
+    length: home.body.length
+  });
+  for (const header of requiredHeaders) {
+    assertCheck(`home security header ${header}`, home.headers.has(header), {
+      status: home.status,
+      value: home.headers.get(header)
+    });
+  }
+  assertCheck("home hides framework header", !home.headers.has("x-powered-by"), {
+    value: home.headers.get("x-powered-by")
+  });
+
+  for (const pathname of ["/privacy", "/terms", "/responsible-use", "/toss"]) {
+    const page = await requestText(pathname, { method: "GET" });
+    assertCheck(`${pathname} renders`, page.status === 200 && page.body.includes("<!DOCTYPE html"), {
+      status: page.status,
+      length: page.body.length
+    });
+  }
+
+  const robots = await requestText("/robots.txt", { method: "GET" });
+  assertCheck("robots.txt renders", robots.status === 200 && /User-agent:/i.test(robots.body), {
+    status: robots.status,
+    body: robots.body.slice(0, 120)
+  });
+
+  const sitemap = await requestText("/sitemap.xml", { method: "GET" });
+  assertCheck("sitemap.xml renders", sitemap.status === 200 && sitemap.body.includes("<urlset"), {
+    status: sitemap.status,
+    length: sitemap.body.length
+  });
+
+  const manifest = await requestJson("/manifest.webmanifest", { method: "GET" });
+  assertCheck("web manifest renders", manifest.status === 200 && manifest.body?.name?.includes("ID 도플갱어"), manifest);
+
   const health = await requestJson("/api/health", { method: "GET" });
   assertCheck("health ok", health.status === 200 && health.body?.ok === true, health);
   assertCheck("beta scan provider", health.body?.scanProvider === "maigret", health.body);
@@ -15,7 +62,10 @@ try {
 
   const scan = await requestJson("/api/scans", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "x-scan-owner-token": ownerToken
+    },
     body: JSON.stringify({
       username,
       purpose: "SELF_CHECK",
@@ -34,6 +84,17 @@ try {
     fullResults: scan.body?.fullResults?.length,
     hasSourceReportHtml: typeof scan.body?.sourceReportHtml === "string"
   });
+  if (typeof scan.body?.sourceReportHtml === "string") {
+    assertCheck("inline report strips scripts", !/<script\b/i.test(scan.body.sourceReportHtml), {
+      hasScript: /<script\b/i.test(scan.body.sourceReportHtml)
+    });
+    assertCheck("inline report hides scanner vendor text", !/\bMaigret\b/i.test(scan.body.sourceReportHtml), {
+      containsVendorText: /\bMaigret\b/i.test(scan.body.sourceReportHtml)
+    });
+    assertCheck("inline report is product branded", scan.body.sourceReportHtml.includes("ID 도플갱어 리포트"), {
+      hasProductTitle: scan.body.sourceReportHtml.includes("ID 도플갱어 리포트")
+    });
+  }
 
   const scanId = scan.body.scanId;
   const preview = await requestJson(`/api/scans/${scanId}/results`, { method: "GET" });
@@ -121,6 +182,7 @@ async function requestText(pathname, init) {
   return {
     status: response.status,
     ok: response.ok,
+    headers: response.headers,
     body: await response.text()
   };
 }

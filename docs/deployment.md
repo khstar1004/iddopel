@@ -108,7 +108,7 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 
 For the public Vercel beta, keep `SCAN_PROVIDER=maigret`. Vercel installs Maigret from `requirements.txt` and the Node scan route calls the Python function at `/api/maigret_scan` for real CLI output. `vercel.json` also points the JSON stores at `/tmp` so the first scan response can complete on Vercel, sets `INLINE_SCAN_ARTIFACTS=true` so the browser can render details even when later serverless functions cannot read the same `/tmp` file, and sets beta free searches to 5 per browser/IP over 24 hours by default. Change that number from `/admin` after signing in with the developer admin account. That storage is not durable and is not a substitute for Postgres; stable detailed reports, orders, monitoring, quota settings, and deletion audits still require `DATABASE_URL`.
 
-After each Vercel beta deployment, run:
+After each Vercel beta deployment, run the beta smoke. It verifies security headers, policy pages, sitemap/robots/manifest, the real scan path, beta inline report rendering, and product-branded embedded source reports:
 
 ```bash
 SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta

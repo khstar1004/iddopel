@@ -30,6 +30,7 @@ const completeScripts = {
   "android:bundle": "node scripts/verify-android-bundle-build.mjs",
   "deploy:verify": "node scripts/verify-deploy-compose.mjs",
   "verify:production": "node scripts/verify-production-config.mjs",
+  "smoke:vercel-beta": "node scripts/smoke-vercel-beta.mjs",
   "smoke:release": "node scripts/smoke-release.mjs",
   "alerts:test": "node scripts/test-alert-webhook.mjs",
   "db:migrate": "node scripts/migrate-postgres.mjs",
@@ -113,6 +114,8 @@ npm run mobile:verify
 npm run android:debug
 npm run android:bundle
 npm run alerts:test
+npm run smoke:vercel-beta
+npm run smoke:release
 `;
 
 const completeEnv = `

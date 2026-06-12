@@ -30,6 +30,7 @@ export const requiredPackageScripts = [
   "android:bundle",
   "deploy:verify",
   "verify:production",
+  "smoke:vercel-beta",
   "smoke:release",
   "alerts:test",
   "db:migrate",
@@ -62,6 +63,8 @@ export const requiredReadmeCommands = [
   "npm run android:debug",
   "npm run android:bundle",
   "npm run deploy:verify",
+  "npm run smoke:vercel-beta",
+  "npm run smoke:release",
   "npm run alerts:test",
   "npm run launch:readiness"
 ];
