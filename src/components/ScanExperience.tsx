@@ -1861,12 +1861,14 @@ async function loadDevAdminResults(scanId: string, adminToken: string, copy: Sca
 
 async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExperienceCopy): Promise<DetailAccessState> {
   const inlineAccess = inlineFullAccessFromSummary(summary, copy);
+  if (inlineAccess) return inlineAccess;
+
   const scanId = summary.scanId;
   const ownerToken = window.localStorage.getItem(freeDetailOwnerTokenKey);
   const usedScanId = window.localStorage.getItem(freeDetailUsedScanIdKey);
 
   if (ownerToken && usedScanId && usedScanId !== scanId) {
-    return inlineAccess ?? loadPreviewResults(
+    return loadPreviewResults(
       scanId,
       copy.detailLabels.freePreview,
       copy.detailLabels.lockedUrl
@@ -1887,7 +1889,6 @@ async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExp
     const fullBody = await fullResponse.json();
 
     if (!fullResponse.ok) {
-      if (inlineAccess) return inlineAccess;
       throw new Error(fullBody?.error?.message ?? "무료 상세 결과를 불러오지 못했어요.");
     }
 
@@ -1904,14 +1905,14 @@ async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExp
   }
 
   if (freeBody?.error?.code === "WEB_PAYWALL_ENABLED") {
-    return inlineAccess ?? loadPreviewResults(
+    return loadPreviewResults(
       scanId,
       copy.detailLabels.paywallPreview,
       freeBody?.error?.message ?? copy.detailLabels.lockedUrl
     );
   }
 
-  return inlineAccess ?? loadPreviewResults(
+  return loadPreviewResults(
     scanId,
     copy.detailLabels.freePreview,
     freeBody?.error?.message ?? copy.detailLabels.lockedUrl
