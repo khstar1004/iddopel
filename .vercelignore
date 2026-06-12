@@ -1,0 +1,10 @@
+.maigret-venv
+.logs
+.data
+.agents
+.cursor
+.next
+node_modules
+.vercel
+.vscode
+
