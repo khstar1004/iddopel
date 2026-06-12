@@ -10,6 +10,8 @@ describe("secret scan verifier", () => {
         "TOSS_SECRET_KEY=replace-with-toss-secret-key",
         "APPLE_PRIVATE_KEY=",
         "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON='...'",
+        "POLAR_ACCESS_TOKEN=replace-with-polar-access-token",
+        "POLAR_WEBHOOK_SECRET=replace-with-polar-webhook-secret",
         'TOSS_SECRET_KEY: "${TOSS_SECRET_KEY:?Set TOSS_SECRET_KEY}"',
         'DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB"'
       ].join("\n")
@@ -50,6 +52,18 @@ describe("secret scan verifier", () => {
     expect(findings).toContainEqual(
       expect.objectContaining({
         file: "README.md",
+        line: 1,
+        type: "sensitive-env-assignment"
+      })
+    );
+  });
+
+  it("flags real-looking Polar secret assignments", () => {
+    const findings = scanTextForSecrets("docs/leak.md", `POLAR_ACCESS_TOKEN=${"p".repeat(36)}`);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        file: "docs/leak.md",
         line: 1,
         type: "sensitive-env-assignment"
       })

@@ -12,7 +12,7 @@ interface PublicOrder {
   amount: number;
   currency: "KRW";
   orderName: string;
-  provider: "MOCK" | "TOSS";
+  provider: "MOCK" | "TOSS" | "POLAR";
   status: "READY" | "PAID" | "FAILED" | "CANCELED";
   checkoutUrl: string | null;
   createdAt: string;
@@ -75,10 +75,10 @@ export function CheckoutClient() {
           <span style={{ color: "#6b7684", fontSize: 13 }}>결제 금액</span>
           <strong style={{ display: "block", marginTop: 4, fontSize: 28 }}>{order.amount.toLocaleString("ko-KR")}원</strong>
         </div>
-        {order.provider === "TOSS" ? (
+        {order.provider === "TOSS" || order.provider === "POLAR" ? (
           <a className="toss-button" href={order.checkoutUrl ?? "#"} style={{ textDecoration: "none" }}>
             <ExternalLink size={18} aria-hidden />
-            토스페이먼츠로 결제하기
+            결제하고 전체 리포트 보기
           </a>
         ) : (
           <button className="toss-button" type="button" onClick={payWithMock} disabled={isPaying}>
@@ -87,7 +87,7 @@ export function CheckoutClient() {
           </button>
         )}
         <p style={{ color: "#6b7684", fontSize: 13, lineHeight: 1.55, margin: 0 }}>
-          실제 운영에서는 `PAYMENT_PROVIDER=toss`와 토스페이먼츠 시크릿 키를 설정하면 결제창으로 이동해요.
+          베타 기간에는 테스트 결제 또는 1회 무료 열람으로 확인할 수 있어요.
         </p>
       </section>
     </CheckoutShell>

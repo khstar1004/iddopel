@@ -32,6 +32,47 @@ describe("production config preflight", () => {
     expect(report.failed).toBe(0);
   });
 
+  it("accepts Polar as the live web checkout provider", async () => {
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "polar",
+        POLAR_ACCESS_TOKEN: "polar_" + "a".repeat(32),
+        POLAR_PRODUCT_ID: "11111111-1111-4111-8111-111111111111",
+        POLAR_WEBHOOK_SECRET: "p".repeat(48),
+        POLAR_SERVER: "production"
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.failed).toBe(0);
+  });
+
+  it("rejects incomplete Polar checkout configuration", async () => {
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "polar",
+        POLAR_ACCESS_TOKEN: "",
+        POLAR_PRODUCT_ID: "YOUR_POLAR_PRODUCT_ID",
+        POLAR_WEBHOOK_SECRET: "short",
+        POLAR_SERVER: "sandbox"
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Polar access token is configured", ok: false }),
+        expect.objectContaining({ name: "Polar product id is configured", ok: false }),
+        expect.objectContaining({ name: "Polar webhook secret is strong", ok: false }),
+        expect.objectContaining({ name: "Polar server is production", ok: false })
+      ])
+    );
+  });
+
   it("rejects missing, placeholder, or reused report secrets", async () => {
     const report = await createProductionConfigReport({
       envValues: {

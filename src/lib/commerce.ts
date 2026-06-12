@@ -39,6 +39,11 @@ export function isPaymentProviderToss() {
   return process.env.PAYMENT_PROVIDER === "toss";
 }
 
+export function isPaymentProviderPolar() {
+  return process.env.PAYMENT_PROVIDER === "polar";
+}
+
 export function resolvePaymentProvider(): ReportOrder["provider"] {
+  if (isPaymentProviderPolar()) return "POLAR";
   return isPaymentProviderToss() ? "TOSS" : "MOCK";
 }

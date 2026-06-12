@@ -143,12 +143,13 @@ Before starting the stack, confirm real values in `deploy/compose/.env`:
 - `REPORT_TOKEN_SECRET`
 - `FIRST_FREE_FINGERPRINT_SECRET`
 - `SCAN_PROVIDER=maigret`
-- `PAYMENT_PROVIDER=toss`
+- `PAYMENT_PROVIDER=toss` or `PAYMENT_PROVIDER=polar`
 - `ENABLE_MOCK_PAYMENTS=false`
-- `WEB_DETAILED_REPORT_PAYWALL_ENABLED=false` for beta. Switch to `true` only after Toss web checkout is ready.
+- `WEB_DETAILED_REPORT_PAYWALL_ENABLED=false` for beta. Switch to `true` only after live web checkout is ready.
 - `TOSS_CLIENT_KEY`
 - `TOSS_SECRET_KEY`
 - `TOSS_SECURITY_KEY`
+- `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID`, and `POLAR_WEBHOOK_SECRET` if using Polar web checkout
 - `TOSS_CONSOLE_API_KEY`
 - `TOSS_CONSOLE_APP_ID`
 - `TOSS_MINI_APP_NAME`
@@ -213,6 +214,27 @@ SMOKE_BASE_URL="https://YOUR_DOMAIN" SMOKE_CONFIRM_PAYMENT=skip npm run smoke:re
 ```
 
 For a local mock-payment smoke test, run the server with `ENABLE_MOCK_PAYMENTS=true` and `PAYMENT_PROVIDER=mock`, then run `npm run smoke:release` against that local URL.
+
+## Polar Web Checkout
+
+The web detailed-report checkout can use Polar instead of Toss by setting:
+
+```bash
+PAYMENT_PROVIDER=polar
+POLAR_ACCESS_TOKEN="YOUR_POLAR_ORGANIZATION_ACCESS_TOKEN"
+POLAR_PRODUCT_ID="YOUR_POLAR_PRODUCT_ID"
+POLAR_WEBHOOK_SECRET="YOUR_POLAR_WEBHOOK_SECRET"
+SITE_URL="https://YOUR_DOMAIN"
+WEB_DETAILED_REPORT_PAYWALL_ENABLED=true
+```
+
+Order creation calls Polar's hosted checkout session API and stores the returned checkout URL. Configure the Polar webhook URL as:
+
+```text
+https://YOUR_DOMAIN/api/payments/polar/webhook
+```
+
+Subscribe at least to `order.paid`. The success redirect also verifies `checkout_id` server-side before opening the paid report, so the user can reach the report even if the webhook arrives slightly later.
 
 ## Toss In-App
 

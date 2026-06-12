@@ -44,6 +44,7 @@ export async function createProductionConfigReport({ envValues = process.env, ru
   const env = (name) => readEnv(envValues, name);
   const siteUrl = env("SITE_URL");
   const runtimeBaseUrl = env("PRODUCTION_BASE_URL").replace(/\/$/, "");
+  const paymentProvider = env("PAYMENT_PROVIDER");
 
   addCheck("DATABASE_URL is production Postgres", /^postgres(?:ql)?:\/\//.test(env("DATABASE_URL")), "Set DATABASE_URL to managed Postgres.");
   addCheck("DATABASE_SSL is explicit", ["true", "false"].includes(env("DATABASE_SSL")), "Set DATABASE_SSL=true if the provider requires TLS verification.");
@@ -61,11 +62,19 @@ export async function createProductionConfigReport({ envValues = process.env, ru
   );
   addCheck("SITE_URL is HTTPS production origin", isHttpsUrl(siteUrl), "Use the deployed HTTPS origin, without a trailing slash.");
   addCheck("SCAN_PROVIDER requires Maigret", env("SCAN_PROVIDER") === "maigret", "Set SCAN_PROVIDER=maigret for real username scanning.");
-  addCheck("PAYMENT_PROVIDER requires Toss", env("PAYMENT_PROVIDER") === "toss", "Set PAYMENT_PROVIDER=toss before live web checkout.");
+  addCheck("PAYMENT_PROVIDER is a live checkout provider", ["toss", "polar"].includes(paymentProvider), "Set PAYMENT_PROVIDER=toss or PAYMENT_PROVIDER=polar before live web checkout.");
   addCheck("Mock payments disabled", env("ENABLE_MOCK_PAYMENTS") !== "true", "Set ENABLE_MOCK_PAYMENTS=false in production.");
-  addCheck("Toss client key is configured", /^test_ck_|^live_ck_/.test(env("TOSS_CLIENT_KEY")), "Set the Toss Payments client key in the deployment secret manager.");
-  addCheck("Toss secret is configured", env("TOSS_SECRET_KEY").length >= 12, "Set a Toss Payments secret key in the deployment secret manager.");
-  addCheck("Toss security key is configured", /^[a-f0-9]{64}$/i.test(env("TOSS_SECURITY_KEY")), "Set the Toss Payments security key in the deployment secret manager.");
+  if (paymentProvider === "toss") {
+    addCheck("Toss client key is configured", /^test_ck_|^live_ck_/.test(env("TOSS_CLIENT_KEY")), "Set the Toss Payments client key in the deployment secret manager.");
+    addCheck("Toss secret is configured", env("TOSS_SECRET_KEY").length >= 12, "Set a Toss Payments secret key in the deployment secret manager.");
+    addCheck("Toss security key is configured", /^[a-f0-9]{64}$/i.test(env("TOSS_SECURITY_KEY")), "Set the Toss Payments security key in the deployment secret manager.");
+  }
+  if (paymentProvider === "polar") {
+    addCheck("Polar access token is configured", env("POLAR_ACCESS_TOKEN").length >= 12 && !hasPlaceholder(env("POLAR_ACCESS_TOKEN")), "Set POLAR_ACCESS_TOKEN in the deployment secret manager.");
+    addCheck("Polar product id is configured", env("POLAR_PRODUCT_ID").length > 0 && !hasPlaceholder(env("POLAR_PRODUCT_ID")), "Set POLAR_PRODUCT_ID to the detailed-report product.");
+    addCheck("Polar webhook secret is strong", isStrongSecret(env("POLAR_WEBHOOK_SECRET")), "Set POLAR_WEBHOOK_SECRET to a random 32+ character webhook secret.");
+    addCheck("Polar server is production", env("POLAR_SERVER") !== "sandbox", "Use POLAR_SERVER=production or leave it unset for production checkout.");
+  }
   addCheck("Telemetry enabled", env("TELEMETRY_DISABLED") !== "true", "Keep TELEMETRY_DISABLED unset or false for launch monitoring.");
   addCheck("Alert webhook is HTTPS", isHttpsUrl(env("ALERT_WEBHOOK_URL")), "Set ALERT_WEBHOOK_URL to the launch alert channel webhook.");
   addCheck("Alert provider is supported", ["generic", "slack", "discord"].includes(env("ALERT_WEBHOOK_PROVIDER")), "Set ALERT_WEBHOOK_PROVIDER=generic, slack, or discord.");

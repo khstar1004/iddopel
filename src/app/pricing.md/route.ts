@@ -28,7 +28,7 @@ Last updated: 2026-06-11
 ## Paid Detailed Report
 - Price: configured through the live checkout provider after production launch.
 - Includes: full result URLs where available, platform/category context, risk labels, action guidance, HTML/PDF report download, paid report entitlement.
-- Payment provider: Toss Payments for web checkout when production keys are configured.
+- Payment provider: configured live checkout provider for web checkout when production keys are configured.
 - Native app payments: disabled until Apple In-App Purchase and Google Play Billing products, receipt verification, sandbox purchases, restore flow, and review notes are production-ready.
 
 ## Monthly Monitoring

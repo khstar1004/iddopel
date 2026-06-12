@@ -11,6 +11,28 @@ export function PaymentSuccessClient() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const provider = searchParams.get("provider");
+    if (provider === "polar") {
+      const checkoutId = searchParams.get("checkout_id");
+      const orderId = searchParams.get("orderId");
+
+      fetch("/api/payments/polar/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ checkoutId, orderId })
+      })
+        .then(async (response) => {
+          const body = await response.json();
+          if (!response.ok) throw new Error(body?.error?.message ?? "결제 완료 정보를 확인하지 못했어요.");
+          setMessage("정밀 리포트로 이동하고 있어요.");
+          window.location.href = body.reportUrl;
+        })
+        .catch((confirmError) => {
+          setError(confirmError instanceof Error ? confirmError.message : "결제 완료 정보를 확인하지 못했어요.");
+        });
+      return;
+    }
+
     const paymentKey = searchParams.get("paymentKey");
     const orderId = searchParams.get("orderId");
     const amount = searchParams.get("amount");
