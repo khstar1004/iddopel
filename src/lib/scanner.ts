@@ -3,6 +3,7 @@ import { expiresAtForNonMember } from "./retention";
 import { buildScores, clamp, shouldMarkFound, stableHash, riskFor } from "./scoring";
 import type {
   CreateScanInput,
+  LockedPreviewInsight,
   LockedScanResultPreview,
   MaigretReportArtifacts,
   ScanJob,
@@ -129,7 +130,8 @@ export function publicSummary(job: ScanJob) {
   return {
     ...summary,
     previewResults: freePreviewLocked ? [] : publicPreviewResultsFor(job.results),
-    lockedResults: lockedPreviewResultsFor(job.results, { includeFreePreview: freePreviewLocked })
+    lockedResults: lockedPreviewResultsFor(job.results, { includeFreePreview: freePreviewLocked }),
+    lockedInsight: lockedPreviewInsightFor(job.results, { includeFreePreview: freePreviewLocked })
   };
 }
 
@@ -146,30 +148,49 @@ export function publicPreviewResultsFor(results: ScanResult[]) {
 }
 
 export function lockedResultsCountFor(results: ScanResult[], options: { includeFreePreview?: boolean } = {}) {
-  const visibleCount = options.includeFreePreview ? 0 : freePreviewResultsFor(results).length;
-  return Math.max(0, foundScanResults(results).length - visibleCount);
+  return lockedCandidateResultsFor(results, options).length;
 }
 
 export function lockedPreviewResultsFor(
   results: ScanResult[],
   options: { includeFreePreview?: boolean } = {}
 ): LockedScanResultPreview[] {
-  const previewIds = options.includeFreePreview
-    ? new Set<string>()
-    : new Set(freePreviewResultsFor(results).map((result) => result.id));
-
-  return foundScanResults(results)
-    .filter((result) => !previewIds.has(result.id))
+  return lockedCandidateResultsFor(results, options)
     .slice(0, LOCKED_PREVIEW_LIMIT)
     .map((result) => ({
       id: result.id,
       platform: result.platform,
-      platformIconUrl: result.platformIconUrl,
       maskedUrl: maskedUrlPreviewFor(result.url),
       category: result.category,
       country: result.country,
       riskLevel: result.riskLevel
     }));
+}
+
+export function lockedPreviewInsightFor(
+  results: ScanResult[],
+  options: { includeFreePreview?: boolean } = {}
+): LockedPreviewInsight {
+  const lockedCandidates = lockedCandidateResultsFor(results, options);
+
+  return {
+    totalCount: lockedCandidates.length,
+    riskDistribution: {
+      HIGH: lockedCandidates.filter((result) => result.riskLevel === "HIGH").length,
+      MEDIUM: lockedCandidates.filter((result) => result.riskLevel === "MEDIUM").length,
+      LOW: lockedCandidates.filter((result) => result.riskLevel === "LOW").length
+    },
+    countryDistribution: countBy(lockedCandidates.map((result) => result.country)),
+    categoryDistribution: countBy(lockedCandidates.map((result) => result.category))
+  };
+}
+
+function lockedCandidateResultsFor(results: ScanResult[], options: { includeFreePreview?: boolean } = {}) {
+  const previewIds = options.includeFreePreview
+    ? new Set<string>()
+    : new Set(freePreviewResultsFor(results).map((result) => result.id));
+
+  return foundScanResults(results).filter((result) => !previewIds.has(result.id));
 }
 
 function maskedUrlPreviewFor(value: string) {

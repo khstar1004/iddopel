@@ -62,6 +62,63 @@ describe("scan results route free preview policy", () => {
     expect(body.lockedResults.map((result: { platform: string }) => result.platform)).toEqual(["GitHub", "LinkedIn"]);
     expect(JSON.stringify(body.lockedResults)).not.toContain("https://");
   });
+
+  it("returns a locked insight teaser without leaking external URLs", async () => {
+    const scan = {
+      ...createScanJobFromResults(
+        {
+          username: "lockedinsight",
+          purpose: "SELF_CHECK",
+          mode: "QUICK"
+        },
+        [
+          {
+            id: "github-insight",
+            platform: "GitHub",
+            url: "https://github.com/lockedinsight",
+            platformIconUrl: "https://github.com/favicon.ico",
+            category: "DEVELOPER",
+            country: "GLOBAL",
+            status: "FOUND",
+            riskLevel: "HIGH",
+            cleanupHint: "Check profile."
+          },
+          {
+            id: "naver-insight",
+            platform: "Naver",
+            url: "https://blog.naver.com/lockedinsight",
+            platformIconUrl: "https://naver.com/favicon.ico",
+            category: "BLOG",
+            country: "KR",
+            status: "FOUND",
+            riskLevel: "MEDIUM",
+            cleanupHint: "Check profile."
+          }
+        ],
+        {
+          checkedCount: 100,
+          now: new Date("2026-06-11T00:00:00.000Z")
+        }
+      ),
+      freePreviewLocked: true,
+      freePreviewLockReason: "BETA_FREE_SCAN_LIMITED" as const
+    };
+    resetScanRepositoryForTests(new MemoryScanRepository([scan]));
+
+    const response = await GET(resultsRequest(scan.scanId), routeContext(scan.scanId));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.results).toEqual([]);
+    expect(body.lockedInsight).toEqual({
+      totalCount: 2,
+      riskDistribution: { HIGH: 1, MEDIUM: 1, LOW: 0 },
+      countryDistribution: { GLOBAL: 1, KR: 1 },
+      categoryDistribution: { DEVELOPER: 1, BLOG: 1 }
+    });
+    expect(body.lockedResults[0]).not.toHaveProperty("platformIconUrl");
+    expect(JSON.stringify(body.lockedResults)).not.toContain("https://");
+  });
 });
 
 function staleScanWithLeakedPreview() {

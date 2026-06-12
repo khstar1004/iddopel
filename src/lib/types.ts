@@ -56,11 +56,17 @@ export interface ScanResult {
 export interface LockedScanResultPreview {
   id: string;
   platform: string;
-  platformIconUrl?: string;
   maskedUrl?: string;
   category: PlatformCategory;
   country: PlatformDefinition["country"];
   riskLevel: RiskLevel;
+}
+
+export interface LockedPreviewInsight {
+  totalCount: number;
+  riskDistribution: Record<RiskLevel, number>;
+  countryDistribution: Partial<Record<PlatformDefinition["country"], number>>;
+  categoryDistribution: Partial<Record<PlatformCategory, number>>;
 }
 
 export interface MaigretReportArtifacts {
@@ -91,6 +97,7 @@ export interface ScanSummary extends ScoreBundle {
   categoryDistribution: Record<string, number>;
   previewResults: ScanResult[];
   lockedResults?: LockedScanResultPreview[];
+  lockedInsight?: LockedPreviewInsight;
   freePreviewLocked?: boolean;
   freePreviewLockReason?: FreePreviewLockReason;
   scanSource?: ScanSource;

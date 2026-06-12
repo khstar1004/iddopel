@@ -2459,6 +2459,45 @@ form.toss-card .submit-hint[data-ready="true"] {
   background: #ecfffb;
 }
 
+.locked-insight-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.locked-insight-strip span {
+  display: grid;
+  min-height: 62px;
+  align-content: center;
+  gap: 3px;
+  border: 1px solid #dbe2ea;
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #4e5968;
+  background: #fbfcfd;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.locked-insight-strip strong {
+  color: #191f28;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.locked-insight-strip span[data-tone="high"] {
+  border-color: #ffd1d1;
+  color: #761818;
+  background: #fff5f5;
+}
+
+.locked-insight-strip span[data-tone="kr"],
+.locked-insight-strip span[data-tone="category"] {
+  border-color: #bdebd9;
+  color: #06443c;
+  background: #f0fff8;
+}
+
 .locked-mosaic-list {
   display: grid;
   gap: 8px;
@@ -2673,7 +2712,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 .history-row small {
   display: block;
   margin-top: 4px;
-  color: #8b95a1;
+  color: #5f6b7a;
   font-size: 12px;
 }
 
@@ -3961,6 +4000,10 @@ form.toss-card .submit-hint[data-ready="true"] {
 
   .preview-open-strip .secondary-button {
     width: 100%;
+  }
+
+  .locked-insight-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .launch-summary {
@@ -5528,6 +5571,105 @@ form.toss-card .toss-button:disabled {
 .app-shell .monitoring-draft p,
 .app-shell .monitoring-latest-row small,
 .app-shell .monitoring-latest-empty,
-.app-shell .mini-card-helper {
+.app-shell .mini-card-helper,
+.app-shell .result-lifecycle span {
   color: #5f6b7a;
+}
+
+/* Service cleanup pass: keep only decision-critical surfaces visually loud. */
+.app-shell .hero-copy {
+  max-width: 680px;
+}
+
+.app-shell .trust-strip {
+  gap: 8px;
+}
+
+.app-shell .trust-chip,
+.result-snapshot span,
+.result-risk-counts span,
+.result-lifecycle span,
+.result-filter-buttons button {
+  min-height: 30px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
+.result-insight-banner,
+.result-risk-overview,
+.result-lifecycle,
+.result-filter-bar {
+  border-color: #e5e8eb;
+  background: #ffffff;
+}
+
+.result-insight-banner[data-tone="high"] {
+  border-color: #ffd1d1;
+  background: #fffafa;
+}
+
+.result-insight-banner[data-tone="medium"] {
+  border-color: #ffe0a8;
+  background: #fffdf8;
+}
+
+.result-insight-banner[data-tone="low"] {
+  border-color: #bdebd9;
+  background: #fbfffd;
+}
+
+.preview-open-strip {
+  border-color: #bdebd9;
+  background: #fbfffd;
+}
+
+.report-unlock-panel,
+.locked-results,
+.locked-result-mosaic {
+  background: #ffffff;
+}
+
+.result-first-panel .result-card-meta,
+.result-first-panel .preview-lock-copy {
+  display: none;
+}
+
+.paid-insight-board {
+  gap: 12px;
+}
+
+.paid-monthly-digest-panel,
+.paid-evidence-packet-panel {
+  background: #ffffff;
+}
+
+.paid-monthly-digest-card,
+.paid-score-tile,
+.paid-analysis-panel {
+  box-shadow: none;
+}
+
+.paid-evidence-strip {
+  border-color: #e5e8eb;
+  background: #fbfcfd;
+}
+
+@media (max-width: 768px) {
+  .result-insight-banner {
+    grid-template-columns: 1fr;
+  }
+
+  .result-insight-banner em {
+    border-left: 0;
+    border-top: 1px solid #e5e8eb;
+    padding-top: 10px;
+    padding-left: 0;
+  }
+
+  .result-risk-overview,
+  .result-lifecycle,
+  .result-filter-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
 import { canAccessFullReport } from "@/lib/entitlements";
 import { getStoredScan } from "@/lib/scan-store";
-import { foundScanResults, lockedPreviewResultsFor, lockedResultsCountFor, publicPreviewResultsFor } from "@/lib/scanner";
+import { foundScanResults, lockedPreviewInsightFor, lockedPreviewResultsFor, lockedResultsCountFor, publicPreviewResultsFor } from "@/lib/scanner";
 import { createTossPreflightResponse, rejectDisallowedTossCors, withTossCors } from "@/lib/toss-cors";
 import type { ScanJob } from "@/lib/types";
 
@@ -33,6 +33,7 @@ export async function GET(request: Request, context: RouteContext) {
   const previewResults = freePreviewLocked ? [] : publicPreviewResultsFor(job.results);
   const lockedCount = lockedResultsCountFor(job.results, { includeFreePreview: freePreviewLocked });
   const lockedResults = lockedPreviewResultsFor(job.results, { includeFreePreview: freePreviewLocked });
+  const lockedInsight = lockedPreviewInsightFor(job.results, { includeFreePreview: freePreviewLocked });
 
   if (fullAccess && !hasPaidAccess) {
     return withTossCors(request, NextResponse.json(
@@ -44,6 +45,7 @@ export async function GET(request: Request, context: RouteContext) {
         freePreviewLockReason: job.freePreviewLockReason,
         lockedCount,
         lockedResults,
+        lockedInsight,
         maigretReportAvailable: Boolean(job.maigretReport?.html),
         maigretReportFilename: job.maigretReport?.htmlFilename,
         results: previewResults
@@ -60,6 +62,7 @@ export async function GET(request: Request, context: RouteContext) {
     freePreviewLockReason: fullAccess && hasPaidAccess ? undefined : job.freePreviewLockReason,
     lockedCount: fullAccess && hasPaidAccess ? 0 : lockedCount,
     lockedResults: fullAccess && hasPaidAccess ? [] : lockedResults,
+    lockedInsight: fullAccess && hasPaidAccess ? undefined : lockedInsight,
     maigretReportAvailable: Boolean(job.maigretReport?.html),
     maigretReportFilename: job.maigretReport?.htmlFilename,
     results: fullAccess && hasPaidAccess ? foundResults : previewResults

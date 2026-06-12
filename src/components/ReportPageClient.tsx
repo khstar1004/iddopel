@@ -185,15 +185,15 @@ export function ReportPageClient() {
           <div className="section-header report-hero">
             <div>
               <h1>정밀 리포트</h1>
-              <p>발견 플랫폼, URL, 위험도, 조치 가이드를 먼저 확인하세요. 발견된 계정들이 동일인이라는 뜻은 아니에요.</p>
+              <p>플랫폼, URL, 위험도, 조치 가이드만 간결하게 정리했습니다. 동일인 여부는 단정하지 않아요.</p>
             </div>
             <div className="report-count-strip" aria-label="정밀 리포트 결과 요약">
               <span>
-                발견 결과
+                발견
                 <strong>{insight.foundCount}개</strong>
               </span>
               <span>
-                검사 범위
+                검사
                 <strong>{insight.checkedCount}곳</strong>
               </span>
             </div>
@@ -206,7 +206,7 @@ export function ReportPageClient() {
               ) : null}
               <a className="primary-button" href={pdfReportUrl}>
                 <Download size={16} aria-hidden />
-                PDF 리포트 다운로드
+                PDF 다운로드
               </a>
               <a className="secondary-button" href={downloadableHtmlReportUrl}>
                 <Download size={16} aria-hidden />
@@ -223,9 +223,9 @@ export function ReportPageClient() {
           />
           <div className="analysis-section report-result-heading">
             <div>
-              <span className="source-badge" data-source="PUBLIC_SCAN">전체 결과 열림</span>
-              <h2>아이디가 남은 플랫폼</h2>
-              <p>프로필 카드, 실제 URL, 정리 가이드를 한 화면에서 바로 확인할 수 있어요.</p>
+              <span className="source-badge" data-source="PUBLIC_SCAN">전체 결과</span>
+              <h2>발견된 플랫폼</h2>
+              <p>실제 URL과 정리 가이드를 한 화면에서 확인하세요.</p>
             </div>
           </div>
           <div className="result-list">
@@ -240,7 +240,7 @@ export function ReportPageClient() {
                   <h2 id="report-page-source-title">{embeddedReportTitle}</h2>
                   <p>
                     {sourceReportUrl
-                      ? "원본 카드 HTML을 바로 확인할 수 있어요."
+                      ? "원본 HTML을 확인할 수 있어요."
                       : "HTML 리포트를 바로 확인할 수 있어요."}
                   </p>
                 </div>
@@ -263,8 +263,8 @@ export function ReportPageClient() {
                   ))}
                 </div>
                 <div className="source-report-fade">
-                  <strong>상단 증거만 빠르게 확인</strong>
-                  <span>전체 원본 HTML은 새 탭 보기나 저장 파일에서 열람할 수 있어요.</span>
+                  <strong>상단만 미리보기</strong>
+                  <span>전체 HTML은 새 탭이나 저장 파일에서 확인하세요.</span>
                 </div>
               </div>
             </section>
@@ -297,15 +297,15 @@ function PaidInsightBoard({
           <ShieldAlert size={22} />
         </div>
         <div>
-          <h2 id="paid-insight-title">유료 분석 보드</h2>
+          <h2 id="paid-insight-title">정밀 요약</h2>
           <p>{insight.headline}</p>
         </div>
       </div>
 
       <div className="paid-briefing-panel">
         <div>
-          <span className="paid-panel-kicker">Executive packet</span>
-          <h3>공유용 브리핑</h3>
+          <span className="paid-panel-kicker">Briefing</span>
+          <h3>공유 브리핑</h3>
           <p>{insight.executiveSummary}</p>
         </div>
         <button className="secondary-button paid-copy-button" type="button" onClick={onCopyBriefing}>
@@ -314,10 +314,10 @@ function PaidInsightBoard({
         </button>
       </div>
 
-      <div className="paid-monthly-digest-panel" aria-label="월간 추적 리포트 미리보기">
+      <div className="paid-monthly-digest-panel" aria-label="월간 추적 요약">
         <div className="paid-monthly-digest-copy">
-          <span className="paid-panel-kicker">Monthly digest</span>
-          <h3>월간 추적 리포트 미리보기</h3>
+          <span className="paid-panel-kicker">Monthly</span>
+          <h3>월간 추적 요약</h3>
           <p>
             지금은 대시보드에서 월간 재점검 기록을 확인하는 구조입니다. 이 요약은 유료 사용자가
             매월 확인해야 할 변화 신호를 이메일형 문장으로 정리해, 이후 실제 메일 발송 기능에도
@@ -335,10 +335,10 @@ function PaidInsightBoard({
         </div>
       </div>
 
-      <div className="paid-evidence-packet-panel" aria-label="증거 패킷">
+      <div className="paid-evidence-packet-panel" aria-label="증거 내보내기">
         <div>
-          <span className="paid-panel-kicker">Evidence packet</span>
-          <h3>증거 패킷</h3>
+          <span className="paid-panel-kicker">Evidence</span>
+          <h3>증거 내보내기</h3>
           <p>
             플랫폼, URL, 위험도, 조치 가이드를 구조화된 파일로 저장합니다. 정리 전후 비교,
             고객센터 문의, 팀 공유에 바로 쓸 수 있는 유료 전용 내보내기입니다.
@@ -359,7 +359,7 @@ function PaidInsightBoard({
       <div className="paid-score-grid" aria-label="정밀 점수">
         <ScoreTile label="노출도" value={insight.exposureScore} tone={insight.exposureScore >= 70 ? "high" : "medium"} />
         <ScoreTile label="사칭 가능성" value={insight.impersonationScore} tone={insight.impersonationScore >= 70 ? "high" : "medium"} />
-        <ScoreTile label="정리 필요도" value={insight.cleanupScore} tone={insight.cleanupScore >= 70 ? "high" : "medium"} />
+        <ScoreTile label="정리 필요" value={insight.cleanupScore} tone={insight.cleanupScore >= 70 ? "high" : "medium"} />
         <ScoreTile label="희소성" value={insight.rarityScore} tone={insight.rarityScore >= 70 ? "low" : "medium"} />
       </div>
 
@@ -382,13 +382,13 @@ function PaidInsightBoard({
           </div>
         </section>
 
-        <DistributionPanel icon={<Layers3 size={18} aria-hidden />} title="플랫폼 성격" rows={insight.categoryRows} />
-        <DistributionPanel icon={<MapPinned size={18} aria-hidden />} title="국가/권역" rows={insight.countryRows} />
+        <DistributionPanel icon={<Layers3 size={18} aria-hidden />} title="유형" rows={insight.categoryRows} />
+        <DistributionPanel icon={<MapPinned size={18} aria-hidden />} title="지역" rows={insight.countryRows} />
 
         <section className="paid-analysis-panel paid-action-panel" aria-labelledby="paid-action-title">
           <div className="paid-panel-title">
             <ListChecks size={18} aria-hidden />
-            <h3 id="paid-action-title">정리 우선순위</h3>
+            <h3 id="paid-action-title">먼저 볼 결과</h3>
           </div>
           <ol className="paid-action-list">
             {insight.priorityResults.map((result) => (
@@ -405,7 +405,7 @@ function PaidInsightBoard({
         <section className="paid-analysis-panel paid-roadmap-panel" aria-labelledby="paid-roadmap-title">
           <div className="paid-panel-title">
             <CalendarDays size={18} aria-hidden />
-            <h3 id="paid-roadmap-title">7일 정리 플랜</h3>
+            <h3 id="paid-roadmap-title">7일 플랜</h3>
           </div>
           <div className="paid-roadmap-list">
             {insight.actionPlan.map((step) => (
@@ -428,7 +428,7 @@ function PaidInsightBoard({
         <section className="paid-analysis-panel paid-reuse-panel" aria-labelledby="paid-reuse-title">
           <div className="paid-panel-title">
             <GitBranch size={18} aria-hidden />
-            <h3 id="paid-reuse-title">아이디 재사용 지도</h3>
+            <h3 id="paid-reuse-title">재사용 지도</h3>
           </div>
           <div className="paid-reuse-map">
             {insight.platformMap.map((row) => (
@@ -828,11 +828,11 @@ function highestRisk(results: ScanResult[]): RiskLevel {
 function buildExecutiveBriefing(report: FullReportResponse, insight: ReturnType<typeof buildPaidReportInsight>) {
   return [
     `[ID 도플갱어 정밀 리포트] ${report.summary?.username ?? report.scanId}`,
-    `발견 결과: ${insight.foundCount}개 / 검사 범위: ${insight.checkedCount}곳`,
-    `점수: 노출도 ${insight.exposureScore}, 사칭 가능성 ${insight.impersonationScore}, 정리 필요도 ${insight.cleanupScore}, 희소성 ${insight.rarityScore}`,
+    `발견: ${insight.foundCount}개 / 검사: ${insight.checkedCount}곳`,
+    `점수: 노출도 ${insight.exposureScore}, 사칭 가능성 ${insight.impersonationScore}, 정리 필요 ${insight.cleanupScore}, 희소성 ${insight.rarityScore}`,
     `우선 정리: ${insight.priorityResults.map((result) => `${result.platform}(${riskLabels[result.riskLevel]})`).join(", ") || "없음"}`,
     `7일 플랜: ${insight.actionPlan.map((step) => `${step.phase} ${step.label}`).join(" -> ")}`,
-    "주의: 발견된 계정들이 동일인이라는 뜻은 아니며, 공개 username 사용 흔적에 대한 참고 자료입니다."
+    "주의: 동일인 판정이 아니라 공개 아이디 사용 흔적 참고 자료입니다."
   ].join("\n");
 }
 

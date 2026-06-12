@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createScanJob, createScanJobFromResults, lockedPreviewResultsFor, publicSummary } from "./scanner";
+import { createScanJob, createScanJobFromResults, lockedPreviewInsightFor, lockedPreviewResultsFor, publicSummary } from "./scanner";
+import type { ScanResult } from "./types";
 
 describe("createScanJob", () => {
   it("creates a deterministic completed summary shape for a valid username", () => {
@@ -182,6 +183,56 @@ describe("createScanJobFromResults", () => {
       "X"
     ]);
     expect(JSON.stringify(lockedPreviewResultsFor(job.results))).not.toContain("https://");
+  });
+
+  it("keeps locked previews URL-safe and summarizes all locked candidates", () => {
+    const results = [
+      {
+        id: "github-safe",
+        platform: "GitHub",
+        url: "https://github.com/safeteaser",
+        platformIconUrl: "https://github.com/favicon.ico",
+        category: "DEVELOPER",
+        country: "GLOBAL",
+        status: "FOUND",
+        riskLevel: "HIGH",
+        cleanupHint: "Check profile."
+      },
+      {
+        id: "naver-safe",
+        platform: "Naver",
+        url: "https://blog.naver.com/safeteaser",
+        platformIconUrl: "https://naver.com/favicon.ico",
+        category: "BLOG",
+        country: "KR",
+        status: "FOUND",
+        riskLevel: "MEDIUM",
+        cleanupHint: "Check profile."
+      },
+      {
+        id: "missing-safe",
+        platform: "Missing",
+        url: "https://missing.example/safeteaser",
+        category: "GLOBAL",
+        country: "US",
+        status: "UNAVAILABLE",
+        riskLevel: "LOW",
+        cleanupHint: "Check profile."
+      }
+    ] satisfies ScanResult[];
+
+    const locked = lockedPreviewResultsFor(results, { includeFreePreview: true });
+    const insight = lockedPreviewInsightFor(results, { includeFreePreview: true });
+
+    expect(locked).toHaveLength(2);
+    expect(locked[0]).not.toHaveProperty("platformIconUrl");
+    expect(JSON.stringify(locked)).not.toContain("https://");
+    expect(insight).toEqual({
+      totalCount: 2,
+      riskDistribution: { HIGH: 1, MEDIUM: 1, LOW: 0 },
+      countryDistribution: { GLOBAL: 1, KR: 1 },
+      categoryDistribution: { DEVELOPER: 1, BLOG: 1 }
+    });
   });
 
   it("uses URL host patterns when external scan platform names do not match local definitions", () => {

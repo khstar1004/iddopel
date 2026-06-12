@@ -29,7 +29,14 @@ import {
   scoreTone,
   type Locale
 } from "@/lib/labels";
-import type { LockedScanResultPreview, PublicMonitoringSubscription, ScanPurpose, ScanResult, ScanSummary } from "@/lib/types";
+import type {
+  LockedPreviewInsight,
+  LockedScanResultPreview,
+  PublicMonitoringSubscription,
+  ScanPurpose,
+  ScanResult,
+  ScanSummary
+} from "@/lib/types";
 import {
   filterScanResults,
   formatExpirationStatus,
@@ -58,6 +65,7 @@ interface ResultsResponse {
   access: "FULL" | "PREVIEW" | "LOCKED";
   lockedCount: number;
   lockedResults?: LockedScanResultPreview[];
+  lockedInsight?: LockedPreviewInsight;
   freePreviewLocked?: boolean;
   freePreviewLockReason?: string;
   maigretReportAvailable?: boolean;
@@ -89,26 +97,26 @@ const scanExperienceCopy = {
     nav: {
       results: "결과",
       pricing: "가격",
-      guides: "SEO 가이드",
-      toss: "토스 인앱"
+      guides: "가이드",
+      toss: "앱"
     },
     hero: {
-      eyebrow: "아이디 흔적 점검",
+      eyebrow: "공개 아이디 점검",
       title: "내 아이디, 어디에 남아 있을까?",
-      description: "자주 쓰는 아이디를 입력하면 공개 프로필 흔적을 바로 찾아 보여줘요.",
-      safetyLabel: "안전 정책",
-      trust: ["실명 검색 미지원", "전화번호·이메일 차단", "동일인 판정 안 함"]
+      description: "아이디 하나로 공개 프로필 흔적을 빠르게 확인하세요.",
+      safetyLabel: "원칙",
+      trust: ["실명 검색 안 함", "연락처 검색 차단", "동일인 단정 안 함"]
     },
     form: {
       label: "아이디",
       ariaLabel: "아이디 입력",
       placeholder: "아이디만 입력",
       scanLabel: "아이디 점검",
-      acknowledgement: "정당한 목적으로 공개 아이디 사용 현황을 점검해요.",
-      safetyNote: "실명, 전화번호, 이메일 검색은 지원하지 않아요. 같은 사람이라고 단정하지 않아요.",
+      acknowledgement: "공개 아이디 사용 현황만 점검해요.",
+      safetyNote: "실명, 전화번호, 이메일은 검색하지 않고 동일인 여부를 단정하지 않아요.",
       withoutAt: (value: string) => `@ 없이 ${value}로 점검돼요.`,
       clearInput: "아이디 입력 지우기",
-      ready: "검색 준비가 끝났어요.",
+      ready: "검색할 수 있어요.",
       blocker: {
         empty: "3자 이상 공개 아이디를 입력해 주세요.",
         acknowledge: "정당한 목적 확인에 체크하면 검색할 수 있어요."
@@ -121,78 +129,78 @@ const scanExperienceCopy = {
       retry: "다시 시도",
       changeInput: "아이디 수정",
       submit: "내 아이디 흔적 찾기",
-      submitting: "찾는 중"
+      submitting: "확인 중"
     },
-    scanSteps: ["공개 프로필 확인 중", "한국 서비스 확인 중", "SNS·블로그 확인 중", "흔적 정리 중"],
+    scanSteps: ["공개 프로필 확인", "한국 확인", "SNS·블로그 확인", "결과 정리"],
     results: {
-      heading: (summary: ScanSummary | null) => summary ? `${summary.username}로 찾은 공개 흔적` : "아이디를 입력하면 결과가 바로 떠요",
+      heading: (summary: ScanSummary | null) => summary ? `${summary.username}로 찾은 공개 흔적` : "아이디를 입력하면 결과를 보여드려요",
       delete: "기록 삭제",
       emptyTitle: "아직 검색한 아이디가 없어요",
-      emptyDescription: "아이디를 검색하면 공개 흔적 결과를 한 화면에서 볼 수 있어요.",
-      emptySteps: ["아이디 입력", "공개 흔적 확인", "필요한 결과만 저장"],
+      emptyDescription: "검색하면 열린 링크와 잠긴 결과를 한 화면에서 정리해요.",
+      emptySteps: ["아이디 입력", "공개 흔적 확인", "필요한 것만 저장"],
       sourceBadge: "공개 흔적",
       previewTitle: (summary: ScanSummary) =>
         summary.foundCount > 0 ? `${summary.username}가 남아 있는 곳` : `${summary.username} 공개 흔적 없음`,
       metricsLabel: "결과 규모",
-      visible: "먼저 공개",
-      locked: "잠긴 URL",
+      visible: "무료 공개",
+      locked: "잠김",
       korea: "한국",
       nextActions: "다음 작업",
-      shareCard: "공유 카드 저장",
-      copySummary: "결과 요약 복사",
-      monitoringAdd: "월간 재점검에 넣기",
-      scanAgain: "다른 아이디 점검",
-      analysisLabel: "점검 보조 분석",
-      interpretation: "결과 해석",
-      checkedPlatforms: "검사 플랫폼",
-      failedChecks: "확인 실패",
-      koreanServices: "한국 서비스",
+      shareCard: "공유 이미지 저장",
+      copySummary: "요약 복사",
+      monitoringAdd: "월간 추적 추가",
+      scanAgain: "새 검색",
+      analysisLabel: "결과 분석",
+      interpretation: "요약",
+      checkedPlatforms: "검사 수",
+      failedChecks: "실패",
+      koreanServices: "한국",
       countries: "국가별 분포",
       categories: "카테고리별 분포",
       score: "점수",
       rarity: "희소성",
       exposure: "노출도",
       impersonation: "사칭 가능성",
-      cleanup: "방치 계정 위험",
-      insightLabel: "빠른 해석",
+      cleanup: "방치 위험",
+      insightLabel: "판단",
       insight: {
         high: {
-          title: "노출이 많은 아이디예요",
-          description: "같은 아이디가 여러 서비스에서 보입니다. 오래된 공개 프로필과 방치 계정을 먼저 확인하세요.",
-          action: "정밀 리포트로 정확한 URL을 열고, 월간 재점검에 등록하는 것을 권장해요."
+          title: "노출이 많아요",
+          description: "여러 서비스에 같은 아이디 흔적이 있습니다. 오래된 프로필부터 확인하세요.",
+          action: "전체 URL을 열고 월간 추적으로 변화를 보세요."
         },
         medium: {
-          title: "확인할 흔적이 있어요",
-          description: "일부 서비스에서 공개 흔적이 보입니다. 자주 쓰는 아이디라면 핵심 플랫폼부터 정리하세요.",
-          action: "요약을 저장하고 같은 아이디를 월간 재점검에 넣어 변화만 확인하세요."
+          title: "확인할 결과가 있어요",
+          description: "일부 서비스에서 공개 흔적이 보입니다. 자주 쓰는 아이디라면 주요 플랫폼부터 보세요.",
+          action: "요약을 저장하고 월간 추적으로 변화만 확인하세요."
         },
         low: {
-          title: "현재 공개 노출은 낮아요",
-          description: "무료 점검 기준으로 바로 보이는 흔적이 많지 않습니다.",
-          action: "브랜드명이나 자주 쓰는 변형 아이디도 한 번 더 확인해 보세요."
+          title: "노출은 낮아요",
+          description: "무료 점검 기준으로 바로 보이는 흔적은 적습니다.",
+          action: "브랜드명이나 자주 쓰는 변형 아이디도 확인해 보세요."
         }
       },
-      snapshotLabel: "핵심 분포",
-      topCountries: "주요 국가",
-      topCategories: "주요 카테고리",
-      riskOverview: "위험 요약",
+      snapshotLabel: "분포",
+      topCountries: "국가",
+      topCategories: "카테고리",
+      riskOverview: "위험",
       riskHigh: "높음",
       riskMedium: "중간",
       riskLow: "낮음",
-      topRiskPlatforms: "우선 확인",
-      noHighRisk: "높은 위험 후보 없음",
-      lifecycle: "결과 보관",
+      topRiskPlatforms: "먼저 볼 곳",
+      noHighRisk: "고위험 없음",
+      lifecycle: "보관",
       createdAt: "생성",
       finishedAt: "완료",
       purpose: "목적"
     },
     preview: {
       fullReport: "정밀 리포트 열기",
-      checkout: "전체 리포트 보기",
-      noResults: "무료 점검에서 바로 보이는 공개 흔적이 없어요.",
-      lockedPreviewTitle: "검색은 완료됐고 결과가 잠겨 있어요.",
-      lockedPreviewDescription: "발견된 후보를 모자이크로 먼저 보여드려요. 정확한 URL과 정리 가이드는 정밀 리포트에서 열 수 있어요.",
-      loading: "상세 결과 확인 중",
+      checkout: "전체 리포트",
+      noResults: "무료로 바로 보이는 흔적은 없어요.",
+      lockedPreviewTitle: "검색은 완료됐어요.",
+      lockedPreviewDescription: "잠긴 후보는 모자이크로만 보여요. 정확한 URL은 정밀 리포트에서 열 수 있어요.",
+      loading: "결과 확인 중",
       filtersLabel: "결과 필터",
       filters: {
         ALL: "전체",
@@ -201,90 +209,95 @@ const scanExperienceCopy = {
         GLOBAL: "글로벌"
       },
       showingCount: (shown: number, total: number) => `${shown}/${total}개 표시`,
-      filteredEmpty: "선택한 필터에 맞는 열린 결과가 없어요.",
+      filteredEmpty: "이 필터에 맞는 열린 결과가 없어요.",
       lockedLabel: "잠긴 상세 결과",
       lockedResult: (index: number) => `잠긴 공개 흔적 #${index}`,
-      lockedDescription: "URL, 위험도, 정리 가이드 잠김",
+      lockedDescription: "URL과 정리 가이드 잠김",
       fullOpen: (count: number) => `${count}개 상세 결과가 열렸어요.`,
-      openVisibleLinks: "무료 링크 5개 열기",
-      visibleLinksTitle: "먼저 열린 링크부터 직접 확인해보세요",
-      visibleLinksDescription: (count: number) => `무료로 열린 ${count}개 링크는 결제 없이 바로 새 탭에서 확인할 수 있어요.`,
-      freeUsedLead: "1회 무료 상세 결과를 이미 사용했어요. ",
-      lockedCount: (count: number) => `상세 URL ${count}개 잠김`,
+      openVisibleLinks: "무료 링크 열기",
+      visibleLinksTitle: "열린 링크부터 확인하세요",
+      visibleLinksDescription: (count: number) => `무료로 열린 ${count}개 링크는 결제 없이 확인할 수 있어요.`,
+      freeUsedLead: "무료 상세 보기 사용 완료 · ",
+      lockedCount: (count: number) => `${count}개 잠김`,
+      lockedInsightLabel: "잠긴 결과 요약",
+      lockedInsightTotal: "잠긴 후보",
+      lockedInsightHighRisk: "주의 후보",
+      lockedInsightKorea: "한국 서비스",
+      lockedInsightTopCategory: (category: string) => `최다 분야 ${category}`,
       ordering: "주문 만드는 중",
-      checkoutWithPrice: "2,900원 결제하고 전체 리포트 보기",
-      unlockTitle: "결제 후 바로 열리는 항목",
-      unlockItems: ["정확한 공개 URL", "위험도 높은 계정 우선순위", "정리/삭제 가이드"],
-      emptyNoCheckout: "결제할 상세 결과가 없어요.",
-      emptyNoCheckoutDescription: "이번 아이디는 공개 후보가 없어 정밀 리포트 결제를 열지 않습니다. 월간 재점검으로 새 흔적만 확인하세요.",
+      checkoutWithPrice: "2,900원 결제하고 전체 리포트",
+      unlockTitle: "정밀 리포트 포함",
+      unlockItems: ["전체 공개 URL", "위험도 우선순위", "정리 가이드"],
+      emptyNoCheckout: "결제할 결과가 없어요.",
+      emptyNoCheckoutDescription: "이번 아이디는 공개 후보가 없어 결제를 열지 않아요. 월간 추적으로 새 흔적만 확인하세요.",
       foundRank: (index: number) => `#${index} 발견됨`,
       candidateAria: (platform: string) => `${platform} 공개 흔적`,
       metadataAria: (platform: string) => `${platform} 메타데이터`,
       maskedAria: (platform: string) => `${platform} 잠긴 상세 URL 미리보기`,
       lockedUrlFallback: "상세 URL 잠김",
-      lockCopy: "무료로 열린 링크는 바로 확인할 수 있어요. 나머지 정확한 URL과 전체 분석은 정밀 리포트에서 열려요."
+      lockCopy: "열린 링크는 바로 확인할 수 있어요. 나머지는 정밀 리포트에서 열려요."
     },
     pricing: {
       title: "가격",
       freeTitle: "무료",
       freePrice: "0원",
-      freeItems: ["빠른 점검", "공개 링크 5개 열람", "나머지 URL 잠금 미리보기"],
-      freeCta: "베타 무료로 시작",
+      freeItems: ["즉시 점검", "무료 링크 5개", "잠긴 결과 미리보기"],
+      freeCta: "무료로 시작",
       reportTitle: "정밀 리포트",
       reportPrice: "2,900원",
-      reportItems: ["전체 결과 URL", "위험도 분석", "HTML/PDF 리포트"],
-      reportCta: "결과에서 열기",
+      reportItems: ["전체 URL", "위험도 분석", "PDF/HTML"],
+      reportCta: "결과에서 구매",
       recommended: "추천",
-      monitoringTitle: "월간 모니터링",
+      monitoringTitle: "월간 추적",
       monitoringPrice: "3,900원/월",
-      monitoringItems: ["월 1회 자동 재점검", "대시보드 재점검 기록", "아이디 3개 모니터링"],
-      monitoringCta: "검색 후 등록"
+      monitoringItems: ["월 1회 자동 재점검", "대시보드 기록", "아이디 3개 모니터링"],
+      monitoringCta: "검색 후 추가"
     },
     monitoring: {
-      title: "월간 자동 재점검",
+      title: "월간 재점검",
       inputLabel: "모니터링할 아이디",
       placeholder: "쉼표로 여러 아이디 입력",
       saving: "등록 중",
-      submit: "월간 재점검 등록",
-      checkoutStarting: "월간 모니터링 결제 페이지로 이동하고 있어요.",
-      scanFirst: "먼저 아이디 점검 후 월간 모니터링을 등록해 주세요.",
-      statusTitle: "모니터링 상태",
-      nextRun: "다음 자동 재점검",
+      submit: "월간 추적 등록",
+      checkoutStarting: "월간 추적 결제 페이지로 이동하고 있어요.",
+      scanFirst: "먼저 아이디 점검 후 월간 추적을 등록해 주세요.",
+      statusTitle: "추적 상태",
+      nextRun: "다음 재점검",
       lastRun: "최근 재점검",
       noneYet: "아직 없음",
-      latestResults: "최근 재점검 결과",
-      latestResultsEmpty: "아직 cron 재점검 결과가 없어요.",
+      latestResults: "최근 결과",
+      latestResultsEmpty: "아직 재점검 결과가 없어요.",
       openLatestResult: (username: string) => `${username} 결과 열기`,
       latestMeta: (foundCount: number, exposureScore: number) => `흔적 ${foundCount}개 · 노출도 ${exposureScore}점`,
-      previewLabel: "등록 전 확인",
-      previewEmpty: "아이디를 입력하거나 먼저 검색하면 등록할 대상을 미리 볼 수 있어요.",
+      previewLabel: "등록 대상",
+      previewEmpty: "아이디를 입력하면 등록 대상을 미리 볼 수 있어요.",
       countLabel: (count: number) => `${count}/3개`,
       ready: (count: number) => `${count}개 아이디를 월간 재점검에 등록할 준비가 됐어요.`,
       duplicateNote: (count: number) => `중복 ${count}개는 자동으로 제외했어요.`,
       invalidMessage: (items: string[]) => `지원하지 않는 입력이 있어요: ${items.join(", ")}`,
-      limitExceeded: (count: number) => `월간 모니터링은 아이디 3개까지 가능해요. ${count}개를 줄여 주세요.`,
-      deliveryNote: "현재 월간 추적은 메일 발송이 아니라 이 브라우저 대시보드에서 최신 결과를 확인하는 방식이에요.",
-      cancel: "모니터링 해지",
-      empty: "아직 등록된 월간 모니터링이 없어요. 무료 점검 후 같은 아이디를 바로 등록할 수 있어요."
+      limitExceeded: (count: number) => `월간 추적은 아이디 3개까지 가능해요. ${count}개를 줄여 주세요.`,
+      deliveryNote: "현재 월간 추적은 이메일이 아니라 이 브라우저 대시보드에서 확인해요.",
+      cancel: "추적 해지",
+      empty: "아직 등록된 월간 추적이 없어요. 무료 점검 후 같은 아이디를 바로 등록할 수 있어요."
     },
     history: {
-      title: "최근 검색한 아이디",
-      quickTitle: "최근 점검",
-      empty: "이 브라우저에 저장된 검색 기록이 없어요.",
+      title: "최근 검색",
+      quickTitle: "최근",
+      empty: "저장된 검색 기록이 없어요.",
       meta: (foundCount: number, rarityScore: number) => `흔적 ${foundCount}개 · 희소성 ${rarityScore}점`,
       restoreAria: (username: string) => `${username} 결과 다시 보기`,
       deleteAria: (username: string) => `${username} 기록 삭제`,
       savedAt: (value: string) => `저장 ${value}`,
-      clearAll: "전체 기록 비우기",
+      clearAll: "기록 비우기",
       restore: "다시 보기",
       delete: "삭제"
     },
     faq: {
       title: "FAQ",
       items: [
-        ["이게 사람 찾기인가요?", "아니요. 아이디 문자열의 공개 사용 현황만 확인해요."],
+        ["사람 찾기인가요?", "아니요. 공개 아이디 사용 현황만 확인해요."],
         ["결과가 모두 같은 사람인가요?", "아니요. 동일인 여부를 판정하지 않아요."],
-        ["검색 기록을 지울 수 있나요?", "네. 무료 기록은 즉시 삭제할 수 있어요."]
+        ["기록을 지울 수 있나요?", "네. 무료 기록은 바로 삭제할 수 있어요."]
       ]
     },
     footer: {
@@ -294,25 +307,25 @@ const scanExperienceCopy = {
     },
     detailLabels: {
       adminFull: "어드민 전체 결과",
-      adminFullDescription: "개발자 테스트 모드로 결제 없이 전체 결과를 보고 있어요.",
+      adminFullDescription: "개발자 테스트 모드입니다.",
       freePreview: "무료 미리보기",
-      paywallPreview: "정밀 리포트 잠김",
-      freeDetail: "1회 무료 상세 결과",
-      freeDetailAgain: "1회 무료 상세 결과 다시 보기",
+      paywallPreview: "리포트 잠김",
+      freeDetail: "무료 상세 보기",
+      freeDetailAgain: "무료 상세 보기 다시 보기",
       paidReport: "결제 완료 리포트",
       fullOpen: "전체 결과 열림",
-      lockedUrl: "상세 URL 잠김"
+      lockedUrl: "URL 잠김"
     },
     sourceReport: {
-      title: "원본 HTML 리포트",
+      title: "원본 HTML",
       open: "새 탭으로 보기",
       save: "HTML 저장",
-      iframeTitle: "원본 HTML 리포트 미리보기"
+      iframeTitle: "원본 HTML 미리보기"
     },
     fullReport: {
       title: "전체 리포트",
-      description: "발견 플랫폼, URL, 위험도, 조치 가이드를 확인하세요.",
-      download: "HTML 리포트 다운로드"
+      description: "플랫폼, URL, 위험도, 조치 가이드를 확인하세요.",
+      download: "HTML 다운로드"
     },
     copyMessages: {
       copied: "공유용 요약을 복사했어요.",
@@ -462,6 +475,11 @@ const scanExperienceCopy = {
       visibleLinksDescription: (count: number) => `${count} free links can be opened in new tabs before payment.`,
       freeUsedLead: "You already used the one-time free detailed result. ",
       lockedCount: (count: number) => `${count} detailed URLs locked`,
+      lockedInsightLabel: "Locked result teaser",
+      lockedInsightTotal: "Locked candidates",
+      lockedInsightHighRisk: "Attention",
+      lockedInsightKorea: "Korea",
+      lockedInsightTopCategory: (category: string) => `Top category ${category}`,
       ordering: "Creating order",
       checkoutWithPrice: "Pay $2.99 and view full report",
       unlockTitle: "What opens after payment",
@@ -1018,15 +1036,15 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
           return;
         }
 
-        throw new Error(body?.error?.message ?? "월간 모니터링을 등록하지 못했어요.");
+        throw new Error(body?.error?.message ?? "월간 추적을 등록하지 못했어요.");
       }
 
       window.localStorage.setItem(monitoringOwnerTokenKey, body.ownerToken);
       setMonitoring(body.monitoring as PublicMonitoringSubscription);
       setMonitoringInput((body.monitoring as PublicMonitoringSubscription).usernames.join(", "));
-      setMonitoringMessage("월간 자동 재점검이 등록됐어요.");
+      setMonitoringMessage("월간 재점검이 등록됐어요.");
     } catch (monitoringError) {
-      setMonitoringMessage(monitoringError instanceof Error ? monitoringError.message : "월간 모니터링 등록 중 문제가 발생했어요.");
+      setMonitoringMessage(monitoringError instanceof Error ? monitoringError.message : "월간 추적 등록 중 문제가 발생했어요.");
     } finally {
       setIsSavingMonitoring(false);
     }
@@ -1046,11 +1064,11 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     const body = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new Error(body?.error?.message ?? "월간 모니터링 주문을 만들지 못했어요.");
+      throw new Error(body?.error?.message ?? "월간 추적 주문을 만들지 못했어요.");
     }
 
     if (typeof body?.orderId !== "string" || typeof body?.checkoutUrl !== "string") {
-      throw new Error("월간 모니터링 결제 링크를 만들지 못했어요.");
+      throw new Error("월간 추적 결제 링크를 만들지 못했어요.");
     }
 
     window.localStorage.setItem(
@@ -1074,13 +1092,13 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
       const body = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error(body?.error?.message ?? "최근 재점검 결과를 불러오지 못했어요.");
+        throw new Error(body?.error?.message ?? "최근 결과를 불러오지 못했어요.");
       }
 
       setSummary(body as ScanSummary);
       focusResultsSection();
     } catch (scanError) {
-      setMonitoringMessage(scanError instanceof Error ? scanError.message : "최근 재점검 결과를 불러오지 못했어요.");
+      setMonitoringMessage(scanError instanceof Error ? scanError.message : "최근 결과를 불러오지 못했어요.");
     }
   }
 
@@ -1099,10 +1117,10 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     if (response.ok) {
       window.localStorage.removeItem(monitoringOwnerTokenKey);
       setMonitoring(null);
-      setMonitoringMessage("월간 모니터링을 해지했어요.");
+      setMonitoringMessage("월간 추적을 해지했어요.");
     } else {
       const body = await response.json().catch(() => null);
-      setMonitoringMessage(body?.error?.message ?? "월간 모니터링을 해지하지 못했어요.");
+      setMonitoringMessage(body?.error?.message ?? "월간 추적을 해지하지 못했어요.");
     }
   }
 
@@ -1732,6 +1750,7 @@ function ResultDashboard({
           isLoadingFull={isLoadingFull}
           isLoadingResults={isLoadingDetailAccess}
           labels={labels}
+          locale={locale}
           onOpenFullReport={openFullReport}
         />
         <div className="result-risk-overview" aria-label={copy.results.riskOverview}>
@@ -1971,6 +1990,7 @@ function ResultPreview({
   isLoadingFull,
   isLoadingResults,
   labels,
+  locale,
   onOpenFullReport
 }: {
   copy: ScanExperienceCopy;
@@ -1978,6 +1998,7 @@ function ResultPreview({
   isLoadingFull: boolean;
   isLoadingResults: boolean;
   labels: LocalizedLabelSets;
+  locale: Locale;
   onOpenFullReport: () => void;
 }) {
   const [resultFilter, setResultFilter] = useState<ResultFilter>("ALL");
@@ -2073,6 +2094,10 @@ function ResultPreview({
       ) : null}
 
       {!isFullAccess && hiddenCount > 0 ? (
+        <LockedInsightStrip copy={copy} insight={detailAccess.lockedInsight} labels={labels} locale={locale} />
+      ) : null}
+
+      {!isFullAccess && hiddenCount > 0 ? (
         <div className="locked-mosaic-list" aria-label={copy.preview.lockedLabel}>
           {lockedPreviewResults.length > 0
             ? lockedPreviewResults.map((result, index) => (
@@ -2111,6 +2136,60 @@ function ResultPreview({
           <CheckCircle2 size={18} aria-hidden />
         )}
       </div>
+    </div>
+  );
+}
+
+function LockedInsightStrip({
+  copy,
+  insight,
+  labels,
+  locale
+}: {
+  copy: ScanExperienceCopy;
+  insight?: LockedPreviewInsight;
+  labels: LocalizedLabelSets;
+  locale: Locale;
+}) {
+  if (!insight || insight.totalCount <= 0) return null;
+
+  const highRiskCount = insight.riskDistribution.HIGH ?? 0;
+  const krCount = insight.countryDistribution.KR ?? 0;
+  const topCategory = topDistributionEntry(insight.categoryDistribution);
+  const stats = [
+    {
+      label: copy.preview.lockedInsightTotal,
+      value: formatCount(insight.totalCount, locale),
+      tone: "total"
+    },
+    {
+      label: copy.preview.lockedInsightHighRisk,
+      value: formatCount(highRiskCount, locale),
+      tone: highRiskCount > 0 ? "high" : "neutral"
+    },
+    {
+      label: copy.preview.lockedInsightKorea,
+      value: formatCount(krCount, locale),
+      tone: krCount > 0 ? "kr" : "neutral"
+    }
+  ];
+
+  if (topCategory) {
+    stats.push({
+      label: copy.preview.lockedInsightTopCategory(labels.category[topCategory[0]] ?? topCategory[0]),
+      value: formatCount(topCategory[1], locale),
+      tone: "category"
+    });
+  }
+
+  return (
+    <div className="locked-insight-strip" aria-label={copy.preview.lockedInsightLabel}>
+      {stats.map((item) => (
+        <span data-tone={item.tone} key={item.label}>
+          <strong>{item.value}</strong>
+          {item.label}
+        </span>
+      ))}
     </div>
   );
 }
@@ -2336,11 +2415,11 @@ function FullReport({ summary, results }: { summary: ScanSummary; results: ScanR
       <div className="section-header" style={{ marginBottom: 12 }}>
         <div>
           <h2 id="full-report-title">전체 리포트</h2>
-          <p>발견 플랫폼, URL, 위험도, 조치 가이드를 확인하세요.</p>
+          <p>플랫폼, URL, 위험도, 조치 가이드를 확인하세요.</p>
         </div>
         <button className="ghost-button" type="button" onClick={() => downloadHtmlReport(summary, results)}>
           <Download size={16} aria-hidden />
-          HTML 리포트 다운로드
+          HTML 다운로드
         </button>
       </div>
       <div className="result-list">
@@ -2416,6 +2495,13 @@ function downloadHtmlReport(summary: ScanSummary, results: ScanResult[]) {
 
 function formatCount(value: number, locale: Locale) {
   return locale === "en" ? `${value} ${value === 1 ? "item" : "items"}` : `${value}개`;
+}
+
+function topDistributionEntry(distribution: Partial<Record<string, number>>) {
+  const [entry] = Object.entries(distribution)
+    .filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > 0)
+    .sort((left, right) => right[1] - left[1]);
+  return entry;
 }
 
 function formatScore(value: number, locale: Locale) {
@@ -2622,6 +2708,7 @@ function previewAccessFromSummary(summary: ScanSummary, copy: ScanExperienceCopy
     access: "PREVIEW",
     lockedCount: Math.max(0, summary.foundCount - summary.previewResults.length),
     lockedResults: summary.lockedResults ?? [],
+    lockedInsight: summary.lockedInsight,
     freePreviewLocked: summary.freePreviewLocked,
     freePreviewLockReason: summary.freePreviewLockReason,
     maigretReportAvailable: summary.maigretReportAvailable,
