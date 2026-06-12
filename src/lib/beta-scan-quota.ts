@@ -720,7 +720,9 @@ function requestIdentity(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = forwarded || request.headers.get("x-real-ip") || "anonymous";
   const userAgent = (request.headers.get("user-agent") ?? "unknown-agent").trim().replace(/\s+/g, " ").slice(0, 160);
-  return `${ip}\n${userAgent}`;
+  const acceptLanguage = (request.headers.get("accept-language") ?? "").trim().replace(/\s+/g, " ").slice(0, 80);
+  const platform = (request.headers.get("sec-ch-ua-platform") ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+  return `${ip}\n${userAgent}\n${acceptLanguage}\n${platform}`;
 }
 
 function normalizeFreeScanLimit(value: number) {

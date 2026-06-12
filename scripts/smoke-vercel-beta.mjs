@@ -7,6 +7,10 @@ const report = {
   checks: []
 };
 const ownerToken = `smoke-owner-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+const smokeHeaders = {
+  "user-agent": `id-doppelganger-smoke/${Date.now().toString(36)}`,
+  "accept-language": `ko-KR,smoke-${Math.random().toString(36).slice(2)}`
+};
 const requiredHeaders = [
   "content-security-policy",
   "strict-transport-security",
@@ -73,6 +77,7 @@ try {
     method: "POST",
     headers: {
       "content-type": "application/json",
+      ...smokeHeaders,
       "x-scan-owner-token": ownerToken
     },
     body: JSON.stringify({
@@ -114,7 +119,7 @@ try {
 
   const freeReport = await requestJson(`/api/scans/${scanId}/free-report`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...smokeHeaders },
     body: JSON.stringify({ soft: true })
   });
   assertCheck(
