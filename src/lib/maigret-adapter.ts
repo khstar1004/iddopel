@@ -81,6 +81,7 @@ const defaultPrioritySiteNames = [
   "GitHubGist",
   "Reddit"
 ];
+const defaultCriticalSiteNames = ["Twitter", "Instagram", "Threads"];
 const defaultBoostTagSpecs: MaigretBoostTagSpec[] = [
   { tag: "kr", limit: 30 },
   { tag: "social", limit: 35 },
@@ -144,12 +145,24 @@ export async function runMaigretScan(input: CreateScanInput, options: MaigretRun
           maxConnections: Number(process.env.MAIGRET_BOOST_MAX_CONNECTIONS || Math.min(maxConnections, 20))
         })
       : null;
-  const report = mergeMaigretSimpleReports(primary.reportJson, priority?.reportJson, boost?.reportJson);
+  const preliminaryReport = mergeMaigretSimpleReports(primary.reportJson, priority?.reportJson, boost?.reportJson);
+  const criticalSiteNames = resolveCriticalSiteNames();
+  const critical =
+    criticalSiteNames.length > 0 && shouldRunCriticalScan(preliminaryReport, input)
+      ? await runMaigretCli(command, input, {
+          processTimeoutMs: Number(process.env.MAIGRET_CRITICAL_PROCESS_TIMEOUT_MS || Math.min(processTimeoutMs, 40000)),
+          scope: { siteNames: criticalSiteNames },
+          timeoutSeconds: Number(process.env.MAIGRET_CRITICAL_SITE_TIMEOUT_SECONDS || 22),
+          retries: Number(process.env.MAIGRET_CRITICAL_RETRIES || 2),
+          maxConnections: Number(process.env.MAIGRET_CRITICAL_MAX_CONNECTIONS || Math.min(maxConnections, 3))
+        })
+      : null;
+  const report = mergeMaigretSimpleReports(preliminaryReport, critical?.reportJson);
   const results = parseMaigretSimpleReport(report, input);
 
   return {
     results,
-    checkedCount: [primary, priority, boost].reduce((total, item) => total + (item?.checkedCount ?? 0), 0),
+    checkedCount: [primary, priority, critical, boost].reduce((total, item) => total + (item?.checkedCount ?? 0), 0),
     failedRate: 0,
     report: primary.htmlReport
   };
@@ -263,6 +276,14 @@ export function resolvePrioritySiteNames() {
   return splitCommaList(configured).length > 0 ? splitCommaList(configured) : defaultPrioritySiteNames;
 }
 
+export function resolveCriticalSiteNames() {
+  const configured = process.env.MAIGRET_CRITICAL_SITES;
+  if (configured === "") return [];
+
+  const parsed = splitCommaList(configured);
+  return parsed.length > 0 ? parsed : defaultCriticalSiteNames;
+}
+
 export function resolveBoostTagSpecs(): MaigretBoostTagSpec[] {
   const configured = process.env.MAIGRET_BOOST_TAGS;
   if (configured === "") return [];
@@ -308,6 +329,18 @@ function mergeMaigretSimpleReports(...reports: Array<string | undefined>) {
       return { ...merged, ...(JSON.parse(report) as Record<string, unknown>) };
     }, {})
   );
+}
+
+function shouldRunCriticalScan(preliminaryReport: string, input: Pick<CreateScanInput, "purpose">) {
+  const configured = String(process.env.MAIGRET_CRITICAL_RESCAN ?? "adaptive").toLowerCase();
+  if (["false", "off", "0"].includes(configured)) return false;
+  if (["true", "always", "1"].includes(configured)) return true;
+
+  try {
+    return parseMaigretSimpleReport(preliminaryReport, input).length > 0;
+  } catch {
+    return false;
+  }
 }
 
 async function runRemoteMaigretScan(input: CreateScanInput, options: MaigretRunOptions): Promise<MaigretRunOutput> {

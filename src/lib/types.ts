@@ -40,6 +40,9 @@ export interface ScanResult {
   platformUrl?: string;
   platformIconUrl?: string;
   profileImageUrl?: string;
+  evidenceTitle?: string;
+  evidenceDescription?: string;
+  evidenceImageUrl?: string;
   category: PlatformCategory;
   country: PlatformDefinition["country"];
   status: "FOUND" | "UNAVAILABLE" | "UNKNOWN";

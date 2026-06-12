@@ -531,6 +531,12 @@ function RichReportResultCard({ result }: { result: ScanResult }) {
             ))}
           </div>
         ) : null}
+        {result.evidenceTitle || result.evidenceDescription ? (
+          <div className="result-evidence-summary">
+            {result.evidenceTitle ? <strong>{result.evidenceTitle}</strong> : null}
+            {result.evidenceDescription ? <span>{result.evidenceDescription}</span> : null}
+          </div>
+        ) : null}
         <a className="result-link" href={result.url} target="_blank" rel="noopener noreferrer">
           <ExternalLink size={15} aria-hidden />
           <span>{result.url}</span>
@@ -558,11 +564,12 @@ function PlatformIcon({ result }: { result: ScanResult }) {
 
 function ResultProfileImage({ result }: { result: ScanResult }) {
   const [isBroken, setIsBroken] = useState(false);
+  const imageUrl = result.profileImageUrl ?? result.evidenceImageUrl;
 
   return (
     <div className="profile-thumb" aria-hidden>
-      {result.profileImageUrl && !isBroken ? (
-        <img alt="" src={result.profileImageUrl} onError={() => setIsBroken(true)} />
+      {imageUrl && !isBroken ? (
+        <img alt="" src={imageUrl} onError={() => setIsBroken(true)} />
       ) : (
         <UserRound size={34} strokeWidth={1.8} />
       )}

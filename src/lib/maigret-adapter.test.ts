@@ -4,6 +4,7 @@ import {
   maigretRecordToScanResult,
   parseMaigretSimpleReport,
   resolveBoostTagSpecs,
+  resolveCriticalSiteNames,
   resolveExcludedSiteNames,
   resolveExcludedTags,
   resolvePrioritySiteNames,
@@ -178,12 +179,14 @@ describe("maigretRecordToScanResult", () => {
 
 describe("Maigret CLI quality options", () => {
   const originalPrioritySites = process.env.MAIGRET_PRIORITY_SITES;
+  const originalCriticalSites = process.env.MAIGRET_CRITICAL_SITES;
   const originalBoostTags = process.env.MAIGRET_BOOST_TAGS;
   const originalExcludedSites = process.env.MAIGRET_EXCLUDED_SITES;
   const originalExcludedTags = process.env.MAIGRET_EXCLUDED_TAGS;
 
   afterEach(() => {
     restoreEnv("MAIGRET_PRIORITY_SITES", originalPrioritySites);
+    restoreEnv("MAIGRET_CRITICAL_SITES", originalCriticalSites);
     restoreEnv("MAIGRET_BOOST_TAGS", originalBoostTags);
     restoreEnv("MAIGRET_EXCLUDED_SITES", originalExcludedSites);
     restoreEnv("MAIGRET_EXCLUDED_TAGS", originalExcludedTags);
@@ -209,6 +212,21 @@ describe("Maigret CLI quality options", () => {
     expect(args).toEqual(expect.arrayContaining(["Instagram", "Twitter", "Threads"]));
     expect(args).not.toContain("--top-sites");
     expect(args).not.toContain("-a");
+  });
+
+  it("adds a slower critical social scan for bot-sensitive platforms", () => {
+    delete process.env.MAIGRET_CRITICAL_SITES;
+    expect(resolveCriticalSiteNames()).toEqual(["Twitter", "Instagram", "Threads"]);
+
+    const args = buildMaigretCliArgs("im9route", "out", {
+      maxConnections: 3,
+      retries: 2,
+      scope: { siteNames: resolveCriticalSiteNames() },
+      timeoutSeconds: 22
+    });
+
+    expect(args).toEqual(expect.arrayContaining(["--site", "Twitter", "Instagram", "Threads"]));
+    expect(args).toEqual(expect.arrayContaining(["--timeout", "22", "--retries", "2", "--max-connections", "3"]));
   });
 
   it("adds a tag-scoped boost scan for Korean, social, creator, and developer coverage", () => {

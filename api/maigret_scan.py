@@ -25,6 +25,11 @@ DEFAULT_PRIORITY_SITES = [
     "GitHubGist",
     "Reddit",
 ]
+DEFAULT_CRITICAL_SITES = [
+    "Twitter",
+    "Instagram",
+    "Threads",
+]
 DEFAULT_BOOST_TAG_SPECS = [
     ("kr", 30),
     ("social", 35),
@@ -143,6 +148,24 @@ def run_maigret_in_process(username, mode):
                 )
             )
             results = merge_maigret_results(results, priority_results)
+
+        critical_site_data = clone_site_data_for_scan(resolve_critical_site_data(db))
+        if should_run_critical_rescan(critical_site_data, results):
+            critical_results = run_async(
+                check_username(
+                    username=username,
+                    site_dict=dict(critical_site_data),
+                    logger=logger,
+                    proxy=proxy_url,
+                    timeout=positive_int(os.environ.get("MAIGRET_CRITICAL_SITE_TIMEOUT_SECONDS"), 22),
+                    is_parsing_enabled=parsing_enabled,
+                    id_type="username",
+                    max_connections=positive_int(os.environ.get("MAIGRET_CRITICAL_MAX_CONNECTIONS"), 3),
+                    no_progressbar=True,
+                    retries=positive_int(os.environ.get("MAIGRET_CRITICAL_RETRIES"), 2),
+                )
+            )
+            results = merge_maigret_results(results, critical_results)
 
         results = sort_report_by_data_points(results)
         safe_username = username.replace("/", "_")
@@ -351,11 +374,43 @@ def resolve_priority_site_data(db):
     return site_data
 
 
+def resolve_critical_site_data(db):
+    critical_sites = resolve_critical_sites()
+    if not critical_sites:
+        return {}
+
+    excluded_tags = resolve_excluded_tags()
+    site_data = db.ranked_sites_dict(
+        top=sys.maxsize,
+        names=critical_sites,
+        excluded_tags=excluded_tags,
+        disabled=False,
+        id_type="username",
+    )
+    remove_excluded_sites(site_data, resolve_excluded_sites())
+    remove_excluded_tagged_sites(site_data, excluded_tags)
+    return site_data
+
+
 def should_run_priority_rescan(priority_site_data):
     if os.environ.get("MAIGRET_PRIORITY_RESCAN") == "false":
         return False
 
     return bool(priority_site_data)
+
+
+def should_run_critical_rescan(critical_site_data, current_results):
+    configured = os.environ.get("MAIGRET_CRITICAL_RESCAN", "adaptive").lower()
+    if configured in ("false", "off", "0"):
+        return False
+    if configured in ("true", "always", "1"):
+        return bool(critical_site_data)
+
+    return bool(critical_site_data) and has_claimed_result(current_results)
+
+
+def has_claimed_result(results):
+    return any(is_claimed_result(result) for result in results.values())
 
 
 def merge_maigret_results(primary_results, priority_results):
@@ -387,6 +442,14 @@ def resolve_priority_sites():
         return []
     parsed = split_comma_list(configured)
     return parsed if parsed else DEFAULT_PRIORITY_SITES
+
+
+def resolve_critical_sites():
+    configured = os.environ.get("MAIGRET_CRITICAL_SITES")
+    if configured == "":
+        return []
+    parsed = split_comma_list(configured)
+    return parsed if parsed else DEFAULT_CRITICAL_SITES
 
 
 def resolve_boost_tag_specs():

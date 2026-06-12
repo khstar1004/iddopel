@@ -530,82 +530,6 @@ form.toss-card .submit-hint[data-ready="true"] {
   font-weight: 800;
 }
 
-.purpose-selector {
-  display: grid;
-  gap: 9px;
-  min-width: 0;
-  border: 0;
-  margin: 0;
-  padding: 0;
-}
-
-.purpose-selector legend {
-  padding: 0;
-  color: var(--soft);
-  font-size: 14px;
-  font-weight: 650;
-}
-
-.purpose-option-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.purpose-option-list label {
-  display: grid;
-  min-width: 0;
-  cursor: pointer;
-}
-
-.purpose-option-list input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.purpose-option-list span {
-  display: grid;
-  min-height: 62px;
-  align-content: center;
-  gap: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  padding: 9px 10px;
-  color: var(--soft);
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.purpose-option-list label[data-active="true"] span {
-  border-color: var(--primary);
-  color: #ffffff;
-  background: rgba(0, 212, 255, 0.12);
-}
-
-.purpose-option-list input:focus-visible + span {
-  outline: 3px solid rgba(0, 212, 255, 0.2);
-  outline-offset: 2px;
-}
-
-.purpose-option-list strong,
-.purpose-option-list small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.purpose-option-list strong {
-  font-size: 13px;
-}
-
-.purpose-option-list small {
-  color: var(--muted);
-  font-size: 12px;
-}
-
 .quick-history {
   display: flex;
   flex-wrap: wrap;
@@ -1806,6 +1730,34 @@ form.toss-card .submit-hint[data-ready="true"] {
   background: #f7f8fa;
   font-size: 12px;
   font-weight: 800;
+}
+
+.result-evidence-summary {
+  display: grid;
+  gap: 3px;
+  max-width: 100%;
+  border-left: 2px solid #dbe2ea;
+  padding-left: 10px;
+}
+
+.result-evidence-summary strong,
+.result-evidence-summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-evidence-summary strong {
+  color: #191f28;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.result-evidence-summary span {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 650;
 }
 
 .result-link {
@@ -3980,10 +3932,6 @@ form.toss-card .submit-hint[data-ready="true"] {
     grid-template-columns: 1fr;
   }
 
-  .purpose-option-list {
-    grid-template-columns: 1fr;
-  }
-
   .result-insight-banner em {
     border-left: 0;
     border-top: 1px solid #dbe2ea;
@@ -5569,18 +5517,6 @@ form.toss-card .toss-button:disabled {
   color: #4e5968;
   background: #e9edf3;
   opacity: 1;
-}
-
-.app-shell .purpose-option-list label[data-active="true"] span,
-form.toss-card .purpose-option-list label[data-active="true"] span {
-  border-color: #1b64da;
-  color: #12315f;
-  background: #edf6ff;
-}
-
-.app-shell .purpose-option-list label[data-active="true"] small,
-form.toss-card .purpose-option-list label[data-active="true"] small {
-  color: #4e5968;
 }
 
 .app-shell .empty-result-panel p,

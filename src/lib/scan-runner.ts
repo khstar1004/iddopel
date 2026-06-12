@@ -1,4 +1,5 @@
 import { runMaigretScan } from "./maigret-adapter";
+import { enrichScanResultsWithMetadata } from "./result-metadata";
 import { createScanJob, createScanJobFromResults } from "./scanner";
 import type { CreateScanInput, ScanJob } from "./types";
 
@@ -14,7 +15,8 @@ export async function runScan(input: CreateScanInput, options: ScanRunOptions = 
   }
 
   const maigret = await runMaigretScan(input, { origin: options.origin });
-  return createScanJobFromResults(input, maigret.results, {
+  const results = await enrichScanResultsWithMetadata(maigret.results);
+  return createScanJobFromResults(input, results, {
     checkedCount: maigret.checkedCount,
     failedRate: maigret.failedRate,
     maigretReport: maigret.report,

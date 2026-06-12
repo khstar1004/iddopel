@@ -159,6 +159,11 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_PRIORITY_SITE_TIMEOUT_SECONDS`: timeout for the priority rescan; beta uses `14` because X/Twitter and Instagram mirrors can be slower on cloud IPs
 - `MAIGRET_PRIORITY_MAX_CONNECTIONS`: lower concurrency for the priority rescan, default `6`
 - `MAIGRET_PRIORITY_RETRIES`: retry count for the priority rescan, default `1`
+- `MAIGRET_CRITICAL_SITES`: bot-sensitive SNS targets that get one more focused pass, default `Twitter,Instagram,Threads`
+- `MAIGRET_CRITICAL_RESCAN`: use `adaptive` so the focused pass runs only after the broad scan finds at least one account; set `always` temporarily when debugging known SNS misses
+- `MAIGRET_CRITICAL_SITE_TIMEOUT_SECONDS`: timeout for the focused critical pass, default `22`
+- `MAIGRET_CRITICAL_MAX_CONNECTIONS`: low concurrency for critical SNS checks, default `3`
+- `MAIGRET_CRITICAL_RETRIES`: retry count for critical SNS checks, default `2`
 - `MAIGRET_BOOST_TAGS`: comma-separated `tag:limit` boosts merged into the scan scope. The Vercel beta default, `kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8`, improves Korean/SNS/creator/developer coverage without scanning all 3,000+ sites.
 - `MAIGRET_EXCLUDED_SITES`: comma-separated Maigret site names to remove from the scan scope and parsed results. The default excludes `Geeksfor Geeks`, which returns false claimed hits for random usernames in Maigret 0.6.1.
 - `MAIGRET_EXCLUDED_TAGS`: comma-separated Maigret tags to remove from the scan scope and parsed results. The beta default is `porn` so adult-site false positives do not surface in the product UI.
@@ -166,6 +171,10 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_SITE_CAP_DEEP`: maximum merged deep-scan sites after priority and tag boosts. Use a higher value only on Docker/Cloudtype workers with longer request timeouts.
 - `MAIGRET_PROXY_URL`: optional HTTP/SOCKS proxy. A residential or mobile proxy can improve large SNS results when cloud IPs are rate-limited or blocked.
 - `MAIGRET_EXTRACT_EXTENDED`: set `false` on Vercel to reduce Maigret memory and network pressure
+- `SCAN_RESULT_METADATA_ENABLED`: set `true` to add a lightweight title/description/image preview for the first few found results
+- `SCAN_RESULT_METADATA_LIMIT`: maximum result URLs to enrich; beta uses `3`
+- `SCAN_RESULT_METADATA_TIMEOUT_MS`: per-result metadata fetch timeout; beta uses `1200`
+- `SCAN_RESULT_METADATA_MAX_BYTES`: maximum HTML prefix to read per metadata fetch; beta uses `65536`
 - `MAIGRET_API_SECRET`: required shared secret for public Vercel production so the Node scan route can call the Python Maigret function with `x-maigret-api-secret`
 - `INLINE_SCAN_ARTIFACTS`: `true` only for Vercel beta without Postgres; keep false when durable report storage and paid web reports are enabled
 - `PAYMENT_PROVIDER`: `toss` or `polar` for live web checkout

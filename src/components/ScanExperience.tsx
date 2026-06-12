@@ -78,7 +78,6 @@ const freeDetailOwnerTokenKey = "id-doppelganger-free-detail-owner-token";
 const freeDetailUsedScanIdKey = "id-doppelganger-free-detail-used-scan-id";
 const devAdminLogoClickWindowMs = 2500;
 const localeStorageKey = "id-doppelganger-locale";
-const scanPurposeOptions: ScanPurpose[] = ["SELF_CHECK", "BRAND_CHECK", "NICKNAME_CHECK"];
 const resultFilterOptions: ResultFilter[] = ["ALL", "HIGH_RISK", "KR", "GLOBAL"];
 const scanExperienceCopy = {
   ko: {
@@ -109,12 +108,6 @@ const scanExperienceCopy = {
       safetyNote: "실명, 전화번호, 이메일 검색은 지원하지 않아요. 같은 사람이라고 단정하지 않아요.",
       withoutAt: (value: string) => `@ 없이 ${value}로 점검돼요.`,
       clearInput: "아이디 입력 지우기",
-      purposeLabel: "점검 목적",
-      purposeOptions: {
-        SELF_CHECK: { label: "내 아이디", description: "개인 흔적 확인" },
-        BRAND_CHECK: { label: "브랜드", description: "상표·서비스명 점검" },
-        NICKNAME_CHECK: { label: "닉네임", description: "활동명·핸들 확인" }
-      },
       ready: "검색 준비가 끝났어요.",
       blocker: {
         empty: "3자 이상 공개 아이디를 입력해 주세요.",
@@ -366,12 +359,6 @@ const scanExperienceCopy = {
       safetyNote: "Real-name, phone, and email search are not supported. We do not claim accounts belong to the same person.",
       withoutAt: (value: string) => `We'll check ${value} without the @ sign.`,
       clearInput: "Clear username input",
-      purposeLabel: "Check purpose",
-      purposeOptions: {
-        SELF_CHECK: { label: "My username", description: "Personal trace check" },
-        BRAND_CHECK: { label: "Brand", description: "Brand or product name" },
-        NICKNAME_CHECK: { label: "Nickname", description: "Alias or handle check" }
-      },
       ready: "Ready to search.",
       blocker: {
         empty: "Enter a public username with at least 3 characters.",
@@ -692,7 +679,6 @@ function formatDateTime(value: string, locale: Locale) {
 export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {}) {
   const [locale, setLocale] = useState<Locale>(initialLocale ?? "ko");
   const [username, setUsername] = useState("");
-  const [scanPurpose, setScanPurpose] = useState<ScanPurpose>("SELF_CHECK");
   const [acknowledged, setAcknowledged] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -896,7 +882,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
           "x-scan-owner-token": scanOwnerToken,
           ...devAdminHeaders(devAdminToken)
         },
-        body: JSON.stringify({ username: normalizedUsername, purpose: scanPurpose, mode: "quick" })
+        body: JSON.stringify({ username: normalizedUsername, purpose: "SELF_CHECK", mode: "quick" })
       });
 
       const body = await response.json();
@@ -986,7 +972,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   function restoreScanFromHistory(item: StoredScan) {
     setSummary(item);
     setUsername(item.username);
-    setScanPurpose(item.purpose);
     setScanError(null);
     focusResultsSection();
   }
@@ -1016,7 +1001,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     const payload: MonitoringRegistrationRequest = {
       ownerToken,
       usernames: monitoringDraft.usernames,
-      purpose: summary?.purpose ?? scanPurpose
+      purpose: summary?.purpose ?? "SELF_CHECK"
     };
 
     try {
@@ -1232,27 +1217,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
               </p>
             ) : null}
           </div>
-
-          <fieldset className="purpose-selector">
-            <legend>{copy.form.purposeLabel}</legend>
-            <div className="purpose-option-list">
-              {scanPurposeOptions.map((purpose) => (
-                <label data-active={scanPurpose === purpose ? "true" : "false"} key={purpose}>
-                  <input
-                    type="radio"
-                    name="scan-purpose"
-                    value={purpose}
-                    checked={scanPurpose === purpose}
-                    onChange={() => setScanPurpose(purpose)}
-                  />
-                  <span>
-                    <strong>{copy.form.purposeOptions[purpose].label}</strong>
-                    <small>{copy.form.purposeOptions[purpose].description}</small>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
 
           {history.length > 0 ? (
             <div className="quick-history" aria-label={copy.history.quickTitle}>
@@ -1506,10 +1470,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                       : copy.monitoring.noneYet}
                   </strong>
                 </div>
-                <div className="mini-card">
-                  <p>{copy.results.purpose}</p>
-                  <strong>{copy.form.purposeOptions[monitoring.purpose]?.label ?? monitoring.purpose}</strong>
-                </div>
                 <MonitoringLatestScans copy={copy} locale={locale} monitoring={monitoring} onOpenScan={openMonitoringScan} />
                 <div className="mini-card monitoring-delivery-note">
                   <Bell size={16} aria-hidden />
@@ -1645,8 +1605,6 @@ function ResultDashboard({
   const topCategories = useMemo(() => topDistributionEntries(summary.categoryDistribution, 2), [summary.categoryDistribution]);
   const riskSummary = useMemo(() => resultRiskSummary(activeAccess.results), [activeAccess.results]);
   const relativeNow = useMemo(() => new Date(), [summary.scanId]);
-  const purposeLabel = copy.form.purposeOptions[summary.purpose]?.label ?? summary.purpose;
-
   useEffect(() => {
     let cancelled = false;
 
@@ -1797,10 +1755,6 @@ function ResultDashboard({
           </div>
         </div>
         <div className="result-lifecycle" aria-label={copy.results.lifecycle}>
-          <span>
-            <strong>{copy.results.purpose}</strong>
-            {purposeLabel}
-          </span>
           <span>
             <strong>{copy.results.createdAt}</strong>
             {formatDateTime(summary.createdAt, locale)}
@@ -2263,6 +2217,12 @@ function RichResultCard({
             ))}
           </div>
         ) : null}
+        {result.evidenceTitle || result.evidenceDescription ? (
+          <div className="result-evidence-summary">
+            {result.evidenceTitle ? <strong>{result.evidenceTitle}</strong> : null}
+            {result.evidenceDescription ? <span>{result.evidenceDescription}</span> : null}
+          </div>
+        ) : null}
 
         {isFullAccess ? (
           <>
@@ -2305,11 +2265,12 @@ function PlatformIcon({ result }: { result: ScanResult }) {
 
 function ResultProfileImage({ result }: { result: ScanResult }) {
   const [isBroken, setIsBroken] = useState(false);
+  const imageUrl = result.profileImageUrl ?? result.evidenceImageUrl;
 
   return (
     <div className="profile-thumb" aria-hidden>
-      {result.profileImageUrl && !isBroken ? (
-        <img alt="" src={result.profileImageUrl} onError={() => setIsBroken(true)} />
+      {imageUrl && !isBroken ? (
+        <img alt="" src={imageUrl} onError={() => setIsBroken(true)} />
       ) : (
         <UserRound size={34} strokeWidth={1.8} />
       )}
