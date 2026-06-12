@@ -11,6 +11,7 @@ export const requiredSecurityHeaders = [
 ];
 
 const livePaymentProviders = new Set(["toss", "polar"]);
+const protectedCronPaths = ["/api/cron/prune", "/api/cron/monitoring"];
 
 export async function createVercelProductionReport({
   baseUrl = process.env.VERCEL_PRODUCTION_BASE_URL || process.env.PRODUCTION_BASE_URL || process.env.SMOKE_BASE_URL || "https://iddopel.vercel.app",
@@ -78,6 +79,16 @@ export async function createVercelProductionReport({
     addCheck(report, "production storage is Postgres", health.body?.storage === "postgres", health.body);
     addCheck(report, "production scan provider is Maigret", health.body?.scanProvider === "maigret", health.body);
     addCheck(report, "production payment provider is live", livePaymentProviders.has(health.body?.paymentProvider), health.body);
+
+    for (const pathname of protectedCronPaths) {
+      const cron = await requestJson(pathname, { method: "GET" });
+      addCheck(
+        report,
+        `${pathname} rejects public requests`,
+        cron.status === 401 && cron.body?.error?.code === "UNAUTHORIZED",
+        cron
+      );
+    }
 
     const ownerToken = `vercel-prod-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     const scan = await requestJson("/api/scans", {

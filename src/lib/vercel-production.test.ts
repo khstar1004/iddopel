@@ -37,7 +37,7 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function productionFetch(): typeof fetch {
+function productionFetch({ publicCron = false } = {}): typeof fetch {
   return async (input) => {
     const url = new URL(String(input));
 
@@ -45,6 +45,9 @@ function productionFetch(): typeof fetch {
     if (["/privacy", "/terms", "/responsible-use", "/toss"].includes(url.pathname)) return htmlResponse();
     if (url.pathname === "/robots.txt") return textResponse("User-agent: *");
     if (url.pathname === "/sitemap.xml") return textResponse("<urlset></urlset>");
+    if (["/api/cron/prune", "/api/cron/monitoring"].includes(url.pathname)) {
+      return publicCron ? jsonResponse({ ok: true }) : jsonResponse({ error: { code: "UNAUTHORIZED" } }, 401);
+    }
     if (url.pathname === "/api/health") {
       return jsonResponse({
         ok: true,
@@ -139,6 +142,22 @@ describe("vercel production verification", () => {
     expect(report.ok).toBe(true);
     expect(report.baseUrl).toBe("https://iddopel.vercel.app");
     expect(failedCheckNames(report)).toEqual([]);
+  });
+
+  it("fails when production cron endpoints are publicly executable", async () => {
+    const report = await createVercelProductionReport({
+      baseUrl: "https://iddopel.vercel.app",
+      username: "vercelprod",
+      fetchImpl: productionFetch({ publicCron: true })
+    });
+
+    expect(report.ok).toBe(false);
+    expect(failedCheckNames(report)).toEqual(
+      expect.arrayContaining([
+        "/api/cron/prune rejects public requests",
+        "/api/cron/monitoring rejects public requests"
+      ])
+    );
   });
 
   it("fails for the free beta deployment shape", async () => {

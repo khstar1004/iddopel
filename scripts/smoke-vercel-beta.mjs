@@ -60,6 +60,15 @@ try {
   assertCheck("beta scan provider", health.body?.scanProvider === "maigret", health.body);
   assertCheck("beta payment provider", health.body?.paymentProvider === "mock", health.body);
 
+  for (const pathname of ["/api/cron/prune", "/api/cron/monitoring"]) {
+    const cron = await requestJson(pathname, { method: "GET" });
+    assertCheck(
+      `${pathname} is not publicly executable`,
+      [401, 500].includes(cron.status) && ["UNAUTHORIZED", "MISCONFIGURED"].includes(cron.body?.error?.code),
+      cron
+    );
+  }
+
   const scan = await requestJson("/api/scans", {
     method: "POST",
     headers: {
