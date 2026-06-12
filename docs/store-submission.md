@@ -38,8 +38,9 @@ This app is not a people-search service. It only checks public username-string u
 ## Required Before Actual Submission
 - Apple Developer team id and bundle id
 - Google Play package name
-- Final privacy policy URL on production domain
-- Support URL and support email
+- Final privacy policy URL on production domain: `https://iddopel.vercel.app/privacy`
+- Support URL: `https://iddopel.vercel.app/responsible-use`
+- Support email: `khstar1004@yonsei.ac.kr`
 - App icon PNG at required sizes: prepared in `store-assets/app-icon-1024.png`
 - App screenshots for iPhone, Android phone, and Android tablet: prepared in `store-assets/screenshots/`
 - Google Play feature graphic: prepared in `store-assets/play-feature-graphic-1024x500.png`
@@ -56,11 +57,11 @@ npm run privacy:verify
 npm run store:verify
 ```
 
-Finalize store URLs and support email after the production domain is live:
+Store URLs and support email are finalized for the Vercel beta domain. Re-run this only if the production domain or support mailbox changes:
 
 ```bash
-STORE_PRODUCTION_ORIGIN="https://YOUR_PRODUCTION_DOMAIN" \
-STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" \
+STORE_PRODUCTION_ORIGIN="https://iddopel.vercel.app" \
+STORE_SUPPORT_EMAIL="khstar1004@yonsei.ac.kr" \
 npm run store:finalize
 STORE_RELEASE_CHECK=true npm run store:verify
 ```

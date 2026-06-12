@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "productName": "ID 도플갱어",
   "lastReviewed": "2026-06-11",
-  "privacyPolicyUrl": "https://YOUR_PRODUCTION_DOMAIN/privacy",
-  "supportUrl": "https://YOUR_PRODUCTION_DOMAIN/responsible-use",
+  "privacyPolicyUrl": "https://iddopel.vercel.app/privacy",
+  "supportUrl": "https://iddopel.vercel.app/responsible-use",
   "tracking": false,
   "thirdPartyAdvertising": false,
   "nativePaidReportsEnabled": false,
@@ -17,40 +17,70 @@
       {
         "category": "Search History",
         "dataType": "Search History",
-        "fields": ["username string"],
-        "purposes": ["App Functionality", "Fraud Prevention"],
+        "fields": [
+          "username string"
+        ],
+        "purposes": [
+          "App Functionality",
+          "Fraud Prevention"
+        ],
         "linkedToUser": false,
         "usedForTracking": false
       },
       {
         "category": "User Content",
         "dataType": "Other User Content",
-        "fields": ["scan purpose", "generated scan summary", "generated report result"],
-        "purposes": ["App Functionality", "Fraud Prevention"],
+        "fields": [
+          "scan purpose",
+          "generated scan summary",
+          "generated report result"
+        ],
+        "purposes": [
+          "App Functionality",
+          "Fraud Prevention"
+        ],
         "linkedToUser": false,
         "usedForTracking": false
       },
       {
         "category": "Diagnostics",
         "dataType": "Performance Data",
-        "fields": ["Core Web Vitals metric name and bounded value"],
-        "purposes": ["Analytics", "App Functionality"],
+        "fields": [
+          "Core Web Vitals metric name and bounded value"
+        ],
+        "purposes": [
+          "Analytics",
+          "App Functionality"
+        ],
         "linkedToUser": false,
         "usedForTracking": false
       },
       {
         "category": "Diagnostics",
         "dataType": "Other Diagnostic Data",
-        "fields": ["client error type", "page path without query string", "release version"],
-        "purposes": ["Analytics", "App Functionality"],
+        "fields": [
+          "client error type",
+          "page path without query string",
+          "release version"
+        ],
+        "purposes": [
+          "Analytics",
+          "App Functionality"
+        ],
         "linkedToUser": false,
         "usedForTracking": false
       },
       {
         "category": "Identifiers",
         "dataType": "User ID",
-        "fields": ["hashed browser owner token for monthly monitoring", "hashed beta quota key for free-scan abuse prevention"],
-        "purposes": ["App Functionality", "Fraud Prevention"],
+        "fields": [
+          "hashed browser owner token for monthly monitoring",
+          "hashed beta quota key for free-scan abuse prevention"
+        ],
+        "purposes": [
+          "App Functionality",
+          "Fraud Prevention"
+        ],
         "linkedToUser": false,
         "usedForTracking": false
       }
@@ -85,47 +115,77 @@
       {
         "category": "App activity",
         "dataType": "Search history",
-        "fields": ["username string"],
+        "fields": [
+          "username string"
+        ],
         "collected": true,
         "shared": false,
         "required": true,
-        "purposes": ["App functionality", "Fraud prevention, security, and compliance"]
+        "purposes": [
+          "App functionality",
+          "Fraud prevention, security, and compliance"
+        ]
       },
       {
         "category": "App activity",
         "dataType": "App interactions",
-        "fields": ["scan purpose", "scan mode", "result view path"],
+        "fields": [
+          "scan purpose",
+          "scan mode",
+          "result view path"
+        ],
         "collected": true,
         "shared": false,
         "required": true,
-        "purposes": ["App functionality", "Fraud prevention, security, and compliance"]
+        "purposes": [
+          "App functionality",
+          "Fraud prevention, security, and compliance"
+        ]
       },
       {
         "category": "App info and performance",
         "dataType": "Crash logs",
-        "fields": ["client error type", "unhandled rejection type"],
+        "fields": [
+          "client error type",
+          "unhandled rejection type"
+        ],
         "collected": true,
         "shared": false,
         "required": false,
-        "purposes": ["Analytics", "App functionality"]
+        "purposes": [
+          "Analytics",
+          "App functionality"
+        ]
       },
       {
         "category": "App info and performance",
         "dataType": "Diagnostics",
-        "fields": ["Core Web Vitals metric name and bounded value", "release version"],
+        "fields": [
+          "Core Web Vitals metric name and bounded value",
+          "release version"
+        ],
         "collected": true,
         "shared": false,
         "required": false,
-        "purposes": ["Analytics", "App functionality"]
+        "purposes": [
+          "Analytics",
+          "App functionality"
+        ]
       },
       {
         "category": "Personal info",
         "dataType": "User IDs",
-        "fields": ["hashed browser owner token for monthly monitoring", "hashed beta quota key for free-scan abuse prevention"],
+        "fields": [
+          "hashed browser owner token for monthly monitoring",
+          "hashed beta quota key for free-scan abuse prevention"
+        ],
         "collected": true,
         "shared": false,
         "required": false,
-        "purposes": ["App functionality", "Fraud prevention, security, and compliance"]
+        "purposes": [
+          "App functionality",
+          "Fraud prevention, security, and compliance"
+        ]
       }
     ],
     "notCollected": [

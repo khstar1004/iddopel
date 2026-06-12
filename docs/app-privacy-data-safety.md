@@ -10,7 +10,7 @@ The App Store / Play Store native shell supports the free scan and result previe
 Native paid reports are disabled in the current default native submission build.
 
 ## Apple App Privacy
-- Privacy policy URL: `https://YOUR_PRODUCTION_DOMAIN/privacy`
+- Privacy policy URL: `https://iddopel.vercel.app/privacy`
 - Tracking: No
 - Data linked to the user: No
 - Data used for tracking: No
@@ -29,7 +29,7 @@ Declare these data types:
 Do not declare collection for contact info, financial info, location, contacts, photos/videos, sensitive info, purchases, browsing history, or advertising data while native paid reports remain disabled.
 
 ## Google Play Data safety
-- Privacy policy URL: `https://YOUR_PRODUCTION_DOMAIN/privacy`
+- Privacy policy URL: `https://iddopel.vercel.app/privacy`
 - Data encrypted in transit: Yes
 - Users can request deletion: Yes
 - Data shared with third parties: No

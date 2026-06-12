@@ -21,11 +21,11 @@ npm run assets:store
 - `privacy-declarations.json`: App Store App Privacy and Google Play Data safety source of truth
 - `../fastlane/metadata/`: Fastlane-ready metadata and copied image assets
 
-Finalize placeholders after the production domain and support mailbox are ready:
+Current production URLs are finalized for the Vercel beta domain. Re-run this only if the production domain or support mailbox changes:
 
 ```bash
-STORE_PRODUCTION_ORIGIN="https://YOUR_PRODUCTION_DOMAIN" \
-STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" \
+STORE_PRODUCTION_ORIGIN="https://iddopel.vercel.app" \
+STORE_SUPPORT_EMAIL="khstar1004@yonsei.ac.kr" \
 npm run store:finalize
 npm run privacy:verify
 ```

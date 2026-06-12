@@ -1,1 +1,1 @@
-https://YOUR_PRODUCTION_DOMAIN/privacy
+https://iddopel.vercel.app/privacy

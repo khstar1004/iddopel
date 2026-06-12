@@ -1,1 +1,1 @@
-https://YOUR_PRODUCTION_DOMAIN/responsible-use
+https://iddopel.vercel.app/responsible-use

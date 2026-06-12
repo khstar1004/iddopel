@@ -11,11 +11,11 @@ npm run privacy:verify
 npm run store:verify
 ```
 
-Finalize production URLs before upload:
+Production URLs are finalized for the Vercel beta domain. Re-run this only if the production domain or support mailbox changes:
 
 ```bash
-STORE_PRODUCTION_ORIGIN="https://YOUR_PRODUCTION_DOMAIN" \
-STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" \
+STORE_PRODUCTION_ORIGIN="https://iddopel.vercel.app" \
+STORE_SUPPORT_EMAIL="khstar1004@yonsei.ac.kr" \
 npm run store:finalize
 STORE_RELEASE_CHECK=true npm run store:verify
 ```
@@ -33,9 +33,8 @@ bundle exec fastlane android internal
 ```
 
 Remaining account-specific values:
-- Apple team id, bundle id, SKU, support URL, privacy URL, and copyright owner
-- Google Play package name, support email, privacy URL, and release track
-- Production domain and final legal URLs
+- Apple team id, bundle id, SKU, and copyright owner
+- Google Play package ownership and release track
 - App Store Connect API key
 - Google Play Android Publisher service account JSON
 

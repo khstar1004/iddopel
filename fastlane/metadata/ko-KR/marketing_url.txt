@@ -1,1 +1,1 @@
-https://YOUR_PRODUCTION_DOMAIN/
+https://iddopel.vercel.app/
