@@ -88,6 +88,7 @@
 - [x] `npm run assets:verify` passes before app store upload and launch kit distribution
 - [x] `npm run store:verify` passes for local submission package
 - [x] `npm run privacy:verify` passes for App Store / Google Play privacy declarations
+- [x] Native paid-report privacy gate blocks `MOBILE_PAYMENTS_ENABLED=true` until Apple Purchase History and Google purchase-history declarations are aligned
 - [x] `npm run android:debug` passes for local Android native compile verification
 - [x] `npm run android:bundle` passes for local Android release bundle verification
 - [x] `npm run deploy:verify` passes for the Docker Compose deployment package

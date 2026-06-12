@@ -1,62 +1,76 @@
 import { access, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const releaseCheck = process.env.STORE_RELEASE_CHECK === "true";
-const checks = [];
-const warnings = [];
+export function createStorePrivacyReport({
+  declaration,
+  appleListing,
+  googleListing,
+  docs,
+  releaseCheck = false,
+  mobilePaymentsEnabled = false,
+  preflightChecks = []
+} = {}) {
+  const checks = [...preflightChecks];
+  const warnings = [];
+  const addCheck = (name, ok, detail) => checks.push({ name, ok: Boolean(ok), detail });
+  const addWarning = (name, detail) => warnings.push({ name, detail });
 
-function addCheck(name, ok, detail) {
-  checks.push({ name, ok, detail });
-}
-
-function addWarning(name, detail) {
-  warnings.push({ name, detail });
-}
-
-async function main() {
-  await requiredFile("store-assets/privacy-declarations.json");
-  await requiredFile("docs/app-privacy-data-safety.md");
-
-  const declaration = JSON.parse(await readFile("store-assets/privacy-declarations.json", "utf-8"));
-  const appleListing = JSON.parse(await readFile("store-assets/apple-app-store.json", "utf-8"));
-  const googleListing = JSON.parse(await readFile("store-assets/google-play-listing.json", "utf-8"));
-  const docs = await readFile("docs/app-privacy-data-safety.md", "utf-8");
-
-  validateTopLevel(declaration, appleListing, googleListing);
-  validateApple(declaration.appleAppPrivacy);
-  validateGoogle(declaration.googlePlayDataSafety);
-  validateDocs(docs);
+  validateTopLevel(declaration, appleListing, googleListing, {
+    releaseCheck,
+    mobilePaymentsEnabled,
+    addCheck,
+    addWarning
+  });
+  validateApple(declaration?.appleAppPrivacy, { mobilePaymentsEnabled, addCheck });
+  validateGoogle(declaration?.googlePlayDataSafety, { mobilePaymentsEnabled, addCheck });
+  validateDocs(docs || "", { mobilePaymentsEnabled, addCheck });
 
   const failed = checks.filter((check) => !check.ok);
-  console.log(JSON.stringify({ ok: failed.length === 0, failed: failed.length, warningCount: warnings.length, checks, warnings }, null, 2));
-  if (failed.length > 0) process.exit(1);
+  return {
+    ok: failed.length === 0,
+    failed: failed.length,
+    warningCount: warnings.length,
+    checks,
+    warnings
+  };
 }
 
-async function requiredFile(path) {
-  try {
-    await access(path);
-    addCheck(`Required file ${path}`, true, path);
-  } catch {
-    addCheck(`Required file ${path}`, false, `${path} is missing.`);
+function validateTopLevel(declaration, appleListing, googleListing, context) {
+  const { releaseCheck, mobilePaymentsEnabled, addCheck, addWarning } = context;
+
+  addCheck("Privacy declaration schema version", declaration?.schemaVersion === 1, "schemaVersion must be 1.");
+  addCheck("Privacy declaration disables tracking", declaration?.tracking === false, "Tracking must be false for the current app.");
+  addCheck("Privacy declaration disables third-party ads", declaration?.thirdPartyAdvertising === false, "No ads SDK should be declared for the current app.");
+
+  if (mobilePaymentsEnabled) {
+    addCheck(
+      "Native paid reports declared enabled",
+      declaration?.nativePaidReportsEnabled === true,
+      "When MOBILE_PAYMENTS_ENABLED=true, store privacy declarations must include native purchase data handling."
+    );
+  } else {
+    addCheck(
+      "Native paid reports disabled",
+      declaration?.nativePaidReportsEnabled === false,
+      "Native paid reports stay disabled until StoreKit / Play Billing setup and store privacy declarations are complete."
+    );
   }
-}
 
-function validateTopLevel(declaration, appleListing, googleListing) {
-  addCheck("Privacy declaration schema version", declaration.schemaVersion === 1, "schemaVersion must be 1.");
-  addCheck("Privacy declaration disables tracking", declaration.tracking === false, "Tracking must be false for the current app.");
-  addCheck("Privacy declaration disables third-party ads", declaration.thirdPartyAdvertising === false, "No ads SDK should be declared for the current app.");
-  addCheck("Native paid reports disabled", declaration.nativePaidReportsEnabled === false, "Native paid reports stay disabled until StoreKit / Play Billing setup is complete.");
-  addCheck("Privacy policy URL matches Apple listing", declaration.privacyPolicyUrl === appleListing.privacyPolicyUrl, "Keep App Store privacy URL and declaration in sync.");
-  addCheck("Privacy policy URL matches Google listing", declaration.privacyPolicyUrl === googleListing.privacyPolicyUrl, "Keep Google Play privacy URL and declaration in sync.");
+  addCheck("Privacy policy URL matches Apple listing", declaration?.privacyPolicyUrl === appleListing?.privacyPolicyUrl, "Keep App Store privacy URL and declaration in sync.");
+  addCheck("Privacy policy URL matches Google listing", declaration?.privacyPolicyUrl === googleListing?.privacyPolicyUrl, "Keep Google Play privacy URL and declaration in sync.");
 
   if (releaseCheck) {
-    addCheck("Privacy URL finalized", isHttpsUrl(declaration.privacyPolicyUrl) && !hasPlaceholder(declaration.privacyPolicyUrl), "Use the production HTTPS privacy URL.");
-    addCheck("Support URL finalized", isHttpsUrl(declaration.supportUrl) && !hasPlaceholder(declaration.supportUrl), "Use the production HTTPS support URL.");
-  } else if (hasPlaceholder(declaration.privacyPolicyUrl) || hasPlaceholder(declaration.supportUrl)) {
+    addCheck("Privacy URL finalized", isHttpsUrl(declaration?.privacyPolicyUrl) && !hasPlaceholder(declaration?.privacyPolicyUrl), "Use the production HTTPS privacy URL.");
+    addCheck("Support URL finalized", isHttpsUrl(declaration?.supportUrl) && !hasPlaceholder(declaration?.supportUrl), "Use the production HTTPS support URL.");
+  } else if (hasPlaceholder(declaration?.privacyPolicyUrl) || hasPlaceholder(declaration?.supportUrl)) {
     addWarning("Privacy URLs are placeholders", "Finalize store-assets/privacy-declarations.json before release submission.");
   }
 }
 
-function validateApple(apple) {
+function validateApple(apple, context) {
+  const { mobilePaymentsEnabled, addCheck } = context;
+
   addCheck("Apple privacy section exists", Boolean(apple), "appleAppPrivacy is required.");
   if (!apple) return;
 
@@ -65,11 +79,22 @@ function validateApple(apple) {
   addCheck("Apple data not linked to user", apple.dataLinkedToUser === false, "Current native shell has no account identity linkage.");
 
   const dataTypes = apple.dataTypes ?? [];
-  requireDataType("Apple", dataTypes, "Search History", "Search History");
-  requireDataType("Apple", dataTypes, "User Content", "Other User Content");
-  requireDataType("Apple", dataTypes, "Diagnostics", "Performance Data");
-  requireDataType("Apple", dataTypes, "Diagnostics", "Other Diagnostic Data");
-  requireDataType("Apple", dataTypes, "Identifiers", "User ID");
+  requireDataType("Apple", dataTypes, "Search History", "Search History", addCheck);
+  requireDataType("Apple", dataTypes, "User Content", "Other User Content", addCheck);
+  requireDataType("Apple", dataTypes, "Diagnostics", "Performance Data", addCheck);
+  requireDataType("Apple", dataTypes, "Diagnostics", "Other Diagnostic Data", addCheck);
+  requireDataType("Apple", dataTypes, "Identifiers", "User ID", addCheck);
+
+  if (mobilePaymentsEnabled) {
+    requireDataType("Apple", dataTypes, "Purchases", "Purchase History", addCheck);
+    addCheck(
+      "Apple purchase history no longer marked not collected",
+      !apple.notCollected?.includes("Purchases"),
+      "When native IAP is enabled, App Store privacy answers must not list Purchases as not collected."
+    );
+  } else {
+    addCheck("Apple not collected Purchases", apple.notCollected?.includes("Purchases"), "Purchases should remain not collected while native paid reports are disabled.");
+  }
 
   for (const item of dataTypes) {
     addCheck(`Apple ${item.dataType} not linked`, item.linkedToUser === false, `${item.dataType} should not be linked to user identity.`);
@@ -82,7 +107,9 @@ function validateApple(apple) {
   }
 }
 
-function validateGoogle(google) {
+function validateGoogle(google, context) {
+  const { mobilePaymentsEnabled, addCheck } = context;
+
   addCheck("Google data safety section exists", Boolean(google), "googlePlayDataSafety is required.");
   if (!google) return;
 
@@ -92,11 +119,22 @@ function validateGoogle(google) {
   addCheck("Google no data sharing", google.dataShared === false, "Current app should not declare data sharing.");
 
   const dataTypes = google.dataTypes ?? [];
-  requireDataType("Google", dataTypes, "App activity", "Search history");
-  requireDataType("Google", dataTypes, "App activity", "App interactions");
-  requireDataType("Google", dataTypes, "App info and performance", "Crash logs");
-  requireDataType("Google", dataTypes, "App info and performance", "Diagnostics");
-  requireDataType("Google", dataTypes, "Personal info", "User IDs");
+  requireDataType("Google", dataTypes, "App activity", "Search history", addCheck);
+  requireDataType("Google", dataTypes, "App activity", "App interactions", addCheck);
+  requireDataType("Google", dataTypes, "App info and performance", "Crash logs", addCheck);
+  requireDataType("Google", dataTypes, "App info and performance", "Diagnostics", addCheck);
+  requireDataType("Google", dataTypes, "Personal info", "User IDs", addCheck);
+
+  if (mobilePaymentsEnabled) {
+    requireDataType("Google", dataTypes, "Financial info", "Purchase history", addCheck);
+    addCheck(
+      "Google purchase history no longer marked not collected",
+      !google.notCollected?.includes("Financial info"),
+      "When native Play Billing is enabled, Data safety answers must not list Financial info as not collected."
+    );
+  } else {
+    addCheck("Google not collected Financial info", google.notCollected?.includes("Financial info"), "Financial info should remain not collected while native paid reports are disabled.");
+  }
 
   for (const item of dataTypes) {
     addCheck(`Google ${item.dataType} collected`, item.collected === true, `${item.dataType} should be marked collected if listed.`);
@@ -109,16 +147,23 @@ function validateGoogle(google) {
   }
 }
 
-function validateDocs(docs) {
+function validateDocs(docs, context) {
+  const { mobilePaymentsEnabled, addCheck } = context;
   const normalizedDocs = docs.toLowerCase();
-  for (const phrase of [
+  const phrases = [
     "Apple App Privacy",
     "Google Play Data safety",
     "Search History",
     "App activity",
     "not a people-search service",
-    "native paid reports are disabled"
-  ]) {
+    mobilePaymentsEnabled ? "native paid reports are enabled" : "native paid reports are disabled"
+  ];
+
+  if (mobilePaymentsEnabled) {
+    phrases.push("Purchase History", "purchase token");
+  }
+
+  for (const phrase of phrases) {
     addCheck(
       `Privacy docs mention ${phrase}`,
       normalizedDocs.includes(phrase.toLowerCase()),
@@ -127,12 +172,21 @@ function validateDocs(docs) {
   }
 }
 
-function requireDataType(platform, dataTypes, category, dataType) {
+function requireDataType(platform, dataTypes, category, dataType, addCheck) {
   addCheck(
     `${platform} declares ${category} / ${dataType}`,
     dataTypes.some((item) => item.category === category && item.dataType === dataType),
     `${platform} declaration must include ${category} / ${dataType}.`
   );
+}
+
+async function requiredFile(path, checks) {
+  try {
+    await access(path);
+    checks.push({ name: `Required file ${path}`, ok: true, detail: path });
+  } catch {
+    checks.push({ name: `Required file ${path}`, ok: false, detail: `${path} is missing.` });
+  }
 }
 
 function isHttpsUrl(value) {
@@ -145,10 +199,40 @@ function isHttpsUrl(value) {
 }
 
 function hasPlaceholder(value = "") {
-  return /YOUR_|replace-with|example/i.test(value);
+  return /YOUR_|replace-with|example/i.test(String(value));
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+async function main() {
+  const preflightChecks = [];
+  await requiredFile("store-assets/privacy-declarations.json", preflightChecks);
+  await requiredFile("docs/app-privacy-data-safety.md", preflightChecks);
+
+  const declaration = JSON.parse(await readFile("store-assets/privacy-declarations.json", "utf-8"));
+  const appleListing = JSON.parse(await readFile("store-assets/apple-app-store.json", "utf-8"));
+  const googleListing = JSON.parse(await readFile("store-assets/google-play-listing.json", "utf-8"));
+  const docs = await readFile("docs/app-privacy-data-safety.md", "utf-8");
+
+  const report = createStorePrivacyReport({
+    declaration,
+    appleListing,
+    googleListing,
+    docs,
+    releaseCheck: process.env.STORE_RELEASE_CHECK === "true",
+    mobilePaymentsEnabled: process.env.MOBILE_PAYMENTS_ENABLED === "true",
+    preflightChecks
+  });
+
+  console.log(JSON.stringify(report, null, 2));
+  if (!report.ok) process.exit(1);
+}
+
+function isMainModule() {
+  return process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+}
+
+if (isMainModule()) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

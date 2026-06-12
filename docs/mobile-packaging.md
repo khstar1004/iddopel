@@ -189,6 +189,14 @@ App Store Connect App Privacy and Google Play Data safety answers are prepared i
 
 Run `npm run privacy:verify` before submitting native builds. Native paid reports are currently declared disabled by default; update the declarations before enabling `MOBILE_PAYMENTS_ENABLED=true`.
 
+Before any store build with native paid reports enabled, run:
+
+```bash
+MOBILE_PAYMENTS_ENABLED=true STORE_RELEASE_CHECK=true npm run privacy:verify
+```
+
+This gate should fail until Apple App Privacy includes Purchases / Purchase History, Google Play Data safety includes Financial info / Purchase history, and purchase token / transaction identifier handling is documented.
+
 ## CI
 `.github/workflows/release-verification.yml` runs:
 - web verify, store asset generation/verification, code hygiene, high-severity `npm run security:audit`, and committed-secret `npm run security:secrets`

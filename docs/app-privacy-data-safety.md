@@ -9,6 +9,11 @@ ID 도플갱어 is not a people-search service. It checks public usage of a user
 The App Store / Play Store native shell supports the free scan and result preview flow. Native paid reports are bridge-ready but disabled by default until `MOBILE_PAYMENTS_ENABLED=true`, StoreKit and Google Play Billing products, the native billing bridge, and production receipt verification credentials are configured.
 Native paid reports are disabled in the current default native submission build.
 
+## Native Paid Report Switch
+Run `MOBILE_PAYMENTS_ENABLED=true STORE_RELEASE_CHECK=true npm run privacy:verify` before any native build that unlocks paid report details through StoreKit or Google Play Billing.
+
+That check must fail until native paid reports are enabled in `store-assets/privacy-declarations.json`, Apple App Privacy declares Purchases / Purchase History, Google Play Data safety declares Financial info / Purchase history, and purchase token / transaction identifier handling is documented.
+
 ## Apple App Privacy
 - Privacy policy URL: `https://iddopel.vercel.app/privacy`
 - Tracking: No
