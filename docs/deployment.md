@@ -167,6 +167,8 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MONITORING_PAYWALL_ENABLED`: keep `false` only for a free beta; set `true` after the monthly monitoring checkout product is ready
 - `TOSS_CLIENT_KEY`: Toss Payments live client key starting with `live_ck_`, required when `PAYMENT_PROVIDER=toss`
 - `TOSS_SECRET_KEY`: Toss Payments live API secret key starting with `live_sk_`, required when `PAYMENT_PROVIDER=toss`
+
+Instagram and X/Twitter checks depend on public unauthenticated responses from those platforms, so cloud IPs can see bot pages, rate limits, or stale HTML. Keep them in `MAIGRET_PRIORITY_SITES`, keep `social`/`photo` in `MAIGRET_BOOST_TAGS`, and use `MAIGRET_PROXY_URL` for the next quality step if production misses known accounts. Instagram and X/Twitter mirror hits are normalized back to the canonical platform in the product UI, while the source HTML report still shows the exact Maigret evidence site.
 - `TOSS_SECURITY_KEY`: Toss Payments 64-character security key, required when `PAYMENT_PROVIDER=toss`
 - `POLAR_ACCESS_TOKEN`: Polar organization access token, required when `PAYMENT_PROVIDER=polar`
 - `POLAR_PRODUCT_ID`: Polar detailed-report product id, required when `PAYMENT_PROVIDER=polar`

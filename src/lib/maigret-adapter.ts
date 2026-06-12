@@ -336,9 +336,11 @@ function remoteMaigretEndpoint(origin?: string) {
 export function parseMaigretSimpleReport(report: string, input: Pick<CreateScanInput, "purpose">): ScanResult[] {
   const parsed = JSON.parse(report) as Record<string, MaigretReportRecord>;
 
-  return Object.entries(parsed)
-    .map(([siteName, record]) => maigretRecordToScanResult(siteName, record, input.purpose))
-    .filter((result): result is ScanResult => Boolean(result));
+  return dedupeScanResults(
+    Object.entries(parsed)
+      .map(([siteName, record]) => maigretRecordToScanResult(siteName, record, input.purpose))
+      .filter((result): result is ScanResult => Boolean(result))
+  );
 }
 
 export function maigretRecordToScanResult(
@@ -356,7 +358,7 @@ export function maigretRecordToScanResult(
     nested(record.site, "url_main"),
     nested(record.site, "url")
   );
-  const normalizedPlatform = normalizeMaigretPlatform(siteName, rawUrl, rawPlatformUrl);
+  const normalizedPlatform = normalizeMaigretPlatform(siteName, rawUrl, rawPlatformUrl, record);
   const category = inferCategory(normalizedPlatform.platform, normalizedPlatform.url, tags);
   const country = inferCountry(tags);
   const riskLevel = riskForMaigret(category, purpose);
@@ -392,7 +394,12 @@ export function maigretRecordToScanResult(
   };
 }
 
-function normalizeMaigretPlatform(siteName: string, url: string, platformUrl: string | null) {
+function normalizeMaigretPlatform(
+  siteName: string,
+  url: string,
+  platformUrl: string | null,
+  record: MaigretReportRecord
+) {
   if (normalizeSiteName(siteName) === "twitter") {
     return {
       platform: "X",
@@ -401,11 +408,49 @@ function normalizeMaigretPlatform(siteName: string, url: string, platformUrl: st
     };
   }
 
+  const source = firstString(nested(record.site, "source"), nested(record.status, "source"));
+  const username = firstString(record.username, nested(record.status, "username"));
+  const mirror = mirrorSourcePlatform(source, username);
+  if (mirror) return mirror;
+
   return {
     platform: siteName,
     url,
     platformUrl
   };
+}
+
+function mirrorSourcePlatform(source: string | null, username: string | null) {
+  if (!source || !username) return null;
+
+  if (normalizeSiteName(source) === "instagram") {
+    return {
+      platform: "Instagram",
+      url: `https://www.instagram.com/${encodeURIComponent(username)}`,
+      platformUrl: "https://www.instagram.com"
+    };
+  }
+
+  if (normalizeSiteName(source) === "twitter" || normalizeSiteName(source) === "x") {
+    return {
+      platform: "X",
+      url: `https://x.com/${encodeURIComponent(username)}`,
+      platformUrl: "https://x.com"
+    };
+  }
+
+  return null;
+}
+
+function dedupeScanResults(results: ScanResult[]) {
+  const seen = new Set<string>();
+  return results.filter((result) => {
+    const key = `${normalizeSiteName(result.platform)}:${normalizeResultUrl(result.url)}`;
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+    return true;
+  });
 }
 
 function rewriteTwitterUrl(value: string) {
@@ -424,6 +469,17 @@ function rewriteTwitterUrl(value: string) {
 
 function normalizeSiteName(value: string) {
   return value.trim().toLowerCase();
+}
+
+function normalizeResultUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    parsed.protocol = parsed.protocol.toLowerCase();
+    parsed.hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return value.trim().replace(/\/$/, "").toLowerCase();
+  }
 }
 
 function splitCommaList(value: string | undefined) {

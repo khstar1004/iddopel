@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import json
 import logging
 import os
@@ -32,6 +33,7 @@ DEFAULT_BOOST_TAG_SPECS = [
     ("blog", 15),
     ("coding", 15),
 ]
+MAIGRET_DATABASE_CACHE = None
 
 
 class handler(BaseHTTPRequestHandler):
@@ -90,16 +92,14 @@ def run_maigret_in_process(username, mode):
 
     with tempfile.TemporaryDirectory(prefix="id-doppelganger-maigret-") as temp_dir:
         from maigret.checking import maigret as check_username
-        from maigret.db_updater import BUNDLED_DB_PATH
         from maigret.report import generate_report_context, save_html_report, save_json_report, sort_report_by_data_points
-        from maigret.sites import MaigretDatabase
 
         os.environ.setdefault("HOME", tempfile.gettempdir())
         os.environ.setdefault("XDG_CACHE_HOME", tempfile.gettempdir())
         logger = logging.getLogger("id-doppelganger-maigret")
         logger.addHandler(logging.NullHandler())
-        db = MaigretDatabase().load_from_path(BUNDLED_DB_PATH)
-        site_data = resolve_site_data(db, top_sites, mode)
+        db = load_maigret_database()
+        site_data = clone_site_data_for_scan(resolve_site_data(db, top_sites, mode))
         results = run_async(
             check_username(
                 username=username,
@@ -244,6 +244,21 @@ def resolve_top_sites(mode):
     if mode == "DEEP":
         return positive_int(os.environ.get("MAIGRET_TOP_SITES_DEEP"), 150)
     return positive_int(os.environ.get("MAIGRET_TOP_SITES_QUICK"), 50)
+
+
+def load_maigret_database():
+    global MAIGRET_DATABASE_CACHE
+    if MAIGRET_DATABASE_CACHE is None:
+        from maigret.db_updater import BUNDLED_DB_PATH
+        from maigret.sites import MaigretDatabase
+
+        MAIGRET_DATABASE_CACHE = MaigretDatabase().load_from_path(BUNDLED_DB_PATH)
+
+    return MAIGRET_DATABASE_CACHE
+
+
+def clone_site_data_for_scan(site_data):
+    return {name: copy.deepcopy(site) for name, site in site_data.items()}
 
 
 def resolve_site_data(db, top_sites, mode="QUICK"):

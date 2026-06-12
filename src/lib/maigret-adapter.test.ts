@@ -80,6 +80,53 @@ describe("parseMaigretSimpleReport", () => {
 
     expect(parseMaigretSimpleReport(report, { purpose: "SELF_CHECK" })).toEqual([]);
   });
+
+  it("surfaces Instagram and X mirror hits as the canonical social profiles", () => {
+    const report = JSON.stringify({
+      ImgInn: {
+        username: "im9route",
+        url_user: "https://imginn.com/im9route/",
+        site: {
+          source: "Instagram",
+          urlMain: "https://imginn.com",
+          tags: ["photo"]
+        }
+      },
+      Instagram: {
+        username: "im9route",
+        url_user: "https://www.instagram.com/im9route/",
+        site: {
+          tags: ["photo", "social"]
+        }
+      },
+      NitterMirror: {
+        username: "legacyx",
+        url_user: "https://nitter.example/legacyx",
+        site: {
+          source: "Twitter",
+          tags: ["social"]
+        }
+      }
+    });
+
+    const results = parseMaigretSimpleReport(report, { purpose: "SELF_CHECK" });
+
+    expect(results).toHaveLength(2);
+    expect(results[0]).toMatchObject({
+      platform: "Instagram",
+      url: "https://www.instagram.com/im9route",
+      platformUrl: "https://www.instagram.com",
+      platformIconUrl: "https://www.instagram.com/favicon.ico",
+      category: "SNS"
+    });
+    expect(results[1]).toMatchObject({
+      platform: "X",
+      url: "https://x.com/legacyx",
+      platformUrl: "https://x.com",
+      platformIconUrl: "https://x.com/favicon.ico",
+      category: "SNS"
+    });
+  });
 });
 
 describe("maigretRecordToScanResult", () => {
