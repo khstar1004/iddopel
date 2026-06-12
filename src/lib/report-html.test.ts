@@ -100,6 +100,8 @@ describe("buildHtmlReport", () => {
     expect(html).toContain("공유용 브리핑");
     expect(html).toContain("월간 추적 리포트 미리보기");
     expect(html).toContain("이번 달 발견");
+    expect(html).toContain("증거 패킷");
+    expect(html).toContain("CSV/JSON 내보내기");
     expect(html).toContain("7일 정리 플랜");
     expect(html).toContain("아이디 재사용 지도");
     expect(html.indexOf("유료 분석 보드")).toBeLessThan(html.indexOf("<table>"));

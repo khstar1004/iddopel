@@ -156,8 +156,8 @@ test("later scans after the first free report show paid preview without browser 
   scanIds.push(await submitLandingScan(page, "paidpreview-ui"));
   await expect(page.getByRole("status").filter({ hasText: "무료 미리보기" })).toBeVisible();
   await expect(page.getByText(/상세 URL \d+개 잠김/)).toBeVisible();
-  await expect(page.locator(".masked-url-teaser").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "전체 리포트 보기" })).toBeVisible();
+  await expect(page.locator(".locked-result-mosaic").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /전체 리포트 보기/ })).toBeVisible();
 
   expect(browserMessages).toEqual([]);
 
@@ -231,6 +231,57 @@ test("scan result cards appear immediately while detailed access is still loadin
   }
 });
 
+test("empty scans do not push the user into detailed report checkout", async ({ page }) => {
+  const browserMessages = watchBrowserErrors(page);
+  await installPaywalledPreviewRoutes(page, emptyScanSummary("emptycase-ui"), {
+    scanId: "scan_emptycase_ui",
+    access: "PREVIEW",
+    lockedCount: 0,
+    lockedResults: [],
+    results: []
+  });
+
+  let orderRequests = 0;
+  await page.route("**/api/orders", async (route) => {
+    orderRequests += 1;
+    await route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ error: { code: "UNEXPECTED_ORDER" } })
+    });
+  });
+
+  await page.goto("/");
+  await submitLandingScan(page, "emptycase-ui");
+
+  await expect(page.getByText("결제할 상세 결과가 없어요.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /전체 리포트 보기/ })).toHaveCount(0);
+  expect(orderRequests).toBe(0);
+  expect(browserMessages).toEqual([]);
+});
+
+test("paywalled previews explain exactly what the detailed report unlocks", async ({ page }) => {
+  const browserMessages = watchBrowserErrors(page);
+  const summary = paywalledScanSummary("lockedcase-ui");
+  await installPaywalledPreviewRoutes(page, summary, {
+    scanId: summary.scanId,
+    access: "PREVIEW",
+    lockedCount: 2,
+    lockedResults: summary.lockedResults,
+    results: summary.previewResults
+  });
+
+  await page.goto("/");
+  await submitLandingScan(page, "lockedcase-ui");
+
+  await expect(page.getByText("결제 후 바로 열리는 항목")).toBeVisible();
+  await expect(page.getByText("정확한 공개 URL")).toBeVisible();
+  await expect(page.getByText("위험도 높은 계정 우선순위")).toBeVisible();
+  await expect(page.getByText("정리/삭제 가이드")).toBeVisible();
+  await expect(page.getByRole("button", { name: "2,900원 결제하고 전체 리포트 보기" })).toBeVisible();
+  expect(browserMessages).toEqual([]);
+});
+
 test("landing form blocks disallowed identifiers before submit", async ({ page }) => {
   const browserMessages = watchBrowserErrors(page);
 
@@ -282,4 +333,112 @@ async function submitLandingScan(page: Page, username: string) {
   await expect(page.getByRole("heading", { name: `${username}로 찾은 공개 흔적` })).toBeVisible();
   await expect(page.locator(".result-first-panel")).toBeInViewport();
   return scan.scanId;
+}
+
+async function installPaywalledPreviewRoutes(page: Page, scanBody: Record<string, unknown>, resultsBody: Record<string, unknown>) {
+  await page.route("**/api/scans", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify(scanBody)
+    });
+  });
+  await page.route("**/api/scans/*/free-report", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "WEB_PAYWALL_ENABLED",
+          message: "정밀 리포트는 결제 후 열려요."
+        }
+      })
+    });
+  });
+  await page.route("**/api/scans/*/results", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(resultsBody)
+    });
+  });
+}
+
+function emptyScanSummary(username: string) {
+  return {
+    ...baseScanSummary(username, "scan_emptycase_ui"),
+    foundCount: 0,
+    countryDistribution: {},
+    categoryDistribution: {},
+    previewResults: [],
+    lockedResults: []
+  };
+}
+
+function paywalledScanSummary(username: string) {
+  const previewResults = [
+    {
+      id: "github-0",
+      platform: "GitHub",
+      url: "https://github.com/",
+      category: "DEVELOPER",
+      country: "US",
+      status: "FOUND",
+      riskLevel: "MEDIUM",
+      cleanupHint: "정확한 URL과 정리 가이드는 전체 리포트에서 확인하세요."
+    }
+  ];
+  const lockedResults = [
+    {
+      id: "naver-1",
+      platform: "Naver",
+      category: "BLOG",
+      country: "KR",
+      riskLevel: "HIGH"
+    },
+    {
+      id: "instagram-2",
+      platform: "Instagram",
+      category: "SNS",
+      country: "GLOBAL",
+      riskLevel: "MEDIUM"
+    }
+  ];
+
+  return {
+    ...baseScanSummary(username, "scan_lockedcase_ui"),
+    foundCount: 3,
+    countryDistribution: { US: 1, KR: 1, GLOBAL: 1 },
+    categoryDistribution: { DEVELOPER: 1, BLOG: 1, SNS: 1 },
+    previewResults,
+    lockedResults
+  };
+}
+
+function baseScanSummary(username: string, scanId: string) {
+  return {
+    scanId,
+    username,
+    purpose: "SELF_CHECK",
+    mode: "QUICK",
+    status: "COMPLETED",
+    progress: 100,
+    checkedCount: 34,
+    failedRate: 0,
+    scanSource: "PUBLIC_SCAN",
+    maigretReportAvailable: false,
+    createdAt: new Date("2026-06-12T00:00:00.000Z").toISOString(),
+    finishedAt: new Date("2026-06-12T00:00:01.000Z").toISOString(),
+    expiresAt: new Date("2026-06-13T00:00:00.000Z").toISOString(),
+    doppelgangerScore: 42,
+    rarityScore: 88,
+    exposureScore: 32,
+    impersonationScore: 28,
+    cleanupScore: 35
+  };
 }

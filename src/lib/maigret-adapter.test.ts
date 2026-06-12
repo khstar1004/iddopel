@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { maigretRecordToScanResult, parseMaigretSimpleReport, runMaigretScan } from "./maigret-adapter";
+import {
+  buildMaigretCliArgs,
+  maigretRecordToScanResult,
+  parseMaigretSimpleReport,
+  resolvePrioritySiteNames,
+  runMaigretScan
+} from "./maigret-adapter";
 
 describe("parseMaigretSimpleReport", () => {
   it("maps Maigret simple JSON claimed accounts into scan results", () => {
@@ -22,12 +28,18 @@ describe("parseMaigretSimpleReport", () => {
         status: {
           tags: ["social", "global"]
         }
+      },
+      Twitter: {
+        url_user: "https://twitter.com/khstar104",
+        url_main: "https://www.twitter.com/",
+        tags: ["messaging", "social"],
+        rank: 5
       }
     });
 
     const results = parseMaigretSimpleReport(report, { purpose: "SELF_CHECK" });
 
-    expect(results).toHaveLength(2);
+    expect(results).toHaveLength(3);
     expect(results[0]).toMatchObject({
       platform: "GitHub",
       url: "https://github.com/khstar104",
@@ -45,6 +57,14 @@ describe("parseMaigretSimpleReport", () => {
       platform: "Instagram",
       category: "SNS",
       riskLevel: "HIGH"
+    });
+    expect(results[2]).toMatchObject({
+      platform: "X",
+      url: "https://x.com/khstar104",
+      platformUrl: "https://x.com",
+      platformIconUrl: "https://x.com/favicon.ico",
+      category: "SNS",
+      rank: 5
     });
   });
 
@@ -73,6 +93,36 @@ describe("maigretRecordToScanResult", () => {
     );
 
     expect(result?.riskLevel).toBe("HIGH");
+  });
+});
+
+describe("Maigret CLI quality options", () => {
+  const originalPrioritySites = process.env.MAIGRET_PRIORITY_SITES;
+
+  afterEach(() => {
+    restoreEnv("MAIGRET_PRIORITY_SITES", originalPrioritySites);
+  });
+
+  it("keeps high-demand social platforms in the priority scan scope", () => {
+    delete process.env.MAIGRET_PRIORITY_SITES;
+
+    expect(resolvePrioritySiteNames()).toEqual(
+      expect.arrayContaining(["Instagram", "Twitter", "Threads", "TikTok", "YouTube", "Naver"])
+    );
+  });
+
+  it("builds a site-scoped priority scan instead of replacing the top-site scan", () => {
+    const args = buildMaigretCliArgs("khstar104", "out", {
+      maxConnections: 6,
+      retries: 1,
+      scope: { siteNames: ["Instagram", "Twitter", "Threads"] },
+      timeoutSeconds: 14
+    });
+
+    expect(args).toContain("--site");
+    expect(args).toEqual(expect.arrayContaining(["Instagram", "Twitter", "Threads"]));
+    expect(args).not.toContain("--top-sites");
+    expect(args).not.toContain("-a");
   });
 });
 

@@ -16,7 +16,7 @@ describe("createScanJob", () => {
     expect(job.scanSource).toBe("LOCAL_FALLBACK");
     expect(job.rarityScore).toBeGreaterThanOrEqual(5);
     expect(job.rarityScore).toBeLessThanOrEqual(99);
-    expect(job.previewResults.length).toBeLessThanOrEqual(3);
+    expect(job.previewResults.length).toBeLessThanOrEqual(5);
   });
 
   it("raises impersonation score for brand purpose compared with self check", () => {
@@ -171,14 +171,14 @@ describe("createScanJobFromResults", () => {
     expect(job.previewResults.map((result) => result.platform)).toEqual([
       "GitHub",
       "Instagram",
-      "KakaoStory"
+      "KakaoStory",
+      "Tistory",
+      "Velog"
     ]);
-    expect(job.previewResults).toHaveLength(3);
+    expect(job.previewResults).toHaveLength(5);
     expect(lockedPreviewResultsFor(job.results).map((result) => result.platform)).toEqual([
       "LinkedIn",
       "Threads",
-      "Tistory",
-      "Velog",
       "X"
     ]);
     expect(JSON.stringify(lockedPreviewResultsFor(job.results))).not.toContain("https://");
@@ -222,6 +222,38 @@ describe("createScanJobFromResults", () => {
     expect(job.previewResults.map((result) => result.platform)).toEqual(["External Blog"]);
   });
 
+  it("recognizes legacy Twitter results as X preview candidates", () => {
+    const job = createScanJobFromResults(
+      {
+        username: "legacyx",
+        purpose: "SELF_CHECK",
+        mode: "QUICK"
+      },
+      [
+        {
+          id: "maigret-twitter",
+          platform: "Twitter",
+          url: "https://twitter.com/legacyx",
+          category: "SNS",
+          country: "GLOBAL",
+          status: "FOUND",
+          riskLevel: "HIGH",
+          cleanupHint: "Check profile."
+        }
+      ],
+      {
+        checkedCount: 100,
+        now: new Date("2026-06-11T00:00:00.000Z")
+      }
+    );
+
+    expect(job.previewResults).toHaveLength(1);
+    expect(publicSummary(job).previewResults[0]).toMatchObject({
+      platform: "Twitter",
+      url: "https://twitter.com/legacyx"
+    });
+  });
+
   it("rebuilds public summaries with the current free-preview policy", () => {
     const job = createScanJobFromResults(
       {
@@ -263,8 +295,7 @@ describe("createScanJobFromResults", () => {
     });
 
     expect(summary.previewResults.map((result) => result.platform)).toEqual(["GitHub"]);
-    expect(summary.previewResults[0].url).toBe("https://github.com");
-    expect(summary.previewResults[0].cleanupHint).not.toContain("Check profile");
-    expect(JSON.stringify(summary.previewResults)).not.toContain("legacyscan");
+    expect(summary.previewResults[0].url).toBe("https://github.com/legacyscan");
+    expect(summary.previewResults[0].cleanupHint).toContain("Check profile");
   });
 });

@@ -150,8 +150,12 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_BIN`: CLI binary path, usually `maigret`
 - `MAIGRET_TOP_SITES_QUICK`: free scan scope, default `100`
 - `MAIGRET_TOP_SITES_DEEP`: paid/deep scan scope, default `500`
+- `MAIGRET_SITE_TIMEOUT_SECONDS`: per-site timeout
+- `MAIGRET_RETRIES`: retry count for transient 5xx, timeout, and blocked checks; keep at least `1` for public beta quality
 - `MAIGRET_PROCESS_TIMEOUT_MS`: process kill timeout
 - `MAIGRET_MAX_CONNECTIONS`: Maigret concurrent connection limit; keep it low on Vercel serverless functions
+- `MAIGRET_PRIORITY_SITES`: comma-separated site names always included in the scan scope, useful for high-demand platforms such as Instagram, X/Twitter, Threads, TikTok, YouTube, Naver, and GitHub
+- `MAIGRET_PROXY_URL`: optional HTTP/SOCKS proxy. A residential or mobile proxy can improve large SNS results when cloud IPs are rate-limited or blocked.
 - `MAIGRET_EXTRACT_EXTENDED`: set `false` on Vercel to reduce Maigret memory and network pressure
 - `MAIGRET_API_SECRET`: required shared secret for public Vercel production so the Node scan route can call the Python Maigret function with `x-maigret-api-secret`
 - `INLINE_SCAN_ARTIFACTS`: `true` only for Vercel beta without Postgres; keep false when durable report storage and paid web reports are enabled

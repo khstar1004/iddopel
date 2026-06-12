@@ -51,7 +51,12 @@ MAIGRET_TOP_SITES_QUICK=100
 MAIGRET_TOP_SITES_DEEP=500
 MAIGRET_DEEP_ALL=false
 MAIGRET_SITE_TIMEOUT_SECONDS=12
+MAIGRET_RETRIES=1
 MAIGRET_PROCESS_TIMEOUT_MS=120000
+MAIGRET_MAX_CONNECTIONS=40
+MAIGRET_PRIORITY_SITES=Instagram,Twitter,Threads,TikTok,YouTube,Facebook,LinkedIn,Naver,GitHub,GitHubGist,Reddit
+# Optional when cloud/datacenter IPs miss large SNS results:
+# MAIGRET_PROXY_URL=http://user:pass@residential-proxy:port
 
 PAYMENT_PROVIDER=toss
 ENABLE_MOCK_PAYMENTS=false

@@ -4,6 +4,7 @@ export const platformDefinitions: PlatformDefinition[] = [
   {
     id: "naver-blog",
     name: "Naver Blog",
+    aliases: ["Naver"],
     category: "BLOG",
     country: "KR",
     urlPattern: "https://blog.naver.com/{username}",
@@ -44,9 +45,11 @@ export const platformDefinitions: PlatformDefinition[] = [
   {
     id: "x",
     name: "X",
+    aliases: ["Twitter"],
     category: "SNS",
     country: "GLOBAL",
     urlPattern: "https://x.com/{username}",
+    hostAliases: ["twitter.com", "www.twitter.com"],
     freePreview: true,
     cleanupHint: "프로필 소개, 링크, 오래된 공개 게시물 노출을 점검하세요.",
     riskWeight: 10

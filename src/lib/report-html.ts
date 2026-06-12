@@ -67,6 +67,7 @@ export function buildHtmlReport(scan: ScanJob, results: ScanResult[]) {
       </div>`
     )
     .join("");
+  const evidencePacketSummary = buildEvidencePacketSummary(results);
   const rows = results
     .map(
       (result) => `<tr>
@@ -114,6 +115,13 @@ export function buildHtmlReport(scan: ScanJob, results: ScanResult[]) {
     .digest-card span { display: block; color: #0f766e; font-size: 12px; font-weight: 800; }
     .digest-card strong { display: block; margin-top: 6px; font-size: 24px; }
     .digest-card p { margin: 8px 0 0; color: #4e5968; font-size: 13px; }
+    .packet { border: 1px solid #dbe5ff; border-radius: 8px; padding: 16px; background: #f8fbff; margin: 24px 0; }
+    .packet h2 { margin: 0 0 8px; font-size: 20px; }
+    .packet p { margin: 0 0 14px; color: #4e5968; }
+    .packet-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .packet-card { border: 1px solid #dbe2ea; border-radius: 8px; padding: 12px; background: #ffffff; break-inside: avoid; }
+    .packet-card span { display: block; color: #1b64da; font-size: 12px; font-weight: 800; }
+    .packet-card strong { display: block; margin-top: 6px; font-size: 22px; }
     .plan { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 24px 0; }
     .plan-step { border: 1px solid #dbe2ea; border-radius: 8px; padding: 12px; background: #f8fafc; break-inside: avoid; }
     .plan-step > span { display: inline-block; border-radius: 999px; padding: 3px 8px; color: #0f766e; background: #d7fff6; font-size: 12px; font-weight: 800; }
@@ -152,6 +160,15 @@ export function buildHtmlReport(scan: ScanJob, results: ScanResult[]) {
     <p>현재 월간추적은 대시보드 기반으로 작동하며, 이 블록은 이후 이메일 발송 기능에 재사용할 수 있는 유료 요약입니다.</p>
     <div class="digest-grid">${monthlyDigest}</div>
   </section>
+  <section class="packet" aria-label="증거 패킷">
+    <h2>증거 패킷</h2>
+    <p>CSV/JSON 내보내기 기준으로 플랫폼, URL, 위험도, 조치 가이드를 구조화했습니다. 고객센터 문의, 팀 공유, 월간 재점검 비교에 사용할 수 있습니다.</p>
+    <div class="packet-grid">
+      <div class="packet-card"><span>포함 URL</span><strong>${evidencePacketSummary.urlCount}개</strong></div>
+      <div class="packet-card"><span>우선 위험</span><strong>${escapeHtml(evidencePacketSummary.topRiskLabel)}</strong></div>
+      <div class="packet-card"><span>파일 형식</span><strong>CSV/JSON</strong></div>
+    </div>
+  </section>
   <section class="analysis" aria-label="유료 분석 보드">
     <div class="analysis-card">
       <h2>위험도 분포</h2>
@@ -186,6 +203,13 @@ export function buildHtmlReport(scan: ScanJob, results: ScanResult[]) {
   </table>
 </body>
 </html>`;
+}
+
+function buildEvidencePacketSummary(results: ScanResult[]) {
+  return {
+    urlCount: results.length,
+    topRiskLabel: riskLabels[highestRisk(results)]
+  };
 }
 
 function buildMonthlyDigest(scan: ScanJob, results: ScanResult[]) {

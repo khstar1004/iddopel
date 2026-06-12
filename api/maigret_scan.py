@@ -11,6 +11,19 @@ from pathlib import Path
 
 
 USERNAME_RE = re.compile(r"^[A-Za-z0-9._-]{3,30}$")
+DEFAULT_PRIORITY_SITES = [
+    "Instagram",
+    "Twitter",
+    "Threads",
+    "TikTok",
+    "YouTube",
+    "Facebook",
+    "LinkedIn",
+    "Naver",
+    "GitHub",
+    "GitHubGist",
+    "Reddit",
+]
 
 
 class handler(BaseHTTPRequestHandler):
@@ -63,7 +76,9 @@ def run_maigret_in_process(username, mode):
     top_sites = resolve_top_sites(mode)
     site_timeout = positive_int(os.environ.get("MAIGRET_SITE_TIMEOUT_SECONDS"), 6)
     max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 10)
+    retries = positive_int(os.environ.get("MAIGRET_RETRIES"), 1)
     parsing_enabled = os.environ.get("MAIGRET_EXTRACT_EXTENDED") != "false"
+    proxy_url = clean_env(os.environ.get("MAIGRET_PROXY_URL"))
 
     with tempfile.TemporaryDirectory(prefix="id-doppelganger-maigret-") as temp_dir:
         from maigret.checking import maigret as check_username
@@ -76,18 +91,19 @@ def run_maigret_in_process(username, mode):
         logger = logging.getLogger("id-doppelganger-maigret")
         logger.addHandler(logging.NullHandler())
         db = MaigretDatabase().load_from_path(BUNDLED_DB_PATH)
-        site_data = db.ranked_sites_dict(top=top_sites, disabled=False, id_type="username")
+        site_data = resolve_site_data(db, top_sites)
         results = run_async(
             check_username(
                 username=username,
                 site_dict=dict(site_data),
                 logger=logger,
+                proxy=proxy_url,
                 timeout=site_timeout,
                 is_parsing_enabled=parsing_enabled,
                 id_type="username",
                 max_connections=max_connections,
                 no_progressbar=True,
-                retries=0,
+                retries=retries,
             )
         )
         results = sort_report_by_data_points(results)
@@ -118,6 +134,7 @@ def run_maigret_subprocess(username, mode):
     site_timeout = positive_int(os.environ.get("MAIGRET_SITE_TIMEOUT_SECONDS"), 6)
     process_timeout_ms = positive_int(os.environ.get("MAIGRET_PROCESS_TIMEOUT_MS"), 55000)
     max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 10)
+    retries = positive_int(os.environ.get("MAIGRET_RETRIES"), 1)
 
     with tempfile.TemporaryDirectory(prefix="id-doppelganger-maigret-") as temp_dir:
         runtime_env = os.environ.copy()
@@ -136,20 +153,32 @@ def run_maigret_subprocess(username, mode):
             temp_dir,
             "--no-color",
             "--no-progressbar",
-            "--no-autoupdate",
             "--no-recursion",
             "--timeout",
             str(site_timeout),
             "--retries",
-            "0",
+            str(retries),
             "--max-connections",
             str(max_connections),
             "--reports-sorting",
             "data",
         ]
 
+        if os.environ.get("MAIGRET_AUTO_UPDATE") != "true":
+            args.append("--no-autoupdate")
+
+        if os.environ.get("MAIGRET_FORCE_UPDATE") == "true":
+            args.append("--force-update")
+
         if os.environ.get("MAIGRET_EXTRACT_EXTENDED") == "false":
             args.append("--no-extracting")
+
+        proxy_url = clean_env(os.environ.get("MAIGRET_PROXY_URL"))
+        if proxy_url:
+            args.extend(["--proxy", proxy_url])
+
+        if os.environ.get("MAIGRET_CLOUDFLARE_BYPASS") == "true":
+            args.append("--cloudflare-bypass")
 
         if mode == "DEEP" and os.environ.get("MAIGRET_DEEP_ALL") == "true":
             args.append("-a")
@@ -207,6 +236,41 @@ def resolve_top_sites(mode):
     if mode == "DEEP":
         return positive_int(os.environ.get("MAIGRET_TOP_SITES_DEEP"), 150)
     return positive_int(os.environ.get("MAIGRET_TOP_SITES_QUICK"), 50)
+
+
+def resolve_site_data(db, top_sites):
+    site_data = db.ranked_sites_dict(top=top_sites, disabled=False, id_type="username")
+    priority_sites = resolve_priority_sites()
+    if priority_sites:
+        priority_site_data = db.ranked_sites_dict(
+            top=sys.maxsize,
+            names=priority_sites,
+            disabled=False,
+            id_type="username",
+        )
+        site_data.update(priority_site_data)
+    return site_data
+
+
+def resolve_priority_sites():
+    configured = os.environ.get("MAIGRET_PRIORITY_SITES")
+    if configured == "":
+        return []
+    parsed = split_comma_list(configured)
+    return parsed if parsed else DEFAULT_PRIORITY_SITES
+
+
+def split_comma_list(value):
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def clean_env(value):
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
 
 
 def positive_int(value, fallback):

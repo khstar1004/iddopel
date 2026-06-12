@@ -270,7 +270,11 @@ function TossLockedMosaicList({
               <strong>{isLockedPreview(result) ? result.platform : `공개 흔적 #${startIndex + index}`}</strong>
               <span>잠김</span>
             </div>
-            <i className="mosaic-line mosaic-line-wide" aria-hidden />
+            {isLockedPreview(result) && result.maskedUrl ? (
+              <span className="toss-masked-url">{result.maskedUrl}</span>
+            ) : (
+              <i className="mosaic-line mosaic-line-wide" aria-hidden />
+            )}
             <i className="mosaic-line mosaic-line-short" aria-hidden />
           </div>
           <LockKeyhole size={15} aria-hidden />

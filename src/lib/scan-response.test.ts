@@ -33,6 +33,7 @@ describe("publicScanResponse", () => {
     expect(response.lockedResults).toEqual([
       expect.objectContaining({
         platform: "LinkedIn",
+        maskedUrl: "linkedin.com/in/lock••••••••",
         category: "GLOBAL",
         country: "GLOBAL",
         riskLevel: "LOW"

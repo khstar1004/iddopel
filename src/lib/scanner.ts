@@ -10,13 +10,11 @@ import type {
   ScanSource
 } from "./types";
 
-export const FREE_PREVIEW_LIMIT = 3;
+export const FREE_PREVIEW_LIMIT = 5;
 export const LOCKED_PREVIEW_LIMIT = 5;
 
 const platformDefinitionsById = new Map(platformDefinitions.map((platform) => [platform.id, platform]));
-const platformDefinitionsByName = new Map(
-  platformDefinitions.map((platform) => [normalizePlatformText(platform.name), platform])
-);
+const platformDefinitionsByName = new Map<string, typeof platformDefinitions[number]>();
 const platformDefinitionsByHost = new Map<string, typeof platformDefinitions[number]>();
 const platformDefinitionsByHostSuffix = platformDefinitions
   .map((platform) => ({
@@ -28,8 +26,17 @@ const platformDefinitionsByHostSuffix = platformDefinitions
   );
 
 for (const platform of platformDefinitions) {
+  platformDefinitionsByName.set(normalizePlatformText(platform.name), platform);
+  for (const alias of platform.aliases ?? []) {
+    platformDefinitionsByName.set(normalizePlatformText(alias), platform);
+  }
+
   const host = platformHostFromPattern(platform.urlPattern);
   if (host) platformDefinitionsByHost.set(host, platform);
+
+  for (const hostAlias of platform.hostAliases ?? []) {
+    platformDefinitionsByHost.set(normalizeHost(hostAlias), platform);
+  }
 }
 
 export function createScanJob(input: CreateScanInput): ScanJob {
@@ -133,7 +140,7 @@ export function freePreviewResultsFor(results: ScanResult[]) {
 }
 
 export function publicPreviewResultsFor(results: ScanResult[]) {
-  return freePreviewResultsFor(results).map(redactScanResultForPreview);
+  return freePreviewResultsFor(results).map(publicScanResultForPreview);
 }
 
 export function lockedResultsCountFor(results: ScanResult[]) {
@@ -150,10 +157,26 @@ export function lockedPreviewResultsFor(results: ScanResult[]): LockedScanResult
       id: result.id,
       platform: result.platform,
       platformIconUrl: result.platformIconUrl,
+      maskedUrl: maskedUrlPreviewFor(result.url),
       category: result.category,
       country: result.country,
       riskLevel: result.riskLevel
     }));
+}
+
+function maskedUrlPreviewFor(value: string) {
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.replace(/^www\./, "");
+    const pathParts = parsed.pathname.split("/").filter(Boolean);
+    const hasProfilePrefix = pathParts.length > 1 && ["@", "in", "u", "user", "channel", "station"].includes(pathParts[0]);
+    const profilePart = (hasProfilePrefix ? pathParts[1] : pathParts[0]) ?? "profile";
+    const profilePrefix = profilePart.replace(/^@/, "").slice(0, Math.min(4, profilePart.length));
+    const routePrefix = hasProfilePrefix ? `${pathParts[0]}/` : "";
+    return `${host}/${routePrefix}${profilePrefix}${"•".repeat(Math.max(4, Math.min(8, profilePart.length)))}`;
+  } catch {
+    return "상세 URL 잠김";
+  }
 }
 
 function countBy(values: string[]): Record<string, number> {
@@ -168,44 +191,10 @@ function canShowInFreePreview(result: ScanResult) {
   return Boolean(definition?.freePreview);
 }
 
-function redactScanResultForPreview(result: ScanResult): ScanResult {
+function publicScanResultForPreview(result: ScanResult): ScanResult {
   return {
-    ...result,
-    url: publicPlatformUrlFor(result),
-    cleanupHint: "정확한 URL과 정리 가이드는 전체 리포트에서 확인하세요.",
-    tags: undefined,
-    rank: undefined,
-    httpStatus: undefined
+    ...result
   };
-}
-
-function publicPlatformUrlFor(result: ScanResult) {
-  const definition = resolvePlatformDefinition(result);
-  if (definition) return platformPublicUrlFromPattern(definition.urlPattern);
-
-  return publicOriginFromUrl(result.url);
-}
-
-function platformPublicUrlFromPattern(pattern: string) {
-  const markerIndex = pattern.indexOf("{");
-  const visiblePattern = markerIndex >= 0 ? pattern.slice(0, markerIndex) : pattern;
-  const fallbackPattern = pattern.replace(/\{[^}]+\}/g, "profile");
-
-  try {
-    const parsed = new URL(visiblePattern || fallbackPattern);
-    return parsed.origin;
-  } catch {
-    return publicOriginFromUrl(fallbackPattern).replace("://profile.", "://");
-  }
-}
-
-function publicOriginFromUrl(value: string) {
-  try {
-    const parsed = new URL(value);
-    return parsed.origin;
-  } catch {
-    return "https://example.com";
-  }
 }
 
 function resolvePlatformDefinition(result: ScanResult) {
@@ -234,7 +223,7 @@ function normalizePlatformText(value: string) {
 function platformHostFromPattern(pattern: string): string | null {
   const testInput = pattern.replace(/\{[^}]+\}/g, "example");
   try {
-    return new URL(testInput).hostname.replace(/^www\./, "").toLowerCase();
+    return normalizeHost(new URL(testInput).hostname);
   } catch {
     return null;
   }
@@ -252,8 +241,12 @@ function platformHostSuffixFromPattern(pattern: string): string | null {
 
 function hostFromUrl(value: string): string | null {
   try {
-    return new URL(value).hostname.replace(/^www\./, "").toLowerCase();
+    return normalizeHost(new URL(value).hostname);
   } catch {
     return null;
   }
+}
+
+function normalizeHost(value: string) {
+  return value.replace(/^www\./, "").toLowerCase();
 }

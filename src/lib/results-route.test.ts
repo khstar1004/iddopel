@@ -20,9 +20,12 @@ describe("scan results route free preview policy", () => {
     expect(body.access).toBe("PREVIEW");
     expect(body.lockedCount).toBe(1);
     expect(body.results.map((result: { platform: string }) => result.platform)).toEqual(["GitHub"]);
+    expect(body.results[0].url).toBe("https://github.com/routepolicy");
+    expect(body.results[0].cleanupHint).toBe("Check profile.");
     expect(body.lockedResults).toEqual([
       expect.objectContaining({
         platform: "LinkedIn",
+        maskedUrl: "linkedin.com/in/rout••••••••",
         category: "GLOBAL",
         country: "GLOBAL"
       })

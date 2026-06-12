@@ -78,6 +78,9 @@ function productionFetch({ publicCron = false } = {}): typeof fetch {
         checkoutUrl: "https://pay.toss.im/checkout"
       }, 201);
     }
+    if (url.pathname === "/api/monitoring") {
+      return jsonResponse({ error: { code: "MONITORING_PAYMENT_REQUIRED" } }, 402);
+    }
 
     return textResponse("not found", 404);
   };
@@ -121,6 +124,9 @@ function betaFetch(): typeof fetch {
         status: "READY",
         checkoutUrl: "http://localhost:3000/checkout/ord_beta"
       }, 201);
+    }
+    if (url.pathname === "/api/monitoring") {
+      return jsonResponse({ ok: true }, 201);
     }
 
     return textResponse("not found", 404);
@@ -175,7 +181,8 @@ describe("vercel production verification", () => {
         "production scan response does not inline paid artifacts",
         "one-time free detailed report is disabled for production",
         "live checkout URL is created",
-        "checkout order uses live provider"
+        "checkout order uses live provider",
+        "monitoring registration is paywalled"
       ])
     );
   });

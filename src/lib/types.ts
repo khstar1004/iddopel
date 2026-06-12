@@ -21,9 +21,11 @@ export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
 export interface PlatformDefinition {
   id: string;
   name: string;
+  aliases?: string[];
   category: PlatformCategory;
   country: "KR" | "US" | "JP" | "GLOBAL";
   urlPattern: string;
+  hostAliases?: string[];
   freePreview: boolean;
   cleanupHint: string;
   riskWeight: number;
@@ -50,6 +52,7 @@ export interface LockedScanResultPreview {
   id: string;
   platform: string;
   platformIconUrl?: string;
+  maskedUrl?: string;
   category: PlatformCategory;
   country: PlatformDefinition["country"];
   riskLevel: RiskLevel;

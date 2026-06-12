@@ -19,6 +19,19 @@ interface MaigretRunOptions {
 
 type MaigretReportRecord = Record<string, unknown>;
 
+interface MaigretCliRunResult {
+  output: string;
+  reportJson: string;
+  htmlReport?: MaigretReportArtifacts;
+  checkedCount: number;
+}
+
+interface MaigretCliScope {
+  topSites?: number;
+  allSites?: boolean;
+  siteNames?: string[];
+}
+
 interface RemoteMaigretResponse {
   ok?: boolean;
   checkedCount?: number;
@@ -54,19 +67,111 @@ const categoryTags: Array<[PlatformCategory, string[]]> = [
   ["DOMAIN", ["domain", "dns", "website"]]
 ];
 
+const defaultPrioritySiteNames = [
+  "Instagram",
+  "Twitter",
+  "Threads",
+  "TikTok",
+  "YouTube",
+  "Facebook",
+  "LinkedIn",
+  "Naver",
+  "GitHub",
+  "GitHubGist",
+  "Reddit"
+];
+
 export async function runMaigretScan(input: CreateScanInput, options: MaigretRunOptions = {}): Promise<MaigretRunOutput> {
   if (shouldUseRemoteMaigret()) {
     return runRemoteMaigretScan(input, options);
   }
 
   const command = process.env.MAIGRET_BIN || "maigret";
-  const tempDir = await mkdtemp(path.join(tmpdir(), "id-doppelganger-maigret-"));
   const topSites = resolveTopSites(input.mode ?? "QUICK");
   const timeoutSeconds = Number(process.env.MAIGRET_SITE_TIMEOUT_SECONDS || "12");
   const processTimeoutMs = Number(process.env.MAIGRET_PROCESS_TIMEOUT_MS || "120000");
   const maxConnections = Number(process.env.MAIGRET_MAX_CONNECTIONS || "40");
+  const retries = Number(process.env.MAIGRET_RETRIES || "1");
+  const primary = await runMaigretCli(command, input, {
+    processTimeoutMs,
+    scope:
+      input.mode === "DEEP" && process.env.MAIGRET_DEEP_ALL === "true"
+        ? { allSites: true }
+        : { topSites },
+    timeoutSeconds,
+    retries,
+    maxConnections
+  });
+  const prioritySiteNames = resolvePrioritySiteNames();
+  const priority =
+    prioritySiteNames.length > 0
+      ? await runMaigretCli(command, input, {
+          processTimeoutMs: Number(process.env.MAIGRET_PRIORITY_PROCESS_TIMEOUT_MS || Math.min(processTimeoutMs, 30000)),
+          scope: { siteNames: prioritySiteNames },
+          timeoutSeconds: Number(process.env.MAIGRET_PRIORITY_SITE_TIMEOUT_SECONDS || Math.max(timeoutSeconds, 14)),
+          retries: Number(process.env.MAIGRET_PRIORITY_RETRIES || Math.max(retries, 1)),
+          maxConnections: Number(process.env.MAIGRET_PRIORITY_MAX_CONNECTIONS || Math.min(maxConnections, 6))
+        })
+      : null;
+  const report = priority ? mergeMaigretSimpleReports(primary.reportJson, priority.reportJson) : primary.reportJson;
+  const results = parseMaigretSimpleReport(report, input);
+
+  return {
+    results,
+    checkedCount: priority ? primary.checkedCount + priority.checkedCount : primary.checkedCount,
+    failedRate: 0,
+    report: primary.htmlReport
+  };
+}
+
+async function runMaigretCli(
+  command: string,
+  input: CreateScanInput,
+  options: {
+    processTimeoutMs: number;
+    scope: MaigretCliScope;
+    timeoutSeconds: number;
+    retries: number;
+    maxConnections: number;
+  }
+): Promise<MaigretCliRunResult> {
+  const tempDir = await mkdtemp(path.join(tmpdir(), "id-doppelganger-maigret-"));
+
+  try {
+    const args = buildMaigretCliArgs(input.username, tempDir, options);
+    const output = await spawnMaigret(command, args, options.processTimeoutMs);
+    const reportPath = await findMaigretJsonReport(tempDir);
+    const reportJson = await readFile(reportPath, "utf-8");
+    const htmlReport = await readMaigretHtmlReport(tempDir);
+
+    return {
+      output,
+      reportJson,
+      htmlReport,
+      checkedCount: extractCheckedCount(output, options.scope.topSites ?? options.scope.siteNames?.length ?? 0)
+    };
+  } finally {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+export function buildMaigretCliArgs(
+  username: string,
+  tempDir: string,
+  {
+    maxConnections,
+    retries,
+    scope,
+    timeoutSeconds
+  }: {
+    maxConnections: number;
+    retries: number;
+    scope: MaigretCliScope;
+    timeoutSeconds: number;
+  }
+) {
   const args = [
-    input.username,
+    username,
     "--html",
     "--json",
     "simple",
@@ -74,45 +179,57 @@ export async function runMaigretScan(input: CreateScanInput, options: MaigretRun
     tempDir,
     "--no-color",
     "--no-progressbar",
-    "--no-autoupdate",
     "--no-recursion",
     "--timeout",
     String(timeoutSeconds),
     "--retries",
-    "0",
+    String(retries),
     "--max-connections",
     String(maxConnections),
     "--reports-sorting",
     "data"
   ];
 
+  if (process.env.MAIGRET_AUTO_UPDATE !== "true") {
+    args.push("--no-autoupdate");
+  }
+  if (process.env.MAIGRET_FORCE_UPDATE === "true") {
+    args.push("--force-update");
+  }
   if (process.env.MAIGRET_EXTRACT_EXTENDED === "false") {
     args.push("--no-extracting");
   }
+  if (process.env.MAIGRET_PROXY_URL) {
+    args.push("--proxy", process.env.MAIGRET_PROXY_URL);
+  }
+  if (process.env.MAIGRET_CLOUDFLARE_BYPASS === "true") {
+    args.push("--cloudflare-bypass");
+  }
 
-  if (input.mode === "DEEP" && process.env.MAIGRET_DEEP_ALL === "true") {
+  if (scope.siteNames?.length) {
+    for (const siteName of scope.siteNames) {
+      args.push("--site", siteName);
+    }
+  } else if (scope.allSites) {
     args.push("-a");
   } else {
-    args.push("--top-sites", String(topSites));
+    args.push("--top-sites", String(scope.topSites ?? resolveTopSites("QUICK")));
   }
 
-  try {
-    const output = await spawnMaigret(command, args, processTimeoutMs);
-    const reportPath = await findMaigretJsonReport(tempDir);
-    const report = await readFile(reportPath, "utf-8");
-    const htmlReport = await readMaigretHtmlReport(tempDir);
-    const checkedCount = extractCheckedCount(output, topSites);
-    const results = parseMaigretSimpleReport(report, input);
+  return args;
+}
 
-    return {
-      results,
-      checkedCount,
-      failedRate: 0,
-      report: htmlReport
-    };
-  } finally {
-    await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
-  }
+export function resolvePrioritySiteNames() {
+  const configured = process.env.MAIGRET_PRIORITY_SITES;
+  if (configured === "") return [];
+
+  return splitCommaList(configured).length > 0 ? splitCommaList(configured) : defaultPrioritySiteNames;
+}
+
+function mergeMaigretSimpleReports(primaryReport: string, priorityReport: string) {
+  const primary = JSON.parse(primaryReport) as Record<string, unknown>;
+  const priority = JSON.parse(priorityReport) as Record<string, unknown>;
+  return JSON.stringify({ ...primary, ...priority });
 }
 
 async function runRemoteMaigretScan(input: CreateScanInput, options: MaigretRunOptions): Promise<MaigretRunOutput> {
@@ -177,12 +294,18 @@ export function maigretRecordToScanResult(
   record: MaigretReportRecord,
   purpose: CreateScanInput["purpose"]
 ): ScanResult | null {
-  const url = firstString(record.url_user, record.urlUser, record.url, nested(record.status, "site_url_user"));
-  if (!url) return null;
+  const rawUrl = firstString(record.url_user, record.urlUser, record.url, nested(record.status, "site_url_user"));
+  if (!rawUrl) return null;
 
   const tags = extractTags(record);
-  const platformUrl = firstString(record.url_main, nested(record.site, "urlMain"), nested(record.site, "url_main"), nested(record.site, "url"));
-  const category = inferCategory(siteName, url, tags);
+  const rawPlatformUrl = firstString(
+    record.url_main,
+    nested(record.site, "urlMain"),
+    nested(record.site, "url_main"),
+    nested(record.site, "url")
+  );
+  const normalizedPlatform = normalizeMaigretPlatform(siteName, rawUrl, rawPlatformUrl);
+  const category = inferCategory(normalizedPlatform.platform, normalizedPlatform.url, tags);
   const country = inferCountry(tags);
   const riskLevel = riskForMaigret(category, purpose);
   const profileImageUrl = firstString(
@@ -200,11 +323,11 @@ export function maigretRecordToScanResult(
   const httpStatus = firstNumber(record.http_status, record.httpStatus);
 
   return {
-    id: `maigret-${stableHash(`${siteName}:${url}`).toString(36)}`,
-    platform: siteName,
-    url,
-    platformUrl: platformUrl ?? undefined,
-    platformIconUrl: faviconUrlFor(platformUrl ?? url),
+    id: `maigret-${stableHash(`${siteName}:${normalizedPlatform.url}`).toString(36)}`,
+    platform: normalizedPlatform.platform,
+    url: normalizedPlatform.url,
+    platformUrl: normalizedPlatform.platformUrl ?? undefined,
+    platformIconUrl: faviconUrlFor(normalizedPlatform.platformUrl ?? normalizedPlatform.url),
     profileImageUrl: profileImageUrl ?? undefined,
     category,
     country,
@@ -215,6 +338,47 @@ export function maigretRecordToScanResult(
     rank: rank ?? undefined,
     httpStatus: httpStatus ?? undefined
   };
+}
+
+function normalizeMaigretPlatform(siteName: string, url: string, platformUrl: string | null) {
+  if (normalizeSiteName(siteName) === "twitter") {
+    return {
+      platform: "X",
+      url: rewriteTwitterUrl(url),
+      platformUrl: "https://x.com"
+    };
+  }
+
+  return {
+    platform: siteName,
+    url,
+    platformUrl
+  };
+}
+
+function rewriteTwitterUrl(value: string) {
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    if (host !== "twitter.com") return value;
+
+    parsed.protocol = "https:";
+    parsed.hostname = "x.com";
+    return parsed.toString().replace(/\/$/, "");
+  } catch {
+    return value;
+  }
+}
+
+function normalizeSiteName(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function splitCommaList(value: string | undefined) {
+  return String(value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function spawnMaigret(command: string, args: string[], timeoutMs: number): Promise<string> {

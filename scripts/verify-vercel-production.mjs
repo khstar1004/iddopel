@@ -156,6 +156,18 @@ export async function createVercelProductionReport({
         provider: order.body?.provider
       });
     }
+
+    const monitoringLocked = await requestJson("/api/monitoring", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ usernames: ["example-user"], purpose: "SELF_CHECK" })
+    });
+    addCheck(
+      report,
+      "monitoring registration is paywalled",
+      monitoringLocked.status === 402 && monitoringLocked.body?.error?.code === "MONITORING_PAYMENT_REQUIRED",
+      monitoringLocked
+    );
   } catch (error) {
     addCheck(report, "production verification request completed", false, {
       error: error instanceof Error ? error.message : String(error)

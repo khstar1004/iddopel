@@ -146,6 +146,7 @@ export function ReportPageClient() {
   const embeddedReportTitle = sourceReportUrl ? "원본 HTML 리포트" : "HTML 리포트";
   const insight = buildPaidReportInsight(report);
   const briefingText = buildExecutiveBriefing(report, insight);
+  const evidencePacket = buildEvidencePacket(report);
 
   async function copyBriefing() {
     try {
@@ -156,6 +157,25 @@ export function ReportPageClient() {
     }
     setBriefingCopied(true);
     window.setTimeout(() => setBriefingCopied(false), 1800);
+  }
+
+  function downloadEvidencePacket(format: "csv" | "json") {
+    const baseFilename = safeFilename(`${evidencePacket.username}-id-evidence-packet`);
+
+    if (format === "json") {
+      downloadTextFile(
+        `${baseFilename}.json`,
+        JSON.stringify(evidencePacket, null, 2),
+        "application/json;charset=utf-8"
+      );
+      return;
+    }
+
+    downloadTextFile(
+      `${baseFilename}.csv`,
+      evidencePacketToCsv(evidencePacket.results),
+      "text/csv;charset=utf-8"
+    );
   }
 
   return (
@@ -196,6 +216,7 @@ export function ReportPageClient() {
           </div>
           <PaidInsightBoard
             briefingCopied={briefingCopied}
+            onDownloadEvidence={downloadEvidencePacket}
             onCopyBriefing={copyBriefing}
             report={report}
             sourceReportUrl={sourceReportUrl}
@@ -256,11 +277,13 @@ export function ReportPageClient() {
 
 function PaidInsightBoard({
   briefingCopied,
+  onDownloadEvidence,
   onCopyBriefing,
   report,
   sourceReportUrl
 }: {
   briefingCopied: boolean;
+  onDownloadEvidence: (format: "csv" | "json") => void;
   onCopyBriefing: () => void;
   report: FullReportResponse;
   sourceReportUrl: string | null;
@@ -309,6 +332,27 @@ function PaidInsightBoard({
               <p>{signal.detail}</p>
             </article>
           ))}
+        </div>
+      </div>
+
+      <div className="paid-evidence-packet-panel" aria-label="증거 패킷">
+        <div>
+          <span className="paid-panel-kicker">Evidence packet</span>
+          <h3>증거 패킷</h3>
+          <p>
+            플랫폼, URL, 위험도, 조치 가이드를 구조화된 파일로 저장합니다. 정리 전후 비교,
+            고객센터 문의, 팀 공유에 바로 쓸 수 있는 유료 전용 내보내기입니다.
+          </p>
+        </div>
+        <div className="paid-evidence-packet-actions">
+          <button className="secondary-button" type="button" onClick={() => onDownloadEvidence("json")}>
+            <Download size={16} aria-hidden />
+            JSON 다운로드
+          </button>
+          <button className="ghost-button" type="button" onClick={() => onDownloadEvidence("csv")}>
+            <FileText size={16} aria-hidden />
+            CSV 다운로드
+          </button>
         </div>
       </div>
 
@@ -624,6 +668,77 @@ function buildMonthlyDigest(results: ScanResult[], riskScore: number, highRiskCo
 
 function exposureScoreFromSummary(summary: FullReportSummary | undefined, fallback: number) {
   return summary?.exposureScore ?? Math.min(99, Math.max(5, fallback));
+}
+
+function buildEvidencePacket(report: FullReportResponse) {
+  const username = report.summary?.username ?? report.scanId;
+
+  return {
+    generatedAt: new Date().toISOString(),
+    scanId: report.scanId,
+    username,
+    access: "paid-report",
+    summary: {
+      foundCount: report.summary?.foundCount ?? report.results.length,
+      checkedCount: report.summary?.checkedCount ?? report.results.length,
+      doppelgangerScore: report.summary?.doppelgangerScore ?? null,
+      exposureScore: report.summary?.exposureScore ?? null,
+      impersonationScore: report.summary?.impersonationScore ?? null,
+      cleanupScore: report.summary?.cleanupScore ?? null
+    },
+    results: report.results.map((result) => ({
+      platform: result.platform,
+      url: result.url,
+      category: categoryLabels[result.category] ?? result.category,
+      country: countryLabels[result.country] ?? result.country,
+      status: result.status,
+      riskLevel: riskLabels[result.riskLevel],
+      cleanupHint: result.cleanupHint,
+      evidence: hostnameFromUrl(result.url) || result.url,
+      tags: result.tags ?? []
+    }))
+  };
+}
+
+function evidencePacketToCsv(results: ReturnType<typeof buildEvidencePacket>["results"]) {
+  const header = ["platform", "url", "category", "country", "status", "riskLevel", "cleanupHint", "evidence", "tags"];
+  const rows = results.map((result) => [
+    result.platform,
+    result.url,
+    result.category,
+    result.country,
+    result.status,
+    result.riskLevel,
+    result.cleanupHint,
+    result.evidence,
+    result.tags.join("|")
+  ]);
+
+  return [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+}
+
+function csvCell(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
+}
+
+function downloadTextFile(filename: string, contents: string, mimeType: string) {
+  const blob = new Blob([contents], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function safeFilename(value: string) {
+  return value
+    .trim()
+    .replace(/[^a-zA-Z0-9가-힣._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    || "id-doppelganger-evidence-packet";
 }
 
 function countByRisk(results: ScanResult[]): Record<RiskLevel, number> {
