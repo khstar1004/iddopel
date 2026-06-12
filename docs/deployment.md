@@ -121,7 +121,7 @@ npm run vercel:db
 npm run vercel:db -- --execute
 ```
 
-The dry run shows the Marketplace Postgres provisioning command, production env pull, `vercel env run -e production -- npm run db:migrate`, production deploy, and `vercel:production` verification. It defaults to Neon on the free provider plan and can be adjusted with `--integration`, `--plan`, `--metadata`, or `--interactive-plan`. For the current free beta, run `npm run vercel:db -- --execute --skip-verify`; paid production should keep the final verification step enabled.
+The dry run shows the Marketplace Postgres provisioning command, production env pull, `vercel env run -e production -- npm run db:migrate`, production deploy, and `vercel:production` verification. It defaults to Neon on the free provider plan and can be adjusted with `--integration`, `--plan`, `--metadata`, or `--interactive-plan`. For the current free beta, set `VERCEL_TOKEN` in non-interactive shells and run `npm run vercel:db -- --execute --skip-verify`; paid production should keep the final verification step enabled.
 
 After each Vercel beta deployment, run the beta smoke. It verifies security headers, policy pages, sitemap/robots/manifest, the real scan path, beta inline report rendering, and product-branded embedded source reports:
 

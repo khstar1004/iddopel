@@ -110,6 +110,7 @@ export function createVercelPostgresSetupPlan({
     notes: [
       "Vercel Marketplace storage is available on all Vercel plans; the provider plan still depends on the selected integration.",
       "The default provider plan is free. Use --plan to choose another plan or --interactive-plan to let Vercel prompt for one.",
+      "For non-interactive execution, set VERCEL_TOKEN in the shell before using --execute.",
       "Run the generated plan with --execute only after confirming the selected Marketplace provider and plan.",
       "The migration step uses vercel env run so database credentials stay in Vercel environment storage."
     ]

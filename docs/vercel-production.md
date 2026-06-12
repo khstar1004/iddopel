@@ -20,6 +20,8 @@ The default plan is a dry run. It prints the exact sequence before touching Verc
 5. `vercel deploy --prod`.
 6. `vercel env run -e production -- npm run vercel:production`.
 
+In non-interactive terminals, set `VERCEL_TOKEN` before using `--execute`. Vercel CLI also supports `--token`, but the environment variable keeps the token out of generated command text.
+
 Useful variants:
 
 ```bash
