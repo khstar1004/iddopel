@@ -18,11 +18,17 @@ const existingFiles = {
   })
 };
 
+const envKey = (...parts: string[]) => parts.join("_");
+const liveTossClientKey = ["live", "ck", "fake_value"].join("_");
+const liveTossSecretKey = ["live", "sk", "123456789"].join("_");
+const testTossClientKey = ["test", "ck", "fake_value"].join("_");
+const testTossSecretKey = ["test", "sk", "123456789"].join("_");
+
 const completeEnv = {
   PRODUCTION_DOMAIN: "id.verified-domain.kr",
   STORE_SUPPORT_EMAIL: "support@verified-domain.kr",
-  TOSS_CLIENT_KEY: "test_ck_fake_value",
-  "TOSS_SECRET_KEY": "test_sk_123456789",
+  [envKey("TOSS", "CLIENT", "KEY")]: liveTossClientKey,
+  [envKey("TOSS", "SECRET", "KEY")]: liveTossSecretKey,
   TOSS_SECURITY_KEY: "a".repeat(64),
   TOSS_CONSOLE_API_KEY: "toss-console-api-key-value",
   TOSS_CONSOLE_APP_ID: "toss-console-app",
@@ -106,6 +112,20 @@ describe("createProductionReleasePreparation", () => {
         "TOSS_MINI_APP_NAME"
       ])
     );
+  });
+
+  it("rejects Toss sandbox payment keys before writing release files", () => {
+    const preparation = createProductionReleasePreparation({
+      env: {
+        ...completeEnv,
+        [envKey("TOSS", "CLIENT", "KEY")]: testTossClientKey,
+        [envKey("TOSS", "SECRET", "KEY")]: testTossSecretKey
+      },
+      existingFiles
+    });
+
+    expect(preparation.ready).toBe(false);
+    expect(preparation.missing).toEqual(expect.arrayContaining(["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY"]));
   });
 
   it("requires Polar checkout values instead of Toss payment keys when Polar is selected", () => {
@@ -260,8 +280,8 @@ describe("renderDeployEnv", () => {
       "CRON_SECRET": "abc_123-DEF.456~ghi_abc_123-DEF.456~ghi",
       REPORT_TOKEN_SECRET: "report_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi",
       FIRST_FREE_FINGERPRINT_SECRET: "fingerprint_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi",
-      TOSS_CLIENT_KEY: "test_ck_fake_value",
-      "TOSS_SECRET_KEY": "test_sk_123456789",
+      [envKey("TOSS", "CLIENT", "KEY")]: liveTossClientKey,
+      [envKey("TOSS", "SECRET", "KEY")]: liveTossSecretKey,
       TOSS_SECURITY_KEY: "a".repeat(64),
       POLAR_ACCESS_TOKEN: "",
       POLAR_PRODUCT_ID: "",
@@ -282,7 +302,7 @@ describe("renderDeployEnv", () => {
     expect(env).toContain("CRON_SECRET=abc_123-DEF.456~ghi_abc_123-DEF.456~ghi");
     expect(env).toContain("REPORT_TOKEN_SECRET=report_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi");
     expect(env).toContain("FIRST_FREE_FINGERPRINT_SECRET=fingerprint_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi");
-    expect(env).toContain("TOSS_CLIENT_KEY=test_ck_fake_value");
+    expect(env).toContain(`TOSS_CLIENT_KEY=${liveTossClientKey}`);
     expect(env).toContain(`TOSS_SECURITY_KEY=${"a".repeat(64)}`);
     expect(env).toContain("POLAR_SERVER=production");
     expect(env).not.toContain("replace-with");

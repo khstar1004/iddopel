@@ -37,6 +37,14 @@ function isStrongSecret(value) {
   return value.length >= 32 && !hasPlaceholder(value);
 }
 
+function isLiveTossClientKey(value) {
+  return /^live_ck_/.test(value) && !hasPlaceholder(value);
+}
+
+function isLiveTossSecretKey(value) {
+  return /^live_sk_/.test(value) && !hasPlaceholder(value);
+}
+
 export async function createProductionConfigReport({ envValues = process.env, runRuntimeChecks: shouldRunRuntimeChecks = true } = {}) {
   const checks = [];
   const warnings = [];
@@ -73,8 +81,8 @@ export async function createProductionConfigReport({ envValues = process.env, ru
   addCheck("Web detailed report paywall enabled", env("WEB_DETAILED_REPORT_PAYWALL_ENABLED") === "true", "Set WEB_DETAILED_REPORT_PAYWALL_ENABLED=true so detailed reports require checkout.");
   addCheck("Monthly monitoring paywall enabled", env("MONITORING_PAYWALL_ENABLED") === "true", "Set MONITORING_PAYWALL_ENABLED=true so monthly monitoring requires checkout.");
   if (paymentProvider === "toss") {
-    addCheck("Toss client key is configured", /^test_ck_|^live_ck_/.test(env("TOSS_CLIENT_KEY")), "Set the Toss Payments client key in the deployment secret manager.");
-    addCheck("Toss secret is configured", env("TOSS_SECRET_KEY").length >= 12, "Set a Toss Payments secret key in the deployment secret manager.");
+    addCheck("Toss live client key is configured", isLiveTossClientKey(env("TOSS_CLIENT_KEY")), "Set a live Toss Payments client key in the deployment secret manager.");
+    addCheck("Toss live secret key is configured", isLiveTossSecretKey(env("TOSS_SECRET_KEY")), "Set a live Toss Payments secret key in the deployment secret manager.");
     addCheck("Toss security key is configured", /^[a-f0-9]{64}$/i.test(env("TOSS_SECURITY_KEY")), "Set the Toss Payments security key in the deployment secret manager.");
   }
   if (paymentProvider === "polar") {

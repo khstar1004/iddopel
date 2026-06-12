@@ -81,7 +81,7 @@ npm run toss:verify
 TOSS_RELEASE_CHECK=true npm run toss:verify
 ```
 
-Local verification checks the `/toss` route, review-safe copy, policy links, CORS allowlist implementation, checkout CSP hosts, and environment template. Release verification additionally requires the Toss console API key, console app id, mini-app name, production HTTPS `SITE_URL`, a live `PAYMENT_PROVIDER`, and review scenario values. Toss Payments keys are required only when `PAYMENT_PROVIDER=toss`; with `PAYMENT_PROVIDER=polar`, confirm the external checkout policy during Toss review.
+Local verification checks the `/toss` route, review-safe copy, policy links, CORS allowlist implementation, checkout CSP hosts, and environment template. Release verification additionally requires the Toss console API key, console app id, mini-app name, production HTTPS `SITE_URL`, a live `PAYMENT_PROVIDER`, and review scenario values. Toss Payments live keys, `live_ck_...` and `live_sk_...`, are required only when `PAYMENT_PROVIDER=toss`; with `PAYMENT_PROVIDER=polar`, confirm the external checkout policy during Toss review.
 
 ## Sources
 - App-in-Toss SDK overview: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0/intro.html

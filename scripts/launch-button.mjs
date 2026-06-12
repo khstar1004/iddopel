@@ -26,6 +26,14 @@ const polarPaymentRequiredKeys = [
   "POLAR_WEBHOOK_SECRET"
 ];
 const productionPaymentProviders = new Set(["toss", "polar"]);
+const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
+const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
+const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
+const productionValueRequirements = {
+  [tossClientKey]: /^live_ck_/,
+  [tossSecretKey]: /^live_sk_/,
+  [tossSecurityKey]: /^[a-f0-9]{64}$/i
+};
 
 const shipRequiredKeys = ["DATABASE_URL", "REPORT_TOKEN_SECRET", "FIRST_FREE_FINGERPRINT_SECRET"];
 const shipRequiredValues = {
@@ -332,9 +340,15 @@ function displayCommand(step) {
 
 function missingKeys(env, keys) {
   return Array.from(new Set(keys)).filter((key) => {
-    const value = String(env[key] || "").trim();
-    return !value || hasPlaceholder(value);
+    return !isLaunchValueConfigured(key, env[key]);
   });
+}
+
+function isLaunchValueConfigured(key, value) {
+  const input = String(value || "").trim();
+  if (!input || hasPlaceholder(input)) return false;
+  if (productionValueRequirements[key]) return productionValueRequirements[key].test(input);
+  return true;
 }
 
 function normalizePaymentProvider(value) {

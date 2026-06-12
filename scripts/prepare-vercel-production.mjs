@@ -63,6 +63,9 @@ const polarPaymentKeys = [
   "POLAR_WEBHOOK_SECRET",
   "POLAR_SERVER"
 ];
+const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
+const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
+const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
 
 const mobileStoreKeys = [
   "APPLE_BUNDLE_ID",
@@ -106,6 +109,12 @@ const productionExpectedValues = {
   NEXT_PUBLIC_TELEMETRY_DISABLED: "false",
   ALERT_WEBHOOK_TIMEOUT_MS: "1500",
   APPLE_ENVIRONMENT: "production"
+};
+
+const productionValueRequirements = {
+  [tossClientKey]: /^live_ck_/,
+  [tossSecretKey]: /^live_sk_/,
+  [tossSecurityKey]: /^[a-f0-9]{64}$/i
 };
 
 export function createVercelProductionPreparation({
@@ -248,6 +257,7 @@ function isEntryConfigured(key, value, expectedValue, required) {
   if (!required) return isConfiguredValue(value);
   if (!isConfiguredValue(value)) return false;
   if (expectedValue) return String(value) === expectedValue;
+  if (productionValueRequirements[key]) return productionValueRequirements[key].test(String(value).trim());
   return true;
 }
 

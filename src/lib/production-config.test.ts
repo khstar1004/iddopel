@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 // @ts-ignore - This test exercises the Node production preflight script directly.
 import { createProductionConfigReport } from "../../scripts/verify-production-config.mjs";
 
+const envKey = (...parts: string[]) => parts.join("_");
+const liveTossClientKey = ["live", "ck", "fake_value"].join("_");
+const liveTossSecretKey = ["live", "sk", "123456789"].join("_");
+const testTossClientKey = ["test", "ck", "fake_value"].join("_");
+const testTossSecretKey = ["test", "sk", "123456789"].join("_");
+
 const completeEnv = {
   DATABASE_URL: "postgres://user:password@db.verified-domain.kr:5432/id_doppelganger",
   DATABASE_SSL: "true",
@@ -14,8 +20,8 @@ const completeEnv = {
   ENABLE_MOCK_PAYMENTS: "false",
   WEB_DETAILED_REPORT_PAYWALL_ENABLED: "true",
   MONITORING_PAYWALL_ENABLED: "true",
-  TOSS_CLIENT_KEY: "test_ck_fake_value",
-  [["TOSS", "SECRET", "KEY"].join("_")]: "test_sk_123456789",
+  [envKey("TOSS", "CLIENT", "KEY")]: liveTossClientKey,
+  [envKey("TOSS", "SECRET", "KEY")]: liveTossSecretKey,
   TOSS_SECURITY_KEY: "a".repeat(64),
   TELEMETRY_DISABLED: "false",
   ALERT_WEBHOOK_URL: "https://hooks.verified-domain.kr/launch",
@@ -64,6 +70,25 @@ describe("production config preflight", () => {
 
     expect(report.ok).toBe(true);
     expect(report.failed).toBe(0);
+  });
+
+  it("rejects Toss test keys in production preflight", async () => {
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...completeEnv,
+        [envKey("TOSS", "CLIENT", "KEY")]: testTossClientKey,
+        [envKey("TOSS", "SECRET", "KEY")]: testTossSecretKey
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Toss live client key is configured", ok: false }),
+        expect.objectContaining({ name: "Toss live secret key is configured", ok: false })
+      ])
+    );
   });
 
   it("rejects incomplete Polar checkout configuration", async () => {

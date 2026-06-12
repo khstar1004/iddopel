@@ -48,8 +48,8 @@ PRODUCTION_DOMAIN="your-domain.example" \
 STORE_SUPPORT_EMAIL="support@your-domain.example" \
 DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" \
 CRON_SECRET="your-32-plus-character-random-secret" \
-TOSS_CLIENT_KEY="your-toss-client-key" \
-TOSS_SECRET_KEY="your-toss-secret-key" \
+TOSS_CLIENT_KEY="your-live-toss-client-key" \
+TOSS_SECRET_KEY="your-live-toss-secret-key" \
 TOSS_SECURITY_KEY="your-toss-security-key" \
 TOSS_CONSOLE_API_KEY="your-toss-console-api-key" \
 TOSS_CONSOLE_APP_ID="your-toss-console-app-id" \
@@ -145,8 +145,8 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `PAYMENT_PROVIDER`: `toss` or `polar` for live web checkout
 - `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` only for a free beta; set `true` after live checkout is ready to require checkout for detailed web reports
 - `MONITORING_PAYWALL_ENABLED`: keep `false` only for a free beta; set `true` after the monthly monitoring checkout product is ready
-- `TOSS_CLIENT_KEY`: Toss Payments client key, required when `PAYMENT_PROVIDER=toss`
-- `TOSS_SECRET_KEY`: Toss Payments API secret key, required when `PAYMENT_PROVIDER=toss`
+- `TOSS_CLIENT_KEY`: Toss Payments live client key starting with `live_ck_`, required when `PAYMENT_PROVIDER=toss`
+- `TOSS_SECRET_KEY`: Toss Payments live API secret key starting with `live_sk_`, required when `PAYMENT_PROVIDER=toss`
 - `TOSS_SECURITY_KEY`: Toss Payments 64-character security key, required when `PAYMENT_PROVIDER=toss`
 - `POLAR_ACCESS_TOKEN`: Polar organization access token, required when `PAYMENT_PROVIDER=polar`
 - `POLAR_PRODUCT_ID`: Polar detailed-report product id, required when `PAYMENT_PROVIDER=polar`

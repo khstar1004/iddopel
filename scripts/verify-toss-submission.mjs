@@ -94,8 +94,8 @@ export function createTossSubmissionReport({ files, packageJson, env = process.e
     addReleaseCheck("Env SITE_URL", isHttpsUrl(value(env, "SITE_URL")), "Set SITE_URL to the production HTTPS origin.");
     addReleaseCheck("Env PAYMENT_PROVIDER", ["toss", "polar"].includes(paymentProvider), "Set PAYMENT_PROVIDER=toss or PAYMENT_PROVIDER=polar for live checkout.");
     if (paymentProvider === "toss") {
-      addReleaseCheck("Env TOSS_CLIENT_KEY", /^test_ck_|^live_ck_/.test(value(env, "TOSS_CLIENT_KEY")), "Set the Toss Payments client key.");
-      addReleaseCheck("Env TOSS_SECRET_KEY", value(env, "TOSS_SECRET_KEY").length >= 12, "Set the Toss Payments secret key.");
+      addReleaseCheck("Env TOSS_CLIENT_KEY", isLiveTossClientKey(value(env, "TOSS_CLIENT_KEY")), "Set the live Toss Payments client key.");
+      addReleaseCheck("Env TOSS_SECRET_KEY", isLiveTossSecretKey(value(env, "TOSS_SECRET_KEY")), "Set the live Toss Payments secret key.");
       addReleaseCheck("Env TOSS_SECURITY_KEY", /^[a-f0-9]{64}$/i.test(value(env, "TOSS_SECURITY_KEY")), "Set the 64-character Toss Payments security key.");
     } else if (paymentProvider === "polar") {
       warnings.push({
@@ -159,6 +159,14 @@ function text(files, file) {
 
 function value(env, key) {
   return env[key]?.trim() ?? "";
+}
+
+function isLiveTossClientKey(input) {
+  return /^live_ck_/.test(input);
+}
+
+function isLiveTossSecretKey(input) {
+  return /^live_sk_/.test(input);
 }
 
 function isHttpsUrl(input) {

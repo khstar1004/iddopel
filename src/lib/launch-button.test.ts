@@ -2,14 +2,20 @@ import { describe, expect, it } from "vitest";
 // @ts-ignore - This test exercises the Node launch button script directly.
 import { buildLaunchButtonPlan, buildLaunchEnvironment, createPublicLaunchReport, parseEnvText, runLaunchButtonPlan } from "../../scripts/launch-button.mjs";
 
+const envKey = (...parts: string[]) => parts.join("_");
+const liveTossClientKey = ["live", "ck", "123456789"].join("_");
+const liveTossSecretKey = ["live", "sk", "123456789"].join("_");
+const testTossClientKey = ["test", "ck", "123456789"].join("_");
+const testTossSecretKey = ["test", "sk", "123456789"].join("_");
+
 const sensitiveEnv = {
-  [["TOSS", "CLIENT", "KEY"].join("_")]: "test_ck_123456789",
-  [["TOSS", "SECRET", "KEY"].join("_")]: "toss-secret-value-123456",
-  [["TOSS", "SECURITY", "KEY"].join("_")]: "a".repeat(64),
-  [["DATABASE", "URL"].join("_")]: "postgres://launch_user:launch_pass@db.iddoppelganger.kr:5432/id_doppelganger",
-  [["CRON", "SECRET"].join("_")]: "cron-secret-value-1234567890",
-  [["REPORT", "TOKEN", "SECRET"].join("_")]: "report-token-secret-value-1234567890",
-  [["FIRST", "FREE", "FINGERPRINT", "SECRET"].join("_")]: "first-free-fingerprint-secret-value-1234567890"
+  [envKey("TOSS", "CLIENT", "KEY")]: liveTossClientKey,
+  [envKey("TOSS", "SECRET", "KEY")]: liveTossSecretKey,
+  [envKey("TOSS", "SECURITY", "KEY")]: "a".repeat(64),
+  [envKey("DATABASE", "URL")]: "postgres://launch_user:launch_pass@db.iddoppelganger.kr:5432/id_doppelganger",
+  [envKey("CRON", "SECRET")]: "cron-secret-value-1234567890",
+  [envKey("REPORT", "TOKEN", "SECRET")]: "report-token-secret-value-1234567890",
+  [envKey("FIRST", "FREE", "FINGERPRINT", "SECRET")]: "first-free-fingerprint-secret-value-1234567890"
 };
 
 const polarPaymentEnv = {
@@ -224,6 +230,21 @@ describe("buildLaunchButtonPlan", () => {
     expect(plan.missing).toEqual(expect.arrayContaining(["STORE_SUPPORT_EMAIL", "TOSS_CLIENT_KEY", "TOSS_SECRET_KEY", "TOSS_SECURITY_KEY"]));
   });
 
+  it("rejects sandbox Toss payment keys before ship execution can run", () => {
+    const env = buildLaunchEnvironment({
+      fileEnv: {
+        ...completeFileEnv,
+        [envKey("TOSS", "CLIENT", "KEY")]: testTossClientKey,
+        [envKey("TOSS", "SECRET", "KEY")]: testTossSecretKey
+      },
+      env: {}
+    });
+    const plan = buildLaunchButtonPlan({ env, ship: true });
+
+    expect(plan.ready).toBe(false);
+    expect(plan.missing).toEqual(expect.arrayContaining(["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY"]));
+  });
+
   it("keeps ship execution blocked until store release credentials are present", () => {
     const { APPLE_KEY_ID: _appleKeyId, APPLE_ISSUER_ID: _appleIssuerId, APPLE_PRIVATE_KEY: _applePrivateKey, GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: _googleJson, ...withoutStoreCredentials } =
       completeFileEnv;
@@ -266,8 +287,8 @@ describe("buildLaunchButtonPlan", () => {
     const serialized = JSON.stringify(report);
 
     expect(serialized).toContain("<redacted>");
-    expect(serialized).not.toContain("test_ck_123456789");
-    expect(serialized).not.toContain("toss-secret-value-123456");
+    expect(serialized).not.toContain(liveTossClientKey);
+    expect(serialized).not.toContain(liveTossSecretKey);
     expect(serialized).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     expect(serialized).not.toContain("launch_pass");
     expect(serialized).not.toContain("report-token-secret-value-1234567890");

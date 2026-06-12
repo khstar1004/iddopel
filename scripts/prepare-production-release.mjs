@@ -32,6 +32,14 @@ const polarPaymentRequiredValues = [
   "POLAR_WEBHOOK_SECRET"
 ];
 const productionPaymentProviders = new Set(["toss", "polar"]);
+const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
+const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
+const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
+const productionValueRequirements = {
+  [tossClientKey]: /^live_ck_/,
+  [tossSecretKey]: /^live_sk_/,
+  [tossSecurityKey]: /^[a-f0-9]{64}$/i
+};
 
 export function normalizeProductionOrigin(value) {
   const rawValue = String(value || "").trim();
@@ -149,12 +157,7 @@ export function createProductionReleasePreparation({ env = {}, existingFiles = {
   }
 
   for (const requirement of requiredExternalValuesForProvider(paymentProvider)) {
-    const [key, expectedValue] = requirement.split("=");
-    if (expectedValue) {
-      if (env[key] !== expectedValue) {
-        missing.push(requirement);
-      }
-    } else if (!String(env[key] || "").trim() || hasPlaceholder(env[key])) {
+    if (!isRequirementConfigured(env, requirement)) {
       missing.push(requirement);
     }
   }
@@ -379,6 +382,16 @@ function requiredExternalValuesForProvider(paymentProvider) {
     paymentProvider === "toss" ? tossPaymentRequiredValues :
     [];
   return [...commonRequiredExternalValues, ...paymentValues];
+}
+
+function isRequirementConfigured(env, requirement) {
+  const [key, expectedValue] = requirement.split("=");
+  const value = String(env[key] || "").trim();
+
+  if (expectedValue) return env[key] === expectedValue;
+  if (!value || hasPlaceholder(value)) return false;
+  if (productionValueRequirements[key]) return productionValueRequirements[key].test(value);
+  return true;
 }
 
 function parseJsonFile(existingFiles, path) {

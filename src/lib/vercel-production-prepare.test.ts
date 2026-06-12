@@ -4,6 +4,10 @@ import { createVercelProductionPreparation, renderVercelProductionRunbook } from
 
 const strongSecret = "1234567890abcdef1234567890abcdef";
 const envKey = (...parts: string[]) => parts.join("_");
+const liveTossClientKey = ["live", "ck", "fake_value"].join("_");
+const liveTossSecretKey = ["live", "sk", "fake_value"].join("_");
+const testTossClientKey = ["test", "ck", "fake_value"].join("_");
+const testTossSecretKey = ["test", "sk", "fake_value"].join("_");
 
 const completeTossEnv = {
   PRODUCTION_DOMAIN: "iddopel.vercel.app",
@@ -15,8 +19,8 @@ const completeTossEnv = {
   [envKey("FIRST", "FREE", "FINGERPRINT", "SECRET")]: `${strongSecret}b`,
   [envKey("MAIGRET", "API", "SECRET")]: `${strongSecret}maigret`,
   PAYMENT_PROVIDER: "toss",
-  [envKey("TOSS", "CLIENT", "KEY")]: "fake-toss-client-key",
-  [envKey("TOSS", "SECRET", "KEY")]: "fake-toss-secret-value",
+  [envKey("TOSS", "CLIENT", "KEY")]: liveTossClientKey,
+  [envKey("TOSS", "SECRET", "KEY")]: liveTossSecretKey,
   [envKey("TOSS", "SECURITY", "KEY")]: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   [envKey("TOSS", "CONSOLE", "API", "KEY")]: "fake-toss-console-api-key",
   TOSS_CONSOLE_APP_ID: "toss-console-app-id",
@@ -82,6 +86,20 @@ describe("prepare Vercel production env", () => {
 
     expect(plan.ready).toBe(false);
     expect(plan.missing).toEqual(expect.arrayContaining(["TOSS_SECRET_KEY", "TOSS_SECURITY_KEY"]));
+  });
+
+  it("rejects Toss sandbox payment keys for Vercel production", () => {
+    const plan = createVercelProductionPreparation({
+      fileEnv: {
+        ...completeTossEnv,
+        [envKey("TOSS", "CLIENT", "KEY")]: testTossClientKey,
+        [envKey("TOSS", "SECRET", "KEY")]: testTossSecretKey
+      },
+      env: {}
+    });
+
+    expect(plan.ready).toBe(false);
+    expect(plan.missing).toEqual(expect.arrayContaining(["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY"]));
   });
 
   it("requires Polar keys instead of Toss payment keys when Polar is selected", () => {

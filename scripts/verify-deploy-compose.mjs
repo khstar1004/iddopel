@@ -166,8 +166,8 @@ function validateEnvShape(values) {
     );
     addCheck("Postgres password is strong", (values.POSTGRES_PASSWORD ?? "").length >= 24 && !hasPlaceholder(values.POSTGRES_PASSWORD), "Use a strong random Postgres password.");
     if (paymentProvider === "toss") {
-      addCheck("Toss client key configured", /^test_ck_|^live_ck_/.test(values.TOSS_CLIENT_KEY ?? ""), "Set the Toss Payments client key.");
-      addCheck("Toss secret configured", (values.TOSS_SECRET_KEY ?? "").length >= 12 && !hasPlaceholder(values.TOSS_SECRET_KEY), "Set the production Toss secret key.");
+      addCheck("Toss live client key configured", isLiveTossClientKey(values.TOSS_CLIENT_KEY), "Set the live Toss Payments client key.");
+      addCheck("Toss live secret configured", isLiveTossSecretKey(values.TOSS_SECRET_KEY), "Set the live Toss Payments secret key.");
       addCheck("Toss security key configured", /^[a-f0-9]{64}$/i.test(values.TOSS_SECURITY_KEY ?? ""), "Set the 64-character Toss Payments security key.");
     }
     if (paymentProvider === "polar") {
@@ -265,6 +265,14 @@ function hasEnvKey(values, key) {
 
 function isStrongSecret(value = "") {
   return value.length >= 32 && !hasPlaceholder(value);
+}
+
+function isLiveTossClientKey(value = "") {
+  return /^live_ck_/.test(value) && !hasPlaceholder(value);
+}
+
+function isLiveTossSecretKey(value = "") {
+  return /^live_sk_/.test(value) && !hasPlaceholder(value);
 }
 
 function hasFinalTossOrigins(value = "") {
