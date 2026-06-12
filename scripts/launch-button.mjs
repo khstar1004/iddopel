@@ -74,7 +74,15 @@ const publicLaunchEnvKeys = new Set([
   "MAIGRET_TOP_SITES_DEEP",
   "MAIGRET_DEEP_ALL",
   "MAIGRET_SITE_TIMEOUT_SECONDS",
+  "MAIGRET_RETRIES",
   "MAIGRET_PROCESS_TIMEOUT_MS",
+  "MAIGRET_MAX_CONNECTIONS",
+  "MAIGRET_PRIORITY_SITES",
+  "MAIGRET_BOOST_TAGS",
+  "MAIGRET_EXCLUDED_SITES",
+  "MAIGRET_SITE_CAP_QUICK",
+  "MAIGRET_SITE_CAP_DEEP",
+  "MAIGRET_EXTRACT_EXTENDED",
   "PAYMENT_PROVIDER",
   "ENABLE_MOCK_PAYMENTS",
   "WEB_DETAILED_REPORT_PAYWALL_ENABLED",
@@ -182,6 +190,20 @@ export function buildLaunchEnvironment({ fileEnv = {}, env = {} } = {}) {
   }
 
   merged.SCAN_PROVIDER ||= "maigret";
+  merged.MAIGRET_BIN ||= "maigret";
+  merged.MAIGRET_TOP_SITES_QUICK ||= "35";
+  merged.MAIGRET_TOP_SITES_DEEP ||= "150";
+  merged.MAIGRET_DEEP_ALL ||= "false";
+  merged.MAIGRET_SITE_TIMEOUT_SECONDS ||= "6";
+  merged.MAIGRET_RETRIES ||= "1";
+  merged.MAIGRET_PROCESS_TIMEOUT_MS ||= "58000";
+  merged.MAIGRET_MAX_CONNECTIONS ||= "20";
+  merged.MAIGRET_PRIORITY_SITES ||= "Instagram,Twitter,Threads,TikTok,YouTube,Facebook,LinkedIn,Naver,GitHub,GitHubGist,Reddit";
+  merged.MAIGRET_BOOST_TAGS ||= "kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8";
+  merged.MAIGRET_EXCLUDED_SITES ||= "Geeksfor Geeks";
+  merged.MAIGRET_SITE_CAP_QUICK ||= "155";
+  merged.MAIGRET_SITE_CAP_DEEP ||= "260";
+  merged.MAIGRET_EXTRACT_EXTENDED ||= "false";
   merged.PAYMENT_PROVIDER = normalizePaymentProvider(merged.PAYMENT_PROVIDER);
   merged.ENABLE_MOCK_PAYMENTS ||= "false";
   merged.WEB_DETAILED_REPORT_PAYWALL_ENABLED ||= "false";

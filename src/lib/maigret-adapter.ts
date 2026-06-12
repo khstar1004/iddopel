@@ -82,13 +82,18 @@ const defaultPrioritySiteNames = [
   "Reddit"
 ];
 const defaultBoostTagSpecs: MaigretBoostTagSpec[] = [
-  { tag: "kr", limit: 25 },
-  { tag: "social", limit: 25 },
-  { tag: "photo", limit: 12 },
-  { tag: "video", limit: 12 },
-  { tag: "blog", limit: 15 },
-  { tag: "coding", limit: 15 }
+  { tag: "kr", limit: 30 },
+  { tag: "social", limit: 35 },
+  { tag: "photo", limit: 16 },
+  { tag: "video", limit: 16 },
+  { tag: "blog", limit: 20 },
+  { tag: "coding", limit: 20 },
+  { tag: "music", limit: 10 },
+  { tag: "design", limit: 10 },
+  { tag: "streaming", limit: 8 },
+  { tag: "messaging", limit: 8 }
 ];
+const defaultExcludedSiteNames = ["Geeksfor Geeks"];
 
 interface MaigretBoostTagSpec {
   tag: string;
@@ -102,9 +107,9 @@ export async function runMaigretScan(input: CreateScanInput, options: MaigretRun
 
   const command = process.env.MAIGRET_BIN || "maigret";
   const topSites = resolveTopSites(input.mode ?? "QUICK");
-  const timeoutSeconds = Number(process.env.MAIGRET_SITE_TIMEOUT_SECONDS || "12");
-  const processTimeoutMs = Number(process.env.MAIGRET_PROCESS_TIMEOUT_MS || "120000");
-  const maxConnections = Number(process.env.MAIGRET_MAX_CONNECTIONS || "40");
+  const timeoutSeconds = Number(process.env.MAIGRET_SITE_TIMEOUT_SECONDS || "6");
+  const processTimeoutMs = Number(process.env.MAIGRET_PROCESS_TIMEOUT_MS || "58000");
+  const maxConnections = Number(process.env.MAIGRET_MAX_CONNECTIONS || "20");
   const retries = Number(process.env.MAIGRET_RETRIES || "1");
   const primary = await runMaigretCli(command, input, {
     processTimeoutMs,
@@ -267,6 +272,14 @@ export function resolveBoostTagSpecs(): MaigretBoostTagSpec[] {
   return parsed.length > 0 ? parsed : defaultBoostTagSpecs;
 }
 
+export function resolveExcludedSiteNames() {
+  const configured = process.env.MAIGRET_EXCLUDED_SITES;
+  if (configured === "") return [];
+
+  const parsed = splitCommaList(configured);
+  return parsed.length > 0 ? parsed : defaultExcludedSiteNames;
+}
+
 function resolveBoostTagCliScope() {
   const specs = resolveBoostTagSpecs();
   return {
@@ -338,6 +351,7 @@ export function parseMaigretSimpleReport(report: string, input: Pick<CreateScanI
 
   return dedupeScanResults(
     Object.entries(parsed)
+      .filter(([siteName]) => !shouldExcludeMaigretSite(siteName))
       .map(([siteName, record]) => maigretRecordToScanResult(siteName, record, input.purpose))
       .filter((result): result is ScanResult => Boolean(result))
   );
@@ -453,6 +467,11 @@ function dedupeScanResults(results: ScanResult[]) {
   });
 }
 
+function shouldExcludeMaigretSite(siteName: string) {
+  const excluded = new Set(resolveExcludedSiteNames().map(normalizeSiteName));
+  return excluded.has(normalizeSiteName(siteName));
+}
+
 function rewriteTwitterUrl(value: string) {
   try {
     const parsed = new URL(value);
@@ -554,10 +573,10 @@ async function readMaigretHtmlReport(folder: string): Promise<MaigretReportArtif
 
 function resolveTopSites(mode: CreateScanInput["mode"]): number {
   if (mode === "DEEP") {
-    return Number(process.env.MAIGRET_TOP_SITES_DEEP || "500");
+    return Number(process.env.MAIGRET_TOP_SITES_DEEP || "150");
   }
 
-  return Number(process.env.MAIGRET_TOP_SITES_QUICK || "100");
+  return Number(process.env.MAIGRET_TOP_SITES_QUICK || "35");
 }
 
 function extractCheckedCount(output: string, fallback: number): number {

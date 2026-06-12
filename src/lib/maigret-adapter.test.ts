@@ -4,6 +4,7 @@ import {
   maigretRecordToScanResult,
   parseMaigretSimpleReport,
   resolveBoostTagSpecs,
+  resolveExcludedSiteNames,
   resolvePrioritySiteNames,
   runMaigretScan
 } from "./maigret-adapter";
@@ -127,6 +128,29 @@ describe("parseMaigretSimpleReport", () => {
       category: "SNS"
     });
   });
+
+  it("filters known noisy Maigret sites before exposing results", () => {
+    const report = JSON.stringify({
+      "Geeksfor Geeks": {
+        username: "zzzxqnotreal88271",
+        url_user: "https://auth.geeksforgeeks.org/user/zzzxqnotreal88271",
+        site: {
+          tags: ["coding"]
+        }
+      },
+      GitHub: {
+        username: "realdev",
+        url_user: "https://github.com/realdev",
+        site: {
+          tags: ["coding"]
+        }
+      }
+    });
+
+    expect(parseMaigretSimpleReport(report, { purpose: "SELF_CHECK" }).map((result) => result.platform)).toEqual([
+      "GitHub"
+    ]);
+  });
 });
 
 describe("maigretRecordToScanResult", () => {
@@ -147,10 +171,12 @@ describe("maigretRecordToScanResult", () => {
 describe("Maigret CLI quality options", () => {
   const originalPrioritySites = process.env.MAIGRET_PRIORITY_SITES;
   const originalBoostTags = process.env.MAIGRET_BOOST_TAGS;
+  const originalExcludedSites = process.env.MAIGRET_EXCLUDED_SITES;
 
   afterEach(() => {
     restoreEnv("MAIGRET_PRIORITY_SITES", originalPrioritySites);
     restoreEnv("MAIGRET_BOOST_TAGS", originalBoostTags);
+    restoreEnv("MAIGRET_EXCLUDED_SITES", originalExcludedSites);
   });
 
   it("keeps high-demand social platforms in the priority scan scope", () => {
@@ -176,27 +202,50 @@ describe("Maigret CLI quality options", () => {
   });
 
   it("adds a tag-scoped boost scan for Korean, social, creator, and developer coverage", () => {
-    process.env.MAIGRET_BOOST_TAGS = "kr:25,social:25,photo:12,video:12,blog:15,coding:15";
+    process.env.MAIGRET_BOOST_TAGS =
+      "kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8";
 
     expect(resolveBoostTagSpecs()).toEqual([
-      { tag: "kr", limit: 25 },
-      { tag: "social", limit: 25 },
-      { tag: "photo", limit: 12 },
-      { tag: "video", limit: 12 },
-      { tag: "blog", limit: 15 },
-      { tag: "coding", limit: 15 }
+      { tag: "kr", limit: 30 },
+      { tag: "social", limit: 35 },
+      { tag: "photo", limit: 16 },
+      { tag: "video", limit: 16 },
+      { tag: "blog", limit: 20 },
+      { tag: "coding", limit: 20 },
+      { tag: "music", limit: 10 },
+      { tag: "design", limit: 10 },
+      { tag: "streaming", limit: 8 },
+      { tag: "messaging", limit: 8 }
     ]);
 
     const args = buildMaigretCliArgs("im9route", "out", {
       maxConnections: 20,
       retries: 1,
-      scope: { tags: ["kr", "social", "photo", "video", "blog", "coding"], topSites: 104 },
-      timeoutSeconds: 7
+      scope: {
+        tags: ["kr", "social", "photo", "video", "blog", "coding", "music", "design", "streaming", "messaging"],
+        topSites: 173
+      },
+      timeoutSeconds: 6
     });
 
-    expect(args).toEqual(expect.arrayContaining(["--tags", "kr,social,photo,video,blog,coding", "--top-sites", "104"]));
+    expect(args).toEqual(
+      expect.arrayContaining([
+        "--tags",
+        "kr,social,photo,video,blog,coding,music,design,streaming,messaging",
+        "--top-sites",
+        "173"
+      ])
+    );
     expect(args).not.toContain("--site");
     expect(args).not.toContain("-a");
+  });
+
+  it("excludes known noisy Maigret sites by default while keeping an escape hatch", () => {
+    delete process.env.MAIGRET_EXCLUDED_SITES;
+    expect(resolveExcludedSiteNames()).toEqual(["Geeksfor Geeks"]);
+
+    process.env.MAIGRET_EXCLUDED_SITES = "";
+    expect(resolveExcludedSiteNames()).toEqual([]);
   });
 });
 

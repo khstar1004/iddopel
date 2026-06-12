@@ -26,13 +26,18 @@ DEFAULT_PRIORITY_SITES = [
     "Reddit",
 ]
 DEFAULT_BOOST_TAG_SPECS = [
-    ("kr", 25),
-    ("social", 25),
-    ("photo", 12),
-    ("video", 12),
-    ("blog", 15),
-    ("coding", 15),
+    ("kr", 30),
+    ("social", 35),
+    ("photo", 16),
+    ("video", 16),
+    ("blog", 20),
+    ("coding", 20),
+    ("music", 10),
+    ("design", 10),
+    ("streaming", 8),
+    ("messaging", 8),
 ]
+DEFAULT_EXCLUDED_SITES = ["Geeksfor Geeks"]
 MAIGRET_DATABASE_CACHE = None
 
 
@@ -85,7 +90,7 @@ def run_maigret(username, mode):
 def run_maigret_in_process(username, mode):
     top_sites = resolve_top_sites(mode)
     site_timeout = positive_int(os.environ.get("MAIGRET_SITE_TIMEOUT_SECONDS"), 6)
-    max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 10)
+    max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 20)
     retries = positive_int(os.environ.get("MAIGRET_RETRIES"), 1)
     parsing_enabled = os.environ.get("MAIGRET_EXTRACT_EXTENDED") != "false"
     proxy_url = clean_env(os.environ.get("MAIGRET_PROXY_URL"))
@@ -141,7 +146,7 @@ def run_maigret_subprocess(username, mode):
     top_sites = resolve_top_sites(mode)
     site_timeout = positive_int(os.environ.get("MAIGRET_SITE_TIMEOUT_SECONDS"), 6)
     process_timeout_ms = positive_int(os.environ.get("MAIGRET_PROCESS_TIMEOUT_MS"), 55000)
-    max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 10)
+    max_connections = positive_int(os.environ.get("MAIGRET_MAX_CONNECTIONS"), 20)
     retries = positive_int(os.environ.get("MAIGRET_RETRIES"), 1)
 
     with tempfile.TemporaryDirectory(prefix="id-doppelganger-maigret-") as temp_dir:
@@ -243,7 +248,7 @@ def run_async(coro):
 def resolve_top_sites(mode):
     if mode == "DEEP":
         return positive_int(os.environ.get("MAIGRET_TOP_SITES_DEEP"), 150)
-    return positive_int(os.environ.get("MAIGRET_TOP_SITES_QUICK"), 50)
+    return positive_int(os.environ.get("MAIGRET_TOP_SITES_QUICK"), 35)
 
 
 def load_maigret_database():
@@ -280,6 +285,7 @@ def resolve_site_data(db, top_sites, mode="QUICK"):
     for tag, limit in resolve_boost_tag_specs():
         site_data.update(db.ranked_sites_dict(top=limit, tags=[tag], disabled=False, id_type="username"))
 
+    remove_excluded_sites(site_data, resolve_excluded_sites())
     return limit_site_data(site_data, resolve_site_cap(mode))
 
 
@@ -312,10 +318,28 @@ def resolve_boost_tag_specs():
     return specs
 
 
+def resolve_excluded_sites():
+    configured = os.environ.get("MAIGRET_EXCLUDED_SITES")
+    if configured == "":
+        return []
+    parsed = split_comma_list(configured)
+    return parsed if parsed else DEFAULT_EXCLUDED_SITES
+
+
+def remove_excluded_sites(site_data, excluded_sites):
+    if not excluded_sites:
+        return
+
+    excluded = {site.lower() for site in excluded_sites}
+    for site_name in list(site_data.keys()):
+        if site_name.lower() in excluded:
+            site_data.pop(site_name, None)
+
+
 def resolve_site_cap(mode):
     if mode == "DEEP":
         return positive_int(os.environ.get("MAIGRET_SITE_CAP_DEEP"), 260)
-    return positive_int(os.environ.get("MAIGRET_SITE_CAP_QUICK"), 120)
+    return positive_int(os.environ.get("MAIGRET_SITE_CAP_QUICK"), 155)
 
 
 def limit_site_data(site_data, cap):
