@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolvePostgresUrl } from "./postgres-env.mjs";
 
 const requiredSecurityHeaders = [
   "content-security-policy",
@@ -45,8 +46,13 @@ export async function createProductionConfigReport({ envValues = process.env, ru
   const siteUrl = env("SITE_URL");
   const runtimeBaseUrl = env("PRODUCTION_BASE_URL").replace(/\/$/, "");
   const paymentProvider = env("PAYMENT_PROVIDER");
+  const databaseUrl = resolvePostgresUrl(envValues);
 
-  addCheck("DATABASE_URL is production Postgres", /^postgres(?:ql)?:\/\//.test(env("DATABASE_URL")), "Set DATABASE_URL to managed Postgres.");
+  addCheck(
+    "Postgres connection string is configured",
+    Boolean(databaseUrl),
+    "Set DATABASE_URL or a Vercel-style POSTGRES_URL to managed Postgres."
+  );
   addCheck("DATABASE_SSL is explicit", ["true", "false"].includes(env("DATABASE_SSL")), "Set DATABASE_SSL=true if the provider requires TLS verification.");
   addCheck("CRON_SECRET is strong", isStrongSecret(env("CRON_SECRET")), "Use at least 32 random characters.");
   addCheck("REPORT_TOKEN_SECRET is strong", isStrongSecret(env("REPORT_TOKEN_SECRET")), "Use at least 32 random characters for detailed-report access tokens.");

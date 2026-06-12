@@ -19,7 +19,7 @@
 - Test: `npm test`
 - Build: `npm run build`
 - Verify: `npm run verify`
-- Postgres migration: `DATABASE_URL=postgres://... npm run db:migrate`
+- Postgres migration: `DATABASE_URL=postgres://... npm run db:migrate`; Vercel/Neon aliases such as `POSTGRES_URL=postgres://... npm run db:migrate` also work.
 - Retention prune: `npm run retention:prune`
 - Cron endpoint: `GET /api/cron/prune` with `Authorization: Bearer $CRON_SECRET`
 - Create paid report order: `POST /api/orders`

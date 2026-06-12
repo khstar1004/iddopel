@@ -53,6 +53,9 @@ const sensitiveEnvKeys = new Set([
   "POLAR_ACCESS_TOKEN",
   "POLAR_WEBHOOK_SECRET",
   "POSTGRES_PASSWORD",
+  "POSTGRES_PRISMA_URL",
+  "POSTGRES_URL",
+  "POSTGRES_URL_NON_POOLING",
   "TOSS_CLIENT_KEY",
   "TOSS_CONSOLE_API_KEY",
   "TOSS_SECURITY_KEY",
@@ -171,16 +174,20 @@ function detectSensitiveAssignment(line) {
   const value = stripInlineComment(rawValue).trim();
   if (isPlaceholderValue(value)) return null;
 
-  if (key === "DATABASE_URL" && !/postgres(?:ql)?:\/\/[^:/"']+:[^@/"']+@/i.test(value)) {
+  if (isPostgresConnectionKey(key) && !/postgres(?:ql)?:\/\/[^:/"']+:[^@/"']+@/i.test(value)) {
     return null;
   }
 
-  if (value.length < 12 && key !== "DATABASE_URL") return null;
+  if (value.length < 12 && !isPostgresConnectionKey(key)) return null;
 
   return {
     type: "sensitive-env-assignment",
     detail: `${key} appears to contain a real secret value. Keep it in .env or a secret manager, not source files.`
   };
+}
+
+function isPostgresConnectionKey(key) {
+  return ["DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL", "POSTGRES_URL_NON_POOLING"].includes(key);
 }
 
 function isPlaceholderValue(value) {

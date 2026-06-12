@@ -58,6 +58,18 @@ describe("secret scan verifier", () => {
     );
   });
 
+  it("flags Vercel-style Postgres URLs with embedded passwords", () => {
+    const findings = scanTextForSecrets("README.md", 'POSTGRES_URL="postgres://realuser:realpass@db.prod-domain.test:5432/app"');
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        file: "README.md",
+        line: 1,
+        type: "sensitive-env-assignment"
+      })
+    );
+  });
+
   it("flags real-looking Polar secret assignments", () => {
     const findings = scanTextForSecrets("docs/leak.md", `POLAR_ACCESS_TOKEN=${"p".repeat(36)}`);
 

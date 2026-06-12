@@ -1,3 +1,5 @@
+import { hasPostgresUrl } from "./postgres-env";
+
 export interface HealthStatus {
   ok: true;
   service: "id-doppelganger";
@@ -12,7 +14,7 @@ export function buildHealthStatus(env: Record<string, string | undefined>, now =
     ok: true,
     service: "id-doppelganger",
     timestamp: now.toISOString(),
-    storage: env.DATABASE_URL?.startsWith("postgres") ? "postgres" : "file",
+    storage: hasPostgresUrl(env) ? "postgres" : "file",
     scanProvider: normalizeProvider(env.SCAN_PROVIDER, "maigret"),
     paymentProvider: normalizeProvider(env.PAYMENT_PROVIDER, "mock")
   };

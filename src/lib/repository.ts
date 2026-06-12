@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
 import { defaultFileStorePath } from "./file-store-path";
+import { resolvePostgresUrl } from "./postgres-env";
 import { isExpired } from "./retention";
 import type { ScanJob } from "./types";
 
@@ -18,8 +19,8 @@ let repository: ScanRepository | null = null;
 export function getScanRepository(): ScanRepository {
   if (repository) return repository;
 
-  const databaseUrl = process.env.DATABASE_URL;
-  repository = databaseUrl?.startsWith("postgres")
+  const databaseUrl = resolvePostgresUrl();
+  repository = databaseUrl
     ? new PostgresScanRepository(databaseUrl)
     : new FileScanRepository(process.env.SCAN_STORE_PATH);
 

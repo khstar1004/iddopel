@@ -28,4 +28,15 @@ describe("buildHealthStatus", () => {
   it("reports Maigret scan mode when no provider is configured", () => {
     expect(buildHealthStatus({}, new Date("2026-06-11T00:00:00.000Z")).scanProvider).toBe("maigret");
   });
+
+  it("reports Postgres storage when Vercel provides POSTGRES_URL", () => {
+    expect(
+      buildHealthStatus(
+        {
+          POSTGRES_URL: "postgresql://user:password@example.com/db"
+        },
+        new Date("2026-06-11T00:00:00.000Z")
+      ).storage
+    ).toBe("postgres");
+  });
 });

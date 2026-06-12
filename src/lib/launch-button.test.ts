@@ -161,6 +161,22 @@ describe("buildLaunchButtonPlan", () => {
     expect(plan.missing).not.toContain("TOSS_SECURITY_KEY");
   });
 
+  it("accepts Vercel-style POSTGRES_URL as the launch database URL", () => {
+    const { DATABASE_URL: _databaseUrl, ...withoutDatabaseUrl } = completeFileEnv;
+    const env = buildLaunchEnvironment({
+      fileEnv: {
+        ...withoutDatabaseUrl,
+        POSTGRES_URL: "postgres://USER:PASSWORD@db.iddoppelganger.kr:5432/id_doppelganger"
+      },
+      env: {}
+    });
+    const plan = buildLaunchButtonPlan({ env, ship: true });
+
+    expect(env.DATABASE_URL).toBe("postgres://USER:PASSWORD@db.iddoppelganger.kr:5432/id_doppelganger");
+    expect(plan.ready).toBe(true);
+    expect(plan.missing).not.toContain("DATABASE_URL");
+  });
+
   it("builds a ship plan with Polar checkout credentials", () => {
     const env = buildLaunchEnvironment({
       fileEnv: {

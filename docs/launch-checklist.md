@@ -69,7 +69,7 @@
 - [x] `npm run e2e` covers Capacitor NativeBilling adapter mapping and Google Play consumable completion after server entitlement
 - [x] `npm run e2e` covers monthly monitoring registration and cancellation
 - [x] `npm run e2e` covers Toss in-app scan-to-checkout flow
-- [ ] `DATABASE_URL=... npm run db:migrate` succeeds for production database
+- [ ] `DATABASE_URL=... npm run db:migrate` or `POSTGRES_URL=... npm run db:migrate` succeeds for production database
 - [ ] Set `CRON_SECRET`, `REPORT_TOKEN_SECRET`, and `FIRST_FREE_FINGERPRINT_SECRET` in production and confirm scheduled prune invocations
 - [ ] Confirm scheduled monthly monitoring invocations via `/api/cron/monitoring`
 - [ ] Deploy Docker image with `SCAN_PROVIDER=maigret` for real username scanning

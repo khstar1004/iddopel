@@ -34,6 +34,20 @@ describe("production config preflight", () => {
     expect(report.failed).toBe(0);
   });
 
+  it("accepts Vercel-style POSTGRES_URL for production persistence", async () => {
+    const { DATABASE_URL: _databaseUrl, ...withoutDatabaseUrl } = completeEnv;
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...withoutDatabaseUrl,
+        POSTGRES_URL: "postgres://user:password@db.verified-domain.kr:5432/id_doppelganger"
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.failed).toBe(0);
+  });
+
   it("accepts Polar as the live web checkout provider", async () => {
     const report = await createProductionConfigReport({
       envValues: {

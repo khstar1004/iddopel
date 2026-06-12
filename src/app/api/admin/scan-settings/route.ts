@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError, readJson } from "@/lib/api";
 import { BetaScanSettingsUpdate, getBetaScanSettingsStore } from "@/lib/beta-scan-quota";
 import { devAdminRuntimeStatus, isDevAdminRequest } from "@/lib/dev-admin";
+import { hasPostgresUrl } from "@/lib/postgres-env";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,6 @@ function runtimeStatus(request: Request) {
   return {
     ...devAdminRuntimeStatus(request),
     scanProvider: process.env.SCAN_PROVIDER ?? "maigret",
-    storage: process.env.DATABASE_URL?.startsWith("postgres") ? "postgres" : "file"
+    storage: hasPostgresUrl() ? "postgres" : "file"
   };
 }

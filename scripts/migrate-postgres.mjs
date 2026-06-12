@@ -2,18 +2,20 @@ import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { resolvePostgresUrl } from "./postgres-env.mjs";
 
 const { Pool } = pg;
+const databaseUrl = resolvePostgresUrl();
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is required for Postgres migration.");
+if (!databaseUrl) {
+  console.error("DATABASE_URL or POSTGRES_URL is required for Postgres migration.");
   process.exit(1);
 }
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const schema = await readFile(join(root, "db", "schema.sql"), "utf-8");
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
   ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : undefined
 });
 

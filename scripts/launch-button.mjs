@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolvePostgresUrl } from "./postgres-env.mjs";
 
 export const defaultLaunchEnvFile = ".env.launch";
 
@@ -149,6 +150,7 @@ function parseDoubleQuotedEnvValue(value) {
 
 export function buildLaunchEnvironment({ fileEnv = {}, env = {} } = {}) {
   const merged = { ...fileEnv, ...env };
+  merged.DATABASE_URL ||= resolvePostgresUrl(merged) || "";
   const origin = normalizeProductionOrigin(
     merged.PRODUCTION_DOMAIN || merged.SITE_URL || merged.STORE_PRODUCTION_ORIGIN || merged.MOBILE_APP_ORIGIN || ""
   );

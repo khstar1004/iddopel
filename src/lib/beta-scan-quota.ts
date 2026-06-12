@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
 import { defaultFileStorePath } from "./file-store-path";
+import { resolvePostgresUrl } from "./postgres-env";
 
 export interface BetaScanQuotaSettings {
   publicScanEnabled: boolean;
@@ -83,8 +84,8 @@ export function betaScanQuotaSettings(env: Record<string, string | undefined> = 
 
 export function getBetaScanSettingsStore(): BetaScanSettingsStore {
   if (!settingsStore) {
-    const databaseUrl = process.env.DATABASE_URL;
-    settingsStore = databaseUrl?.startsWith("postgres")
+    const databaseUrl = resolvePostgresUrl();
+    settingsStore = databaseUrl
       ? new PostgresBetaScanSettingsStore(databaseUrl)
       : new FileBetaScanSettingsStore(process.env.BETA_SCAN_SETTINGS_STORE_PATH);
   }
@@ -94,8 +95,8 @@ export function getBetaScanSettingsStore(): BetaScanSettingsStore {
 
 export function getBetaScanUsageStore(): BetaScanUsageStore {
   if (!usageStore) {
-    const databaseUrl = process.env.DATABASE_URL;
-    usageStore = databaseUrl?.startsWith("postgres")
+    const databaseUrl = resolvePostgresUrl();
+    usageStore = databaseUrl
       ? new PostgresBetaScanUsageStore(databaseUrl)
       : new FileBetaScanUsageStore(process.env.BETA_SCAN_USAGE_STORE_PATH);
   }
@@ -105,8 +106,8 @@ export function getBetaScanUsageStore(): BetaScanUsageStore {
 
 export function getBetaScanLoadStore(): BetaScanLoadStore {
   if (!loadStore) {
-    const databaseUrl = process.env.DATABASE_URL;
-    loadStore = databaseUrl?.startsWith("postgres")
+    const databaseUrl = resolvePostgresUrl();
+    loadStore = databaseUrl
       ? new PostgresBetaScanLoadStore(databaseUrl)
       : new FileBetaScanLoadStore(process.env.BETA_SCAN_LOAD_STORE_PATH);
   }

@@ -2,12 +2,14 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { resolvePostgresUrl } from "./postgres-env.mjs";
 
 const { Pool } = pg;
+const databaseUrl = resolvePostgresUrl();
 
-if (process.env.DATABASE_URL?.startsWith("postgres")) {
+if (databaseUrl) {
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: databaseUrl,
     ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : undefined
   });
 

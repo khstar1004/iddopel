@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
 import { defaultFileStorePath } from "./file-store-path";
+import { resolvePostgresUrl } from "./postgres-env";
 import type { MonitoringSubscription } from "./types";
 
 export interface MonitoringRepository {
@@ -17,8 +18,8 @@ let monitoringRepository: MonitoringRepository | null = null;
 export function getMonitoringRepository(): MonitoringRepository {
   if (monitoringRepository) return monitoringRepository;
 
-  const databaseUrl = process.env.DATABASE_URL;
-  monitoringRepository = databaseUrl?.startsWith("postgres")
+  const databaseUrl = resolvePostgresUrl();
+  monitoringRepository = databaseUrl
     ? new PostgresMonitoringRepository(databaseUrl)
     : new FileMonitoringRepository(process.env.MONITORING_STORE_PATH);
 

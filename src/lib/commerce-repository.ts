@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Pool } from "pg";
 import { defaultFileStorePath } from "./file-store-path";
+import { resolvePostgresUrl } from "./postgres-env";
 import type { ReportOrder } from "./types";
 
 export interface CommerceRepository {
@@ -17,8 +18,8 @@ let commerceRepository: CommerceRepository | null = null;
 export function getCommerceRepository(): CommerceRepository {
   if (commerceRepository) return commerceRepository;
 
-  const databaseUrl = process.env.DATABASE_URL;
-  commerceRepository = databaseUrl?.startsWith("postgres")
+  const databaseUrl = resolvePostgresUrl();
+  commerceRepository = databaseUrl
     ? new PostgresCommerceRepository(databaseUrl)
     : new FileCommerceRepository(process.env.ORDER_STORE_PATH);
 
