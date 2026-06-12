@@ -10,6 +10,7 @@ describe("completePolarCheckout", () => {
     vi.unstubAllGlobals();
     delete process.env.POLAR_ACCESS_TOKEN;
     delete process.env.POLAR_PRODUCT_ID;
+    delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
     resetCommerceRepositoryForTests(null);
   });
 
@@ -38,13 +39,47 @@ describe("completePolarCheckout", () => {
     const result = await completePolarCheckout(order.orderId, "chk_123");
 
     expect(result.reportToken).toBeTruthy();
+    expect(result.productId).toBe("DETAILED_REPORT");
     expect(result.reportUrl).toContain(`/reports/${order.scanId}?token=`);
+  });
+
+  it("returns the monthly monitoring product id after a paid monitoring checkout", async () => {
+    const order = createOrder(
+      createScanJob({ username: "polaruser", purpose: "SELF_CHECK", mode: "QUICK" }),
+      "POLAR",
+      "MONTHLY_MONITORING"
+    );
+    resetCommerceRepositoryForTests(new MemoryCommerceRepository([order]));
+    process.env.POLAR_ACCESS_TOKEN = "polar_test_token";
+    process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID = "22222222-2222-4222-8222-222222222222";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          id: "chk_monthly",
+          status: "succeeded",
+          product_id: "22222222-2222-4222-8222-222222222222",
+          currency: "krw",
+          metadata: {
+            orderId: order.orderId,
+            scanId: order.scanId,
+            productId: "MONTHLY_MONITORING"
+          }
+        })
+      )
+    );
+
+    const result = await completePolarCheckout(order.orderId, "chk_monthly");
+
+    expect(result.reportToken).toBeTruthy();
+    expect(result.productId).toBe("MONTHLY_MONITORING");
   });
 });
 
 describe("grantPolarOrderPaid", () => {
   afterEach(() => {
     delete process.env.POLAR_PRODUCT_ID;
+    delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
     resetCommerceRepositoryForTests(null);
   });
 

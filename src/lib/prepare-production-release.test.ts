@@ -39,6 +39,15 @@ const completeEnv = {
   ALERT_RUNBOOK_URL: "https://docs.verified-domain.kr/runbooks/id-doppelganger"
 };
 
+const polarEnv = {
+  PAYMENT_PROVIDER: "polar",
+  POLAR_ACCESS_TOKEN: "polar_" + "a".repeat(32),
+  POLAR_PRODUCT_ID: "11111111-1111-4111-8111-111111111111",
+  POLAR_MONTHLY_MONITORING_PRODUCT_ID: "22222222-2222-4222-8222-222222222222",
+  POLAR_WEBHOOK_SECRET: "p".repeat(48),
+  POLAR_SERVER: "production"
+};
+
 describe("normalizeProductionOrigin", () => {
   it("normalizes bare production domains to HTTPS origins", () => {
     expect(normalizeProductionOrigin("id.example.com/path?ignored=1")).toEqual({
@@ -97,6 +106,57 @@ describe("createProductionReleasePreparation", () => {
         "TOSS_MINI_APP_NAME"
       ])
     );
+  });
+
+  it("requires Polar checkout values instead of Toss payment keys when Polar is selected", () => {
+    const preparation = createProductionReleasePreparation({
+      env: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "polar",
+        TOSS_CLIENT_KEY: "",
+        TOSS_SECRET_KEY: "",
+        TOSS_SECURITY_KEY: ""
+      },
+      existingFiles
+    });
+
+    expect(preparation.ready).toBe(false);
+    expect(preparation.missing).toEqual(
+      expect.arrayContaining([
+        "POLAR_ACCESS_TOKEN",
+        "POLAR_PRODUCT_ID",
+        "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+        "POLAR_WEBHOOK_SECRET"
+      ])
+    );
+    expect(preparation.missing).not.toContain("TOSS_CLIENT_KEY");
+    expect(preparation.missing).not.toContain("TOSS_SECRET_KEY");
+    expect(preparation.missing).not.toContain("TOSS_SECURITY_KEY");
+  });
+
+  it("renders Polar checkout env for production Compose", () => {
+    const preparation = createProductionReleasePreparation({
+      env: {
+        ...completeEnv,
+        ...polarEnv,
+        TOSS_CLIENT_KEY: "",
+        TOSS_SECRET_KEY: "",
+        TOSS_SECURITY_KEY: ""
+      },
+      existingFiles,
+      now: new Date("2026-06-11T00:00:00.000Z"),
+      randomBytes: () => Buffer.from("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ12")
+    });
+    const deployEnv = preparation.fileUpdates.find((update: { path: string }) => update.path === "deploy/compose/.env")?.content ?? "";
+
+    expect(preparation.ready).toBe(true);
+    expect(deployEnv).toContain("PAYMENT_PROVIDER=polar");
+    expect(deployEnv).toContain(`POLAR_ACCESS_TOKEN=${polarEnv.POLAR_ACCESS_TOKEN}`);
+    expect(deployEnv).toContain(`POLAR_PRODUCT_ID=${polarEnv.POLAR_PRODUCT_ID}`);
+    expect(deployEnv).toContain(`POLAR_MONTHLY_MONITORING_PRODUCT_ID=${polarEnv.POLAR_MONTHLY_MONITORING_PRODUCT_ID}`);
+    expect(deployEnv).toContain(`POLAR_WEBHOOK_SECRET=${polarEnv.POLAR_WEBHOOK_SECRET}`);
+    expect(deployEnv).toContain("POLAR_SERVER=production");
+    expect(deployEnv).toContain("TOSS_CLIENT_KEY=");
   });
 
   it("requires native paid reports to be enabled for production preparation", () => {
@@ -163,6 +223,11 @@ describe("renderProductionLaunchRunbook", () => {
       TOSS_CLIENT_KEY: "test_ck_should_not_render",
       [["TOSS", "SECRET", "KEY"].join("_")]: "test_sk_should_not_render",
       TOSS_SECURITY_KEY: "a".repeat(64),
+      PAYMENT_PROVIDER: "polar",
+      POLAR_ACCESS_TOKEN: "polar_should_not_render",
+      POLAR_PRODUCT_ID: "product_should_not_render",
+      POLAR_MONTHLY_MONITORING_PRODUCT_ID: "monthly_product_should_not_render",
+      POLAR_WEBHOOK_SECRET: "polar_webhook_should_not_render",
       "POSTGRES_PASSWORD": "postgres_should_not_render",
       "CRON_SECRET": "cron_should_not_render",
       ALERT_WEBHOOK_URL: "https://hooks.verified-domain.kr/secret-webhook"
@@ -171,6 +236,7 @@ describe("renderProductionLaunchRunbook", () => {
     expect(runbook).toContain("docker compose --env-file deploy/compose/.env");
     expect(runbook).toContain('PRODUCTION_BASE_URL="https://id.verified-domain.kr" npm run verify:production');
     expect(runbook).toContain("TOSS_RELEASE_CHECK=true");
+    expect(runbook).toContain("Web checkout provider: Polar");
     expect(runbook).toContain("STORE_RELEASE_CHECK=true");
     expect(runbook).toContain("MOBILE_RELEASE_CHECK=true");
     expect(runbook).not.toContain("test_ck_should_not_render");
@@ -179,6 +245,9 @@ describe("renderProductionLaunchRunbook", () => {
     expect(runbook).not.toContain("postgres_should_not_render");
     expect(runbook).not.toContain("cron_should_not_render");
     expect(runbook).not.toContain("secret-webhook");
+    expect(runbook).not.toContain("polar_should_not_render");
+    expect(runbook).not.toContain("monthly_product_should_not_render");
+    expect(runbook).not.toContain("polar_webhook_should_not_render");
   });
 });
 
@@ -194,6 +263,11 @@ describe("renderDeployEnv", () => {
       TOSS_CLIENT_KEY: "test_ck_fake_value",
       "TOSS_SECRET_KEY": "test_sk_123456789",
       TOSS_SECURITY_KEY: "a".repeat(64),
+      POLAR_ACCESS_TOKEN: "",
+      POLAR_PRODUCT_ID: "",
+      POLAR_MONTHLY_MONITORING_PRODUCT_ID: "",
+      POLAR_WEBHOOK_SECRET: "",
+      POLAR_SERVER: "production",
       TOSS_CONSOLE_APP_ID: "toss-console-app",
       TOSS_MINI_APP_NAME: "id-doppelganger",
       TOSS_ALLOWED_ORIGINS: "https://id-doppelganger.apps.tossmini.com,https://id-doppelganger.private-apps.tossmini.com",
@@ -210,6 +284,7 @@ describe("renderDeployEnv", () => {
     expect(env).toContain("FIRST_FREE_FINGERPRINT_SECRET=fingerprint_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi");
     expect(env).toContain("TOSS_CLIENT_KEY=test_ck_fake_value");
     expect(env).toContain(`TOSS_SECURITY_KEY=${"a".repeat(64)}`);
+    expect(env).toContain("POLAR_SERVER=production");
     expect(env).not.toContain("replace-with");
   });
 });

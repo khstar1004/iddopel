@@ -5,9 +5,28 @@ const tokenMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 export function isDevAdminEnabled(request: Request) {
   if (process.env.ENABLE_DEV_ADMIN === "false") return false;
   if (process.env.ENABLE_DEV_ADMIN === "true") {
-    return isLocalRequest(request) || Boolean(process.env.DEV_ADMIN_PASSWORD);
+    return true;
   }
   return isLocalRequest(request);
+}
+
+export function isDevAdminLoginConfigured(request: Request) {
+  return isLocalRequest(request) || Boolean(process.env.DEV_ADMIN_PASSWORD);
+}
+
+export function devAdminRuntimeStatus(request: Request) {
+  const local = isLocalRequest(request);
+  const enabled = isDevAdminEnabled(request);
+
+  return {
+    enabled,
+    loginConfigured: enabled && isDevAdminLoginConfigured(request),
+    setupRequired: enabled && !isDevAdminLoginConfigured(request),
+    local,
+    passwordConfigured: Boolean(process.env.DEV_ADMIN_PASSWORD),
+    secretConfigured: Boolean(process.env.DEV_ADMIN_SECRET),
+    username: enabled ? devAdminUsername() : null
+  };
 }
 
 export function devAdminUsername() {
@@ -16,6 +35,7 @@ export function devAdminUsername() {
 
 export function verifyDevAdminCredentials(request: Request, username: string, password: string) {
   if (!isDevAdminEnabled(request)) return false;
+  if (!isDevAdminLoginConfigured(request)) return false;
   const expectedUsername = devAdminUsername();
   const expectedPassword = process.env.DEV_ADMIN_PASSWORD || (isLocalRequest(request) ? "admin" : "");
   if (!expectedPassword) return false;
@@ -25,6 +45,7 @@ export function verifyDevAdminCredentials(request: Request, username: string, pa
 
 export function createDevAdminToken(request: Request, username: string, now = Date.now()) {
   if (!isDevAdminEnabled(request)) return null;
+  if (!isDevAdminLoginConfigured(request)) return null;
   const payload = Buffer.from(JSON.stringify({ username, issuedAt: now })).toString("base64url");
   const signature = sign(payload, request);
   return `dev.${payload}.${signature}`;
@@ -32,6 +53,7 @@ export function createDevAdminToken(request: Request, username: string, now = Da
 
 export function isDevAdminRequest(request: Request) {
   if (!isDevAdminEnabled(request)) return false;
+  if (!isDevAdminLoginConfigured(request)) return false;
   const token = readDevAdminToken(request);
   if (!token) return false;
   return verifyDevAdminToken(request, token);

@@ -7,12 +7,9 @@ import { fileURLToPath } from "node:url";
 
 export const defaultLaunchEnvFile = ".env.launch";
 
-const prepareRequiredKeys = [
+const basePrepareRequiredKeys = [
   "PRODUCTION_DOMAIN",
   "STORE_SUPPORT_EMAIL",
-  "TOSS_CLIENT_KEY",
-  "TOSS_SECRET_KEY",
-  "TOSS_SECURITY_KEY",
   "TOSS_CONSOLE_API_KEY",
   "TOSS_CONSOLE_APP_ID",
   "TOSS_MINI_APP_NAME",
@@ -20,6 +17,14 @@ const prepareRequiredKeys = [
   "ALERT_WEBHOOK_URL",
   "ALERT_RUNBOOK_URL"
 ];
+const tossPaymentRequiredKeys = ["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY", "TOSS_SECURITY_KEY"];
+const polarPaymentRequiredKeys = [
+  "POLAR_ACCESS_TOKEN",
+  "POLAR_PRODUCT_ID",
+  "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+  "POLAR_WEBHOOK_SECRET"
+];
+const productionPaymentProviders = new Set(["toss", "polar"]);
 
 const shipRequiredKeys = ["DATABASE_URL", "REPORT_TOKEN_SECRET", "FIRST_FREE_FINGERPRINT_SECRET"];
 const shipRequiredValues = {
@@ -59,7 +64,13 @@ const publicLaunchEnvKeys = new Set([
   "PAYMENT_PROVIDER",
   "ENABLE_MOCK_PAYMENTS",
   "WEB_DETAILED_REPORT_PAYWALL_ENABLED",
+  "MONITORING_PAYWALL_ENABLED",
   "TOSS_CLIENT_KEY",
+  "POLAR_ACCESS_TOKEN",
+  "POLAR_PRODUCT_ID",
+  "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+  "POLAR_WEBHOOK_SECRET",
+  "POLAR_SERVER",
   "SITE_URL",
   "PRODUCTION_BASE_URL",
   "SMOKE_BASE_URL",
@@ -152,9 +163,11 @@ export function buildLaunchEnvironment({ fileEnv = {}, env = {} } = {}) {
   }
 
   merged.SCAN_PROVIDER ||= "maigret";
-  merged.PAYMENT_PROVIDER ||= "toss";
+  merged.PAYMENT_PROVIDER = normalizePaymentProvider(merged.PAYMENT_PROVIDER);
   merged.ENABLE_MOCK_PAYMENTS ||= "false";
   merged.WEB_DETAILED_REPORT_PAYWALL_ENABLED ||= "false";
+  merged.MONITORING_PAYWALL_ENABLED ||= "false";
+  merged.POLAR_SERVER ||= "production";
   merged.DATABASE_SSL ||= "false";
   merged.MONITORING_CRON_LIMIT ||= "3";
   merged.SMOKE_CONFIRM_PAYMENT ||= "skip";
@@ -190,7 +203,15 @@ export function buildLaunchButtonPlan({
   ship = false,
   localGate = false
 } = {}) {
+  const paymentProvider = normalizePaymentProvider(env.PAYMENT_PROVIDER);
+  const prepareRequiredKeys = [
+    ...basePrepareRequiredKeys,
+    ...requiredPaymentKeysForProvider(paymentProvider)
+  ];
   const missing = missingKeys(env, ship ? [...prepareRequiredKeys, ...shipRequiredKeys, ...storeReleaseRequiredKeys] : prepareRequiredKeys);
+  if (!productionPaymentProviders.has(paymentProvider)) {
+    missing.push("PAYMENT_PROVIDER=toss|polar");
+  }
   if (ship) {
     for (const [key, expectedValue] of Object.entries(shipRequiredValues)) {
       if (env[key] !== expectedValue) {
@@ -312,6 +333,17 @@ function missingKeys(env, keys) {
     const value = String(env[key] || "").trim();
     return !value || hasPlaceholder(value);
   });
+}
+
+function normalizePaymentProvider(value) {
+  const input = String(value || "").trim().toLowerCase();
+  return input || "toss";
+}
+
+function requiredPaymentKeysForProvider(paymentProvider) {
+  if (paymentProvider === "polar") return polarPaymentRequiredKeys;
+  if (paymentProvider === "toss") return tossPaymentRequiredKeys;
+  return [];
 }
 
 function hasPlaceholder(value) {

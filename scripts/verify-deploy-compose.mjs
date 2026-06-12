@@ -83,7 +83,9 @@ function validateComposeSource(compose) {
   addCheck("Compose waits for migrations", compose.includes("condition: service_completed_successfully"), "App should wait for the migrate service to finish successfully.");
   addCheck("Compose uses production scanner default", compose.includes("SCAN_PROVIDER: \"${SCAN_PROVIDER:-maigret}\""), "Default SCAN_PROVIDER should be maigret.");
   addCheck("Compose keeps mock payments disabled by default", compose.includes("ENABLE_MOCK_PAYMENTS: \"${ENABLE_MOCK_PAYMENTS:-false}\""), "Mock payments must be disabled by default.");
+  addCheck("Compose passes web paywall switches", compose.includes("WEB_DETAILED_REPORT_PAYWALL_ENABLED") && compose.includes("MONITORING_PAYWALL_ENABLED"), "App service must receive web paywall switches.");
   addCheck("Compose passes report access secrets", compose.includes("REPORT_TOKEN_SECRET") && compose.includes("FIRST_FREE_FINGERPRINT_SECRET"), "App service must receive report token and first-free fingerprint secrets.");
+  addCheck("Compose passes live checkout env", compose.includes("TOSS_CLIENT_KEY") && compose.includes("POLAR_ACCESS_TOKEN") && compose.includes("POLAR_MONTHLY_MONITORING_PRODUCT_ID"), "App service must receive Toss and Polar checkout settings.");
   addCheck("Compose passes Toss mini-app env", compose.includes("TOSS_MINI_APP_NAME") && compose.includes("TOSS_ALLOWED_ORIGINS"), "App service must receive Toss mini-app Origin settings.");
   addCheck("Compose passes alert webhook env", compose.includes("ALERT_WEBHOOK_URL") && compose.includes("ALERT_RUNBOOK_URL"), "App service must receive alert webhook settings.");
   addCheck("Compose exposes only Caddy ports", compose.includes("443:443") && !compose.includes("3000:3000"), "Only Caddy should bind public ports in production.");
@@ -110,9 +112,8 @@ function validateEnvShape(values) {
     "SCAN_PROVIDER",
     "PAYMENT_PROVIDER",
     "ENABLE_MOCK_PAYMENTS",
-    "TOSS_CLIENT_KEY",
-    "TOSS_SECRET_KEY",
-    "TOSS_SECURITY_KEY",
+    "WEB_DETAILED_REPORT_PAYWALL_ENABLED",
+    "MONITORING_PAYWALL_ENABLED",
     "TOSS_CONSOLE_APP_ID",
     "TOSS_MINI_APP_NAME",
     "TOSS_ALLOWED_ORIGINS",
@@ -132,8 +133,22 @@ function validateEnvShape(values) {
     addCheck(`Deploy env ${key}`, Boolean(values[key]), `${key} must be set in ${envPath}.`);
   }
 
+  for (const key of [
+    "TOSS_CLIENT_KEY",
+    "TOSS_SECRET_KEY",
+    "TOSS_SECURITY_KEY",
+    "POLAR_ACCESS_TOKEN",
+    "POLAR_PRODUCT_ID",
+    "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+    "POLAR_WEBHOOK_SECRET",
+    "POLAR_SERVER"
+  ]) {
+    addCheck(`Deploy env declares ${key}`, hasEnvKey(values, key), `${key} must be declared in ${envPath}.`);
+  }
+
+  const paymentProvider = String(values.PAYMENT_PROVIDER || "").trim();
   addCheck("Deploy env defaults to Maigret", values.SCAN_PROVIDER === "maigret", "SCAN_PROVIDER should be maigret in production Compose.");
-  addCheck("Deploy env defaults to Toss", values.PAYMENT_PROVIDER === "toss", "PAYMENT_PROVIDER should be toss in production Compose.");
+  addCheck("Deploy env uses live checkout provider", ["toss", "polar"].includes(paymentProvider), "PAYMENT_PROVIDER should be toss or polar in production Compose.");
   addCheck("Deploy env disables mock payments", values.ENABLE_MOCK_PAYMENTS === "false", "ENABLE_MOCK_PAYMENTS must be false.");
   addCheck("Postgres password is URL-safe", /^[A-Za-z0-9._~-]+$/.test(values.POSTGRES_PASSWORD ?? ""), "Use URL-safe characters because the password is interpolated into DATABASE_URL.");
 
@@ -150,9 +165,22 @@ function validateEnvShape(values) {
       "Use different secrets for report tokens and first-free fingerprints."
     );
     addCheck("Postgres password is strong", (values.POSTGRES_PASSWORD ?? "").length >= 24 && !hasPlaceholder(values.POSTGRES_PASSWORD), "Use a strong random Postgres password.");
-    addCheck("Toss client key configured", /^test_ck_|^live_ck_/.test(values.TOSS_CLIENT_KEY ?? ""), "Set the Toss Payments client key.");
-    addCheck("Toss secret configured", (values.TOSS_SECRET_KEY ?? "").length >= 12 && !hasPlaceholder(values.TOSS_SECRET_KEY), "Set the production Toss secret key.");
-    addCheck("Toss security key configured", /^[a-f0-9]{64}$/i.test(values.TOSS_SECURITY_KEY ?? ""), "Set the 64-character Toss Payments security key.");
+    if (paymentProvider === "toss") {
+      addCheck("Toss client key configured", /^test_ck_|^live_ck_/.test(values.TOSS_CLIENT_KEY ?? ""), "Set the Toss Payments client key.");
+      addCheck("Toss secret configured", (values.TOSS_SECRET_KEY ?? "").length >= 12 && !hasPlaceholder(values.TOSS_SECRET_KEY), "Set the production Toss secret key.");
+      addCheck("Toss security key configured", /^[a-f0-9]{64}$/i.test(values.TOSS_SECURITY_KEY ?? ""), "Set the 64-character Toss Payments security key.");
+    }
+    if (paymentProvider === "polar") {
+      addCheck("Polar access token configured", (values.POLAR_ACCESS_TOKEN ?? "").length >= 12 && !hasPlaceholder(values.POLAR_ACCESS_TOKEN), "Set the Polar access token.");
+      addCheck("Polar product id configured", (values.POLAR_PRODUCT_ID ?? "").length > 0 && !hasPlaceholder(values.POLAR_PRODUCT_ID), "Set the Polar detailed-report product id.");
+      addCheck(
+        "Polar monthly monitoring product id configured",
+        (values.POLAR_MONTHLY_MONITORING_PRODUCT_ID ?? "").length > 0 && !hasPlaceholder(values.POLAR_MONTHLY_MONITORING_PRODUCT_ID),
+        "Set the Polar monthly-monitoring product id."
+      );
+      addCheck("Polar webhook secret is strong", isStrongSecret(values.POLAR_WEBHOOK_SECRET), "Set a 32+ character Polar webhook secret.");
+      addCheck("Polar server is production", values.POLAR_SERVER !== "sandbox", "Use POLAR_SERVER=production or leave it unset for production checkout.");
+    }
     addCheck("Toss console app id configured", (values.TOSS_CONSOLE_APP_ID ?? "").length > 0 && !hasPlaceholder(values.TOSS_CONSOLE_APP_ID), "Set the Apps in Toss console app id.");
     addCheck("Toss mini app name finalized", /^[a-z0-9-]+$/.test(values.TOSS_MINI_APP_NAME ?? "") && !hasPlaceholder(values.TOSS_MINI_APP_NAME), "Set the Apps in Toss mini app name.");
     addCheck("Toss allowed origins finalized", hasFinalTossOrigins(values.TOSS_ALLOWED_ORIGINS), "Set live and private tossmini.com Origins.");
@@ -170,9 +198,13 @@ function validateEnvShape(values) {
       hasPlaceholder(values.FIRST_FREE_FINGERPRINT_SECRET) ||
       hasPlaceholder(values.TOSS_CLIENT_KEY) ||
       hasPlaceholder(values.TOSS_SECRET_KEY) ||
-      hasPlaceholder(values.TOSS_SECURITY_KEY)
+      hasPlaceholder(values.TOSS_SECURITY_KEY) ||
+      hasPlaceholder(values.POLAR_ACCESS_TOKEN) ||
+      hasPlaceholder(values.POLAR_PRODUCT_ID) ||
+      hasPlaceholder(values.POLAR_MONTHLY_MONITORING_PRODUCT_ID) ||
+      hasPlaceholder(values.POLAR_WEBHOOK_SECRET)
     ) {
-      addWarning("Production secret placeholder", "Replace CRON_SECRET, report secrets, and Toss payment keys in deploy/compose/.env before deployment.");
+      addWarning("Production secret placeholder", "Replace CRON_SECRET, report secrets, and checkout provider keys in deploy/compose/.env before deployment.");
     }
     if (hasPlaceholder(values.TOSS_CONSOLE_APP_ID) || hasPlaceholder(values.TOSS_MINI_APP_NAME) || hasPlaceholder(values.TOSS_ALLOWED_ORIGINS)) {
       addWarning("Toss mini-app placeholder", "Replace Toss console and tossmini.com Origin placeholders before Toss submission.");
@@ -225,6 +257,10 @@ function isFinalDomain(value) {
 
 function hasPlaceholder(value = "") {
   return /YOUR_|your_|replace-with|placeholder|local-|example/i.test(value);
+}
+
+function hasEnvKey(values, key) {
+  return Object.prototype.hasOwnProperty.call(values, key);
 }
 
 function isStrongSecret(value = "") {

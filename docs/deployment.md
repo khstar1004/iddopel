@@ -139,11 +139,17 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_EXTRACT_EXTENDED`: set `false` on Vercel to reduce Maigret memory and network pressure
 - `MAIGRET_API_SECRET`: optional shared secret for the Node scan route to call the Python Maigret function with `x-maigret-api-secret`
 - `INLINE_SCAN_ARTIFACTS`: `true` only for Vercel beta without Postgres; keep false when durable report storage and paid web reports are enabled
-- `PAYMENT_PROVIDER`: `toss` for production payments
-- `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` for beta so the one-time free detailed report remains available; set `true` after Toss checkout is ready to require checkout for detailed web reports
-- `TOSS_CLIENT_KEY`: Toss Payments client key for payment-window SDK compatibility and merchant verification
-- `TOSS_SECRET_KEY`: Toss Payments API secret key
-- `TOSS_SECURITY_KEY`: Toss Payments 64-character security key for encrypted services or webhook signature verification when enabled
+- `PAYMENT_PROVIDER`: `toss` or `polar` for live web checkout
+- `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` only for a free beta; set `true` after live checkout is ready to require checkout for detailed web reports
+- `MONITORING_PAYWALL_ENABLED`: keep `false` only for a free beta; set `true` after the monthly monitoring checkout product is ready
+- `TOSS_CLIENT_KEY`: Toss Payments client key, required when `PAYMENT_PROVIDER=toss`
+- `TOSS_SECRET_KEY`: Toss Payments API secret key, required when `PAYMENT_PROVIDER=toss`
+- `TOSS_SECURITY_KEY`: Toss Payments 64-character security key, required when `PAYMENT_PROVIDER=toss`
+- `POLAR_ACCESS_TOKEN`: Polar organization access token, required when `PAYMENT_PROVIDER=polar`
+- `POLAR_PRODUCT_ID`: Polar detailed-report product id, required when `PAYMENT_PROVIDER=polar`
+- `POLAR_MONTHLY_MONITORING_PRODUCT_ID`: Polar monthly-monitoring product id, required when `PAYMENT_PROVIDER=polar`
+- `POLAR_WEBHOOK_SECRET`: 32+ character Polar webhook signing secret, required when `PAYMENT_PROVIDER=polar`
+- `POLAR_SERVER`: `production` for live Polar checkout, `sandbox` only for sandbox testing
 - `TOSS_CONSOLE_API_KEY`: Apps in Toss console/AX release automation API key; keep it in the secret manager and never expose it to the client
 - `TOSS_CONSOLE_APP_ID`: Toss developer console app id
 - `TOSS_MINI_APP_NAME`: Toss mini app slug used to derive standard Toss origins

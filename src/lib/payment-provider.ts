@@ -72,7 +72,7 @@ export async function attachPolarCheckoutUrl(order: ReportOrder, origin: string)
     throw new Error("Polar 주문이 아니에요.");
   }
 
-  const productId = requirePolarProductId();
+  const productId = requirePolarProductId(order.productId);
   const response = await fetch(`${polarApiBaseUrl()}/v1/checkouts`, {
     method: "POST",
     headers: {
@@ -154,11 +154,11 @@ export function validatePolarCheckoutForOrder(order: ReportOrder, checkout: Pola
 
   const metadataProductId = stringMetadata(checkout.metadata, "productId");
   if (metadataProductId !== order.productId) {
-    throw new Error("Polar 결제 상품이 정밀 리포트 상품이 아니에요.");
+    throw new Error("Polar 결제 상품이 요청한 상품과 일치하지 않아요.");
   }
 
   const checkoutProductId = checkout.product_id ?? checkout.productId;
-  const expectedProductId = process.env.POLAR_PRODUCT_ID?.trim();
+  const expectedProductId = polarProductIdFor(order.productId);
   if (expectedProductId && checkoutProductId && checkoutProductId !== expectedProductId) {
     throw new Error("Polar 상품 ID가 설정값과 일치하지 않아요.");
   }
@@ -227,13 +227,22 @@ function requirePolarAccessToken() {
   return accessToken;
 }
 
-function requirePolarProductId() {
-  const productId = process.env.POLAR_PRODUCT_ID?.trim();
-  if (!productId) {
-    throw new Error("POLAR_PRODUCT_ID가 설정되어 있지 않아요.");
+function requirePolarProductId(productId: ReportOrder["productId"]) {
+  const productIdValue = polarProductIdFor(productId);
+  if (!productIdValue) {
+    throw new Error(`${polarProductEnvKey(productId)}가 설정되어 있지 않아요.`);
   }
 
-  return productId;
+  return productIdValue;
+}
+
+function polarProductIdFor(productId: ReportOrder["productId"]) {
+  const productIdValue = process.env[polarProductEnvKey(productId)]?.trim();
+  return productIdValue || null;
+}
+
+function polarProductEnvKey(productId: ReportOrder["productId"]) {
+  return productId === "MONTHLY_MONITORING" ? "POLAR_MONTHLY_MONITORING_PRODUCT_ID" : "POLAR_PRODUCT_ID";
 }
 
 function polarApiBaseUrl() {

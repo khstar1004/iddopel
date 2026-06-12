@@ -12,6 +12,8 @@ const completeEnv = {
   SCAN_PROVIDER: "maigret",
   PAYMENT_PROVIDER: "toss",
   ENABLE_MOCK_PAYMENTS: "false",
+  WEB_DETAILED_REPORT_PAYWALL_ENABLED: "true",
+  MONITORING_PAYWALL_ENABLED: "true",
   TOSS_CLIENT_KEY: "test_ck_fake_value",
   [["TOSS", "SECRET", "KEY"].join("_")]: "test_sk_123456789",
   TOSS_SECURITY_KEY: "a".repeat(64),
@@ -39,6 +41,7 @@ describe("production config preflight", () => {
         PAYMENT_PROVIDER: "polar",
         POLAR_ACCESS_TOKEN: "polar_" + "a".repeat(32),
         POLAR_PRODUCT_ID: "11111111-1111-4111-8111-111111111111",
+        POLAR_MONTHLY_MONITORING_PRODUCT_ID: "22222222-2222-4222-8222-222222222222",
         POLAR_WEBHOOK_SECRET: "p".repeat(48),
         POLAR_SERVER: "production"
       },
@@ -56,6 +59,7 @@ describe("production config preflight", () => {
         PAYMENT_PROVIDER: "polar",
         POLAR_ACCESS_TOKEN: "",
         POLAR_PRODUCT_ID: "YOUR_POLAR_PRODUCT_ID",
+        POLAR_MONTHLY_MONITORING_PRODUCT_ID: "YOUR_POLAR_MONTHLY_MONITORING_PRODUCT_ID",
         POLAR_WEBHOOK_SECRET: "short",
         POLAR_SERVER: "sandbox"
       },
@@ -67,6 +71,7 @@ describe("production config preflight", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "Polar access token is configured", ok: false }),
         expect.objectContaining({ name: "Polar product id is configured", ok: false }),
+        expect.objectContaining({ name: "Polar monthly monitoring product id is configured", ok: false }),
         expect.objectContaining({ name: "Polar webhook secret is strong", ok: false }),
         expect.objectContaining({ name: "Polar server is production", ok: false })
       ])

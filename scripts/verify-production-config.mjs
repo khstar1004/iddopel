@@ -64,6 +64,8 @@ export async function createProductionConfigReport({ envValues = process.env, ru
   addCheck("SCAN_PROVIDER requires Maigret", env("SCAN_PROVIDER") === "maigret", "Set SCAN_PROVIDER=maigret for real username scanning.");
   addCheck("PAYMENT_PROVIDER is a live checkout provider", ["toss", "polar"].includes(paymentProvider), "Set PAYMENT_PROVIDER=toss or PAYMENT_PROVIDER=polar before live web checkout.");
   addCheck("Mock payments disabled", env("ENABLE_MOCK_PAYMENTS") !== "true", "Set ENABLE_MOCK_PAYMENTS=false in production.");
+  addCheck("Web detailed report paywall enabled", env("WEB_DETAILED_REPORT_PAYWALL_ENABLED") === "true", "Set WEB_DETAILED_REPORT_PAYWALL_ENABLED=true so detailed reports require checkout.");
+  addCheck("Monthly monitoring paywall enabled", env("MONITORING_PAYWALL_ENABLED") === "true", "Set MONITORING_PAYWALL_ENABLED=true so monthly monitoring requires checkout.");
   if (paymentProvider === "toss") {
     addCheck("Toss client key is configured", /^test_ck_|^live_ck_/.test(env("TOSS_CLIENT_KEY")), "Set the Toss Payments client key in the deployment secret manager.");
     addCheck("Toss secret is configured", env("TOSS_SECRET_KEY").length >= 12, "Set a Toss Payments secret key in the deployment secret manager.");
@@ -72,6 +74,11 @@ export async function createProductionConfigReport({ envValues = process.env, ru
   if (paymentProvider === "polar") {
     addCheck("Polar access token is configured", env("POLAR_ACCESS_TOKEN").length >= 12 && !hasPlaceholder(env("POLAR_ACCESS_TOKEN")), "Set POLAR_ACCESS_TOKEN in the deployment secret manager.");
     addCheck("Polar product id is configured", env("POLAR_PRODUCT_ID").length > 0 && !hasPlaceholder(env("POLAR_PRODUCT_ID")), "Set POLAR_PRODUCT_ID to the detailed-report product.");
+    addCheck(
+      "Polar monthly monitoring product id is configured",
+      env("POLAR_MONTHLY_MONITORING_PRODUCT_ID").length > 0 && !hasPlaceholder(env("POLAR_MONTHLY_MONITORING_PRODUCT_ID")),
+      "Set POLAR_MONTHLY_MONITORING_PRODUCT_ID to the monthly-monitoring product."
+    );
     addCheck("Polar webhook secret is strong", isStrongSecret(env("POLAR_WEBHOOK_SECRET")), "Set POLAR_WEBHOOK_SECRET to a random 32+ character webhook secret.");
     addCheck("Polar server is production", env("POLAR_SERVER") !== "sandbox", "Use POLAR_SERVER=production or leave it unset for production checkout.");
   }

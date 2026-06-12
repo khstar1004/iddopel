@@ -36,7 +36,7 @@ create index if not exists scan_jobs_username_created_at_idx on scan_jobs (usern
 create table if not exists report_orders (
   id text primary key,
   scan_id text not null references scan_jobs(id) on delete cascade,
-  product_id text not null check (product_id in ('DETAILED_REPORT')),
+  product_id text not null check (product_id in ('DETAILED_REPORT', 'MONTHLY_MONITORING')),
   amount integer not null check (amount > 0),
   currency text not null check (currency in ('KRW')),
   order_name text not null,
@@ -56,6 +56,10 @@ create index if not exists report_orders_payment_key_idx on report_orders (provi
 alter table report_orders drop constraint if exists report_orders_provider_check;
 alter table report_orders add constraint report_orders_provider_check
   check (provider in ('MOCK', 'TOSS', 'POLAR', 'APP_STORE', 'GOOGLE_PLAY'));
+
+alter table report_orders drop constraint if exists report_orders_product_id_check;
+alter table report_orders add constraint report_orders_product_id_check
+  check (product_id in ('DETAILED_REPORT', 'MONTHLY_MONITORING'));
 
 create table if not exists monitoring_subscriptions (
   id text primary key,
@@ -80,10 +84,20 @@ create index if not exists monitoring_subscriptions_next_run_idx
 
 create table if not exists beta_scan_settings (
   id text primary key,
+  public_scan_enabled boolean not null default true,
   free_scan_limit integer not null check (free_scan_limit >= 0 and free_scan_limit <= 1000),
   window_hours integer not null check (window_hours >= 1 and window_hours <= 720),
+  max_concurrent_scans integer not null default 6 check (max_concurrent_scans >= 1 and max_concurrent_scans <= 50),
+  busy_retry_after_seconds integer not null default 30 check (busy_retry_after_seconds >= 1 and busy_retry_after_seconds <= 3600),
+  scan_lease_ttl_seconds integer not null default 90 check (scan_lease_ttl_seconds >= 10 and scan_lease_ttl_seconds <= 600),
   updated_at timestamptz not null
 );
+
+alter table beta_scan_settings
+  add column if not exists public_scan_enabled boolean not null default true,
+  add column if not exists max_concurrent_scans integer not null default 6,
+  add column if not exists busy_retry_after_seconds integer not null default 30,
+  add column if not exists scan_lease_ttl_seconds integer not null default 90;
 
 create table if not exists beta_scan_usage (
   quota_key text primary key,
@@ -93,3 +107,11 @@ create table if not exists beta_scan_usage (
 );
 
 create index if not exists beta_scan_usage_reset_at_idx on beta_scan_usage (reset_at);
+
+create table if not exists beta_scan_leases (
+  lease_id text primary key,
+  created_at timestamptz not null,
+  expires_at timestamptz not null
+);
+
+create index if not exists beta_scan_leases_expires_at_idx on beta_scan_leases (expires_at);

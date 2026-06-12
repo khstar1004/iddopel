@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { POST } from "../app/api/scans/route";
 import {
+  FileBetaScanLoadStore,
   FileBetaScanSettingsStore,
   FileBetaScanUsageStore,
   resetBetaScanQuotaStoresForTests
@@ -32,7 +33,8 @@ describe("scan route beta free quota", () => {
     resetScanRepositoryForTests(new MemoryScanRepository());
     resetBetaScanQuotaStoresForTests(
       new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
-      new FileBetaScanUsageStore(path.join(dir, "usage.json"))
+      new FileBetaScanUsageStore(path.join(dir, "usage.json")),
+      new FileBetaScanLoadStore(path.join(dir, "load.json"))
     );
 
     const first = await POST(scanRequest("firstquota", { ownerToken: "owner-token-one" }));
@@ -54,7 +56,8 @@ describe("scan route beta free quota", () => {
     resetScanRepositoryForTests(new MemoryScanRepository());
     resetBetaScanQuotaStoresForTests(
       new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
-      new FileBetaScanUsageStore(path.join(dir, "usage.json"))
+      new FileBetaScanUsageStore(path.join(dir, "usage.json")),
+      new FileBetaScanLoadStore(path.join(dir, "load.json"))
     );
 
     const first = await POST(scanRequest("firstownerquota", { ip: "203.0.113.21", ownerToken: "same-owner-token" }));
@@ -64,6 +67,50 @@ describe("scan route beta free quota", () => {
     expect(first.status).toBe(201);
     expect(second.status).toBe(429);
     expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("blocks public beta scans when the administrator disables search", async () => {
+    process.env.SCAN_PROVIDER = "mock";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "scan-route-disabled-"));
+    const settingsStore = new FileBetaScanSettingsStore(path.join(dir, "settings.json"));
+    await settingsStore.update({ publicScanEnabled: false });
+    resetScanRepositoryForTests(new MemoryScanRepository());
+    resetBetaScanQuotaStoresForTests(
+      settingsStore,
+      new FileBetaScanUsageStore(path.join(dir, "usage.json")),
+      new FileBetaScanLoadStore(path.join(dir, "load.json"))
+    );
+
+    const response = await POST(scanRequest("disabledscan"));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.error?.code).toBe("BETA_SCAN_DISABLED");
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("returns a busy response when the beta scan concurrency limit is reached", async () => {
+    process.env.SCAN_PROVIDER = "mock";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "scan-route-busy-"));
+    const settingsStore = new FileBetaScanSettingsStore(path.join(dir, "settings.json"));
+    const loadStore = new FileBetaScanLoadStore(path.join(dir, "load.json"));
+    const settings = await settingsStore.update({ maxConcurrentScans: 1, busyRetryAfterSeconds: 9 });
+    const lease = await loadStore.acquire(settings);
+    resetScanRepositoryForTests(new MemoryScanRepository());
+    resetBetaScanQuotaStoresForTests(
+      settingsStore,
+      new FileBetaScanUsageStore(path.join(dir, "usage.json")),
+      loadStore
+    );
+
+    const response = await POST(scanRequest("busyscan"));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("9");
+    expect(body.error?.code).toBe("BETA_SCAN_BUSY");
+    await lease.release?.();
     await rm(dir, { recursive: true, force: true });
   });
 });

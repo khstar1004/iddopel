@@ -16,6 +16,9 @@ const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
 const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
 const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
 const tossConsoleApiKey = ["TOSS", "CONSOLE", "API", "KEY"].join("_");
+const polarAccessToken = ["POLAR", "ACCESS", "TOKEN"].join("_");
+const polarMonthlyMonitoringProductId = ["POLAR", "MONTHLY", "MONITORING", "PRODUCT", "ID"].join("_");
+const polarWebhookSecret = ["POLAR", "WEBHOOK", "SECRET"].join("_");
 const cronSecretKey = ["CRON", "SECRET"].join("_");
 const reportTokenSecretKey = ["REPORT", "TOKEN", "SECRET"].join("_");
 const firstFreeFingerprintSecretKey = ["FIRST", "FREE", "FINGERPRINT", "SECRET"].join("_");
@@ -83,6 +86,8 @@ describe("launch-console", () => {
       [tossSecretKey]: "placeholder-value",
       [tossSecurityKey]: "a".repeat(64),
       [tossConsoleApiKey]: "console-api-key-value",
+      [polarAccessToken]: "polar_" + "a".repeat(32),
+      [polarWebhookSecret]: "p".repeat(48),
       [reportTokenSecretKey]: "report-token-secret-value-1234567890",
       [firstFreeFingerprintSecretKey]: "first-free-fingerprint-secret-1234567890"
     });
@@ -112,6 +117,16 @@ describe("launch-console", () => {
       sensitive: true,
       value: ""
     });
+    expect(status.find((item) => item.key === polarAccessToken)).toMatchObject({
+      configured: true,
+      sensitive: true,
+      value: ""
+    });
+    expect(status.find((item) => item.key === polarWebhookSecret)).toMatchObject({
+      configured: true,
+      sensitive: true,
+      value: ""
+    });
     expect(status.find((item) => item.key === reportTokenSecretKey)).toMatchObject({
       configured: true,
       sensitive: true,
@@ -126,6 +141,8 @@ describe("launch-console", () => {
     expect(JSON.stringify(status)).not.toContain("placeholder-value");
     expect(JSON.stringify(status)).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     expect(JSON.stringify(status)).not.toContain("console-api-key-value");
+    expect(JSON.stringify(status)).not.toContain("polar_" + "a".repeat(32));
+    expect(JSON.stringify(status)).not.toContain("p".repeat(48));
     expect(JSON.stringify(status)).not.toContain("report-token-secret-value-1234567890");
     expect(JSON.stringify(status)).not.toContain("first-free-fingerprint-secret-1234567890");
   });
@@ -164,11 +181,18 @@ describe("launch-console", () => {
       [cronSecretKey]: "short",
       [reportTokenSecretKey]: "shared-secret-value-123456789012345",
       [firstFreeFingerprintSecretKey]: "shared-secret-value-123456789012345",
+      PAYMENT_PROVIDER: "toss",
       [tossClientKey]: "wrong-client-key",
       [tossSecretKey]: "short",
       [tossSecurityKey]: "not-64-hex",
       [tossConsoleApiKey]: "short",
       TOSS_ALLOWED_ORIGINS: "https://bad.example.com",
+      [polarAccessToken]: "short",
+      POLAR_PRODUCT_ID: "x",
+      [polarMonthlyMonitoringProductId]: "x",
+      [polarWebhookSecret]: "short",
+      POLAR_SERVER: "edge",
+      MONITORING_PAYWALL_ENABLED: "maybe",
       ALERT_WEBHOOK_URL: "http://hooks.example.com/launch",
       ALERT_WEBHOOK_PROVIDER: "pager",
       ALERT_RUNBOOK_URL: "https://localhost/runbook",
@@ -198,6 +222,7 @@ describe("launch-console", () => {
       [tossSecurityKey]: expect.stringContaining("64자 hex"),
       [tossConsoleApiKey]: expect.stringContaining("12자 이상"),
       TOSS_ALLOWED_ORIGINS: expect.stringContaining("공개 tossmini.com Origin"),
+      MONITORING_PAYWALL_ENABLED: expect.stringContaining("true 또는 false"),
       ALERT_WEBHOOK_URL: expect.stringContaining("HTTPS"),
       ALERT_WEBHOOK_PROVIDER: expect.stringContaining("generic, slack, discord"),
       ALERT_RUNBOOK_URL: expect.stringContaining("HTTPS"),
@@ -212,6 +237,34 @@ describe("launch-console", () => {
       GOOGLE_PLAY_PACKAGE_NAME: expect.stringContaining("com.iddoppelganger.app"),
       GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: expect.stringContaining("영문, 숫자"),
       [googlePlayServiceAccountJsonKey]: expect.stringContaining("JSON")
+    });
+  });
+
+  it("rejects unsupported web checkout providers", () => {
+    expect(validateLaunchEnvValues({ PAYMENT_PROVIDER: "card" })).toMatchObject({
+      PAYMENT_PROVIDER: expect.stringContaining("toss 또는 polar")
+    });
+  });
+
+  it("validates the active Polar checkout fields and ignores inactive Toss payment placeholders", () => {
+    expect(
+      validateLaunchEnvValues({
+        PAYMENT_PROVIDER: "polar",
+        TOSS_CLIENT_KEY: "YOUR_TOSS_CLIENT_KEY",
+        TOSS_SECRET_KEY: "YOUR_TOSS_SECRET_KEY",
+        TOSS_SECURITY_KEY: "YOUR_TOSS_SECURITY_KEY",
+        [polarAccessToken]: "short",
+        POLAR_PRODUCT_ID: "x",
+        [polarMonthlyMonitoringProductId]: "x",
+        [polarWebhookSecret]: "short",
+        POLAR_SERVER: "edge"
+      })
+    ).toMatchObject({
+      [polarAccessToken]: expect.stringContaining("12자 이상"),
+      POLAR_PRODUCT_ID: expect.stringContaining("3자 이상"),
+      [polarMonthlyMonitoringProductId]: expect.stringContaining("3자 이상"),
+      [polarWebhookSecret]: expect.stringContaining("32자 이상"),
+      POLAR_SERVER: expect.stringContaining("production 또는 sandbox")
     });
   });
 
@@ -299,6 +352,22 @@ describe("launch-console", () => {
     });
     expect(launchEnvFields.find((field) => field.key === tossConsoleApiKey)).toMatchObject({
       label: "Toss Console API Key",
+      sensitive: true
+    });
+    expect(launchEnvFields.find((field) => field.key === "PAYMENT_PROVIDER")).toMatchObject({
+      label: "웹 결제 Provider",
+      sensitive: false
+    });
+    expect(launchEnvFields.find((field) => field.key === polarAccessToken)).toMatchObject({
+      label: "Polar Access Token",
+      sensitive: true
+    });
+    expect(launchEnvFields.find((field) => field.key === polarMonthlyMonitoringProductId)).toMatchObject({
+      label: "Polar 월간 모니터링 상품 ID",
+      sensitive: false
+    });
+    expect(launchEnvFields.find((field) => field.key === polarWebhookSecret)).toMatchObject({
+      label: "Polar Webhook Secret",
       sensitive: true
     });
     expect(launchEnvFields.find((field) => field.key === "TOSS_ALLOWED_ORIGINS")).toMatchObject({

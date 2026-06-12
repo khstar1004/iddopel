@@ -32,14 +32,14 @@ ID 도플갱어
 ## Technical Notes
 - WebView route: `/toss`
 - Login: optional in MVP, Toss Login later
-- Payment: web checkout route `/checkout/{orderId}`, Toss Payments provider through `PAYMENT_PROVIDER=toss`
+- Payment: web checkout route `/checkout/{orderId}`, using `PAYMENT_PROVIDER=toss` or `PAYMENT_PROVIDER=polar`
 - API: `/api/scans`
 - Cross-origin API allowlist: configure `TOSS_MINI_APP_NAME` or `TOSS_ALLOWED_ORIGINS` for `https://<appName>.apps.tossmini.com` and `https://<appName>.private-apps.tossmini.com`
 - mTLS and partner API credentials must be configured after Toss console registration.
 
 ## Required Before Actual Submission
 - Toss developer console app id
-- Toss Payments client key, secret key, and security key
+- Web checkout provider keys: Toss Payments client/secret/security keys when `PAYMENT_PROVIDER=toss`, or Polar access token, detailed-report product id, monthly-monitoring product id, and webhook secret when `PAYMENT_PROVIDER=polar`
 - Business registration and partner review status
 - Registered service terms and privacy consent text
 - Production domain allowlist
@@ -81,7 +81,7 @@ npm run toss:verify
 TOSS_RELEASE_CHECK=true npm run toss:verify
 ```
 
-Local verification checks the `/toss` route, review-safe copy, policy links, CORS allowlist implementation, Toss Payments CSP hosts, and environment template. Release verification additionally requires the Toss Payments client/secret/security keys, Toss console API key, console app id, mini-app name, production HTTPS `SITE_URL`, `PAYMENT_PROVIDER=toss`, and review scenario values.
+Local verification checks the `/toss` route, review-safe copy, policy links, CORS allowlist implementation, checkout CSP hosts, and environment template. Release verification additionally requires the Toss console API key, console app id, mini-app name, production HTTPS `SITE_URL`, a live `PAYMENT_PROVIDER`, and review scenario values. Toss Payments keys are required only when `PAYMENT_PROVIDER=toss`; with `PAYMENT_PROVIDER=polar`, confirm the external checkout policy during Toss review.
 
 ## Sources
 - App-in-Toss SDK overview: https://developers-apps-in-toss.toss.im/bedrock/reference/framework/%EC%8B%9C%EC%9E%91%ED%95%98%EA%B8%B0/intro.html

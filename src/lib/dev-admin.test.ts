@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { isDevAdminEnabled } from "./dev-admin";
+import { devAdminRuntimeStatus, isDevAdminEnabled, isDevAdminLoginConfigured } from "./dev-admin";
 
 describe("dev admin availability", () => {
   const originalEnableDevAdmin = process.env.ENABLE_DEV_ADMIN;
@@ -17,11 +17,18 @@ describe("dev admin availability", () => {
     expect(isDevAdminEnabled(new Request("http://localhost:3000/admin"))).toBe(true);
   });
 
-  it("does not enable public admin without an explicit password", () => {
+  it("marks public admin as setup-required without an explicit password", () => {
     process.env.ENABLE_DEV_ADMIN = "true";
     delete process.env.DEV_ADMIN_PASSWORD;
+    const request = new Request("https://id.example.com/admin");
 
-    expect(isDevAdminEnabled(new Request("https://id.example.com/admin"))).toBe(false);
+    expect(isDevAdminEnabled(request)).toBe(true);
+    expect(isDevAdminLoginConfigured(request)).toBe(false);
+    expect(devAdminRuntimeStatus(request)).toMatchObject({
+      enabled: true,
+      setupRequired: true,
+      loginConfigured: false
+    });
   });
 
   it("enables public admin when the deployment has a password", () => {

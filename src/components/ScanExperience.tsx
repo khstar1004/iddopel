@@ -29,6 +29,7 @@ import type { PublicMonitoringSubscription, ScanResult, ScanSummary } from "@/li
 import { normalizeUsername } from "@/lib/validation";
 import { BrandIcon } from "./BrandIcon";
 import { devAdminTokenKey, getOrCreateFreeScanOwnerToken } from "./client-tokens";
+import { pendingMonitoringKey } from "./paid-monitoring-client";
 import { ScanEyeLoader } from "./ScanEyeLoader";
 
 interface StoredScan extends ScanSummary {
@@ -155,6 +156,8 @@ const scanExperienceCopy = {
       placeholder: "쉼표로 여러 아이디 입력",
       saving: "등록 중",
       submit: "월간 재점검 등록",
+      checkoutStarting: "월간 모니터링 결제 페이지로 이동하고 있어요.",
+      scanFirst: "먼저 아이디 점검 후 월간 모니터링을 등록해 주세요.",
       statusTitle: "모니터링 상태",
       nextRun: "다음 자동 재점검",
       lastRun: "최근 재점검",
@@ -319,6 +322,8 @@ const scanExperienceCopy = {
       placeholder: "Enter multiple usernames with commas",
       saving: "Saving",
       submit: "Start monthly recheck",
+      checkoutStarting: "Opening the monthly monitoring checkout.",
+      scanFirst: "Run a username check before starting monthly monitoring.",
       statusTitle: "Monitoring status",
       nextRun: "Next automatic recheck",
       lastRun: "Last recheck",
@@ -408,6 +413,12 @@ type LocalizedLabelSets = {
   country: Record<string, string>;
   risk: Record<string, string>;
 };
+
+interface MonitoringRegistrationRequest {
+  ownerToken?: string;
+  usernames: string[];
+  purpose: "SELF_CHECK";
+}
 
 function isLocale(value: string | null | undefined): value is Locale {
   return value === "ko" || value === "en";
@@ -679,16 +690,22 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     const rawInput = monitoringInput.trim() || summary?.username || username.trim();
     const usernames = rawInput.split(/[,\s]+/).map((item) => item.trim()).filter(Boolean);
     const ownerToken = window.localStorage.getItem(monitoringOwnerTokenKey) ?? undefined;
+    const payload: MonitoringRegistrationRequest = { ownerToken, usernames, purpose: "SELF_CHECK" };
 
     try {
       const response = await fetch("/api/monitoring", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerToken, usernames, purpose: "SELF_CHECK" })
+        body: JSON.stringify(payload)
       });
-      const body = await response.json();
+      const body = await response.json().catch(() => null);
 
       if (!response.ok) {
+        if (response.status === 402 && body?.error?.code === "MONITORING_PAYMENT_REQUIRED") {
+          await startMonitoringCheckout(payload);
+          return;
+        }
+
         throw new Error(body?.error?.message ?? "월간 모니터링을 등록하지 못했어요.");
       }
 
@@ -701,6 +718,39 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     } finally {
       setIsSavingMonitoring(false);
     }
+  }
+
+  async function startMonitoringCheckout(payload: MonitoringRegistrationRequest) {
+    if (!summary?.scanId) {
+      throw new Error(copy.monitoring.scanFirst);
+    }
+
+    setMonitoringMessage(copy.monitoring.checkoutStarting);
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scanId: summary.scanId, productId: "MONTHLY_MONITORING" })
+    });
+    const body = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(body?.error?.message ?? "월간 모니터링 주문을 만들지 못했어요.");
+    }
+
+    if (typeof body?.orderId !== "string" || typeof body?.checkoutUrl !== "string") {
+      throw new Error("월간 모니터링 결제 링크를 만들지 못했어요.");
+    }
+
+    window.localStorage.setItem(
+      pendingMonitoringKey,
+      JSON.stringify({
+        orderId: body.orderId,
+        ownerToken: payload.ownerToken,
+        usernames: payload.usernames,
+        purpose: payload.purpose
+      })
+    );
+    window.location.href = body.checkoutUrl;
   }
 
   async function deleteMonitoring() {

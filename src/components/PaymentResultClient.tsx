@@ -3,14 +3,23 @@
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  isMonthlyMonitoringPayment,
+  registerPaidMonitoringFromPayment,
+  type PaymentAccessResponse
+} from "./paid-monitoring-client";
 
 export function PaymentSuccessClient() {
   const searchParams = useSearchParams();
   const [message, setMessage] = useState("결제를 승인하고 있어요.");
   const [error, setError] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+
     const provider = searchParams.get("provider");
     if (provider === "polar") {
       const checkoutId = searchParams.get("checkout_id");
@@ -22,8 +31,18 @@ export function PaymentSuccessClient() {
         body: JSON.stringify({ checkoutId, orderId })
       })
         .then(async (response) => {
-          const body = await response.json();
+          const body = (await response.json()) as PaymentAccessResponse & { error?: { message?: string } };
           if (!response.ok) throw new Error(body?.error?.message ?? "결제 완료 정보를 확인하지 못했어요.");
+
+          if (isMonthlyMonitoringPayment(body)) {
+            setMessage("월간 모니터링을 등록하고 있어요.");
+            await registerPaidMonitoringFromPayment(body);
+            setMessage("월간 모니터링으로 이동하고 있어요.");
+            window.location.href = "/#monitoring-status-title";
+            return;
+          }
+
+          if (!body.reportUrl) throw new Error("결제 리포트 주소가 응답에 없어요.");
           setMessage("정밀 리포트로 이동하고 있어요.");
           window.location.href = body.reportUrl;
         })
@@ -43,8 +62,18 @@ export function PaymentSuccessClient() {
       body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) })
     })
       .then(async (response) => {
-        const body = await response.json();
+        const body = (await response.json()) as PaymentAccessResponse & { error?: { message?: string } };
         if (!response.ok) throw new Error(body?.error?.message ?? "결제 승인을 완료하지 못했어요.");
+
+        if (isMonthlyMonitoringPayment(body)) {
+          setMessage("월간 모니터링을 등록하고 있어요.");
+          await registerPaidMonitoringFromPayment(body);
+          setMessage("월간 모니터링으로 이동하고 있어요.");
+          window.location.href = "/#monitoring-status-title";
+          return;
+        }
+
+        if (!body.reportUrl) throw new Error("결제 리포트 주소가 응답에 없어요.");
         setMessage("정밀 리포트로 이동하고 있어요.");
         window.location.href = body.reportUrl;
       })

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { handleApiError, jsonError, readJson } from "@/lib/api";
+import { isMonitoringPaywallEnabled, monitoringPaywallEnabledMessage } from "@/lib/monitoring-paywall";
 import { getMonitoringForOwner, registerMonitoring } from "@/lib/monitoring-service";
+import { assertPaidProductAccess, PaidProductAccessError } from "@/lib/paid-product-access";
 
 export const runtime = "nodejs";
 
@@ -22,6 +24,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = (await readJson(request)) as Record<string, unknown>;
+
+    if (isMonitoringPaywallEnabled()) {
+      await assertPaidProductAccess({
+        orderId: body.paymentOrderId,
+        token: body.paymentToken,
+        productId: "MONTHLY_MONITORING"
+      });
+    }
+
     const result = await registerMonitoring({
       ownerToken: body.ownerToken,
       usernames: body.usernames,
@@ -30,6 +41,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    if (error instanceof PaidProductAccessError) {
+      return jsonError(
+        error.code === "PAYMENT_REQUIRED" ? "MONITORING_PAYMENT_REQUIRED" : error.code,
+        error.code === "PAYMENT_REQUIRED" ? monitoringPaywallEnabledMessage() : error.message,
+        error.status
+      );
+    }
+
     return handleApiError(error);
   }
 }

@@ -145,11 +145,10 @@ Before starting the stack, confirm real values in `deploy/compose/.env`:
 - `SCAN_PROVIDER=maigret`
 - `PAYMENT_PROVIDER=toss` or `PAYMENT_PROVIDER=polar`
 - `ENABLE_MOCK_PAYMENTS=false`
-- `WEB_DETAILED_REPORT_PAYWALL_ENABLED=false` for beta. Switch to `true` only after live web checkout is ready.
-- `TOSS_CLIENT_KEY`
-- `TOSS_SECRET_KEY`
-- `TOSS_SECURITY_KEY`
-- `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID`, and `POLAR_WEBHOOK_SECRET` if using Polar web checkout
+- `WEB_DETAILED_REPORT_PAYWALL_ENABLED=true` after live web checkout is ready; keep `false` only for a free beta.
+- `MONITORING_PAYWALL_ENABLED=true` after the monthly monitoring checkout product is ready; keep `false` only for a free beta.
+- `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, and `TOSS_SECURITY_KEY` if using Toss web checkout
+- `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID`, `POLAR_MONTHLY_MONITORING_PRODUCT_ID`, and `POLAR_WEBHOOK_SECRET` if using Polar web checkout
 - `TOSS_CONSOLE_API_KEY`
 - `TOSS_CONSOLE_APP_ID`
 - `TOSS_MINI_APP_NAME`
@@ -184,10 +183,10 @@ After a Vercel beta deployment, verify the public beta surface. This checks secu
 SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 ```
 
-That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The full manual sequence is:
+That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss in-app, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The Toss web-checkout manual sequence is:
 
 ```bash
-PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" REPORT_TOKEN_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_REPORT_TOKEN_SECRET" FIRST_FREE_FINGERPRINT_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_FINGERPRINT_SECRET" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
+PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" REPORT_TOKEN_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_REPORT_TOKEN_SECRET" FIRST_FREE_FINGERPRINT_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_FINGERPRINT_SECRET" PAYMENT_PROVIDER="toss" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
 DEPLOY_RELEASE_CHECK=true npm run deploy:verify
 npm run assets:all
 npm run scan:maigret
@@ -222,10 +221,12 @@ The web detailed-report checkout can use Polar instead of Toss by setting:
 ```bash
 PAYMENT_PROVIDER=polar
 POLAR_ACCESS_TOKEN="YOUR_POLAR_ORGANIZATION_ACCESS_TOKEN"
-POLAR_PRODUCT_ID="YOUR_POLAR_PRODUCT_ID"
+POLAR_PRODUCT_ID="YOUR_DETAILED_REPORT_PRODUCT_ID"
+POLAR_MONTHLY_MONITORING_PRODUCT_ID="YOUR_MONTHLY_MONITORING_PRODUCT_ID"
 POLAR_WEBHOOK_SECRET="YOUR_POLAR_WEBHOOK_SECRET"
 SITE_URL="https://YOUR_DOMAIN"
 WEB_DETAILED_REPORT_PAYWALL_ENABLED=true
+MONITORING_PAYWALL_ENABLED=true
 ```
 
 Order creation calls Polar's hosted checkout session API and stores the returned checkout URL. Configure the Polar webhook URL as:
@@ -234,7 +235,7 @@ Order creation calls Polar's hosted checkout session API and stores the returned
 https://YOUR_DOMAIN/api/payments/polar/webhook
 ```
 
-Subscribe at least to `order.paid`. The success redirect also verifies `checkout_id` server-side before opening the paid report, so the user can reach the report even if the webhook arrives slightly later.
+Use `Raw` delivery format. Subscribe at least to `order.paid`; add subscription/refund events before enforcing cancellation and refund entitlements. The success redirect also verifies `checkout_id` server-side before opening the paid report or registering paid monthly monitoring, so the user can continue even if the webhook arrives slightly later.
 
 ## Toss In-App
 

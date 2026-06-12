@@ -33,7 +33,7 @@
 - [x] Paid report order, checkout, entitlement token, locked full-result API
 - [x] First detailed report free entitlement and blurred locked-result paywall for later reports
 - [x] Beta free-search quota consumes request-identity and owner-token keys, with Postgres persistence and file fallback
-- [x] Web detailed-report paywall flag prepared; beta keeps `WEB_DETAILED_REPORT_PAYWALL_ENABLED=false` until Toss checkout is registered
+- [x] Web detailed-report and monthly-monitoring paywall flags prepared; beta keeps them `false` only until checkout products are registered
 - [x] Mock payment confirmation is blocked unless `ENABLE_MOCK_PAYMENTS=true` and the order is a local mock order
 - [x] Viral-safe PNG share card for result screens without platform URLs or profile details
 - [x] Local developer admin login for repeated scan and report testing
@@ -73,8 +73,9 @@
 - [ ] Set `CRON_SECRET`, `REPORT_TOKEN_SECRET`, and `FIRST_FREE_FINGERPRINT_SECRET` in production and confirm scheduled prune invocations
 - [ ] Confirm scheduled monthly monitoring invocations via `/api/cron/monitoring`
 - [ ] Deploy Docker image with `SCAN_PROVIDER=maigret` for real username scanning
-- [ ] Set `PAYMENT_PROVIDER=toss`, `SITE_URL`, `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, `TOSS_SECURITY_KEY`, `TOSS_CONSOLE_API_KEY`, `TOSS_CONSOLE_APP_ID`, `TOSS_MINI_APP_NAME`, and `TOSS_ALLOWED_ORIGINS`
-- [ ] Run a Toss Payments test-key payment from checkout to `/reports/{scanId}`
+- [ ] Set `PAYMENT_PROVIDER=toss` with `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, and `TOSS_SECURITY_KEY`, or `PAYMENT_PROVIDER=polar` with `POLAR_ACCESS_TOKEN`, `POLAR_PRODUCT_ID`, `POLAR_MONTHLY_MONITORING_PRODUCT_ID`, and `POLAR_WEBHOOK_SECRET`
+- [ ] Set `SITE_URL`, `TOSS_CONSOLE_API_KEY`, `TOSS_CONSOLE_APP_ID`, `TOSS_MINI_APP_NAME`, and `TOSS_ALLOWED_ORIGINS` for Toss in-app submission
+- [ ] Run a selected-provider test checkout from checkout to `/reports/{scanId}`
 - [x] Browser smoke test at 320, 768, 1024, 1440 px
 - [ ] Security headers checked on the production domain
 - [ ] `npm run release:production` passes with real production env, deployed domain, regenerated release assets, store credentials, and Toss credentials
@@ -91,8 +92,8 @@
 - [x] `npm run launch:readiness` summarizes local release gates and remaining external blockers
 - [x] `npm run toss:verify` passes for local Toss in-app submission readiness
 - [x] `SMOKE_BASE_URL=https://iddopel.vercel.app npm run smoke:vercel-beta` verifies Vercel beta security headers, policy pages, SEO endpoints, real scan execution, inline results, and embedded report branding
-- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... REPORT_TOKEN_SECRET=... FIRST_FREE_FINGERPRINT_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... TOSS_ALLOWED_ORIGINS=... WEB_DETAILED_REPORT_PAYWALL_ENABLED=false ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_BUNDLE_ID=com.iddoppelganger.app APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report APPLE_ENVIRONMENT=production APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
-- [ ] Production `npm run launch:button -- --execute --ship` completes with real domain, database, Toss, store, alert, and mobile release values
+- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... REPORT_TOKEN_SECRET=... FIRST_FREE_FINGERPRINT_SECRET=... PAYMENT_PROVIDER=toss|polar TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... POLAR_ACCESS_TOKEN=... POLAR_PRODUCT_ID=... POLAR_MONTHLY_MONITORING_PRODUCT_ID=... POLAR_WEBHOOK_SECRET=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... TOSS_ALLOWED_ORIGINS=... WEB_DETAILED_REPORT_PAYWALL_ENABLED=true MONITORING_PAYWALL_ENABLED=true ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_BUNDLE_ID=com.iddoppelganger.app APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report APPLE_ENVIRONMENT=production APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
+- [ ] Production `npm run launch:button -- --execute --ship` completes with real domain, database, selected web checkout provider, Toss in-app, store, alert, and mobile release values
 - [ ] `DEPLOY_RELEASE_CHECK=true npm run deploy:verify` passes with real production `deploy/compose/.env`
 - [ ] Production `sitemap.xml` and `robots.txt` checked after final `SITE_URL` deployment
 - [ ] `TOSS_RELEASE_CHECK=true npm run toss:verify` passes with Toss console app id, live/private Toss origins, and production review scenario

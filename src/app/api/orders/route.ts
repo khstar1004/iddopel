@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleApiError, jsonError, readJson } from "@/lib/api";
-import { createOrder, publicOrder, resolvePaymentProvider } from "@/lib/commerce";
+import { createOrder, parseProductId, publicOrder, resolvePaymentProvider } from "@/lib/commerce";
 import { getCommerceRepository } from "@/lib/commerce-repository";
 import { attachCheckoutUrl } from "@/lib/payment-provider";
 import { getStoredScan } from "@/lib/scan-store";
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     const provider = resolvePaymentProvider();
-    const order = createOrder(scan, provider);
+    const order = createOrder(scan, provider, parseProductId(body.productId));
     const orderWithCheckout = await attachCheckoutUrl(order, requestOrigin(request));
     await getCommerceRepository().create(orderWithCheckout);
 

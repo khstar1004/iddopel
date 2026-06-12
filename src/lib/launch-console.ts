@@ -18,6 +18,15 @@ export type LaunchConsoleOptions = {
   confirm: string;
 };
 
+const tossPaymentKeys = ["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY", "TOSS_SECURITY_KEY"];
+const polarPaymentKeys = [
+  "POLAR_ACCESS_TOKEN",
+  "POLAR_PRODUCT_ID",
+  "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+  "POLAR_WEBHOOK_SECRET",
+  "POLAR_SERVER"
+];
+
 export const launchEnvFields: LaunchEnvField[] = [
   { key: "PRODUCTION_DOMAIN", label: "프로덕션 도메인", sensitive: false, placeholder: "id.yourdomain.kr" },
   { key: "STORE_SUPPORT_EMAIL", label: "스토어 지원 이메일", sensitive: false, placeholder: "support@yourdomain.kr" },
@@ -26,9 +35,20 @@ export const launchEnvFields: LaunchEnvField[] = [
   { key: "CRON_SECRET", label: "Cron Secret", sensitive: true, placeholder: "32자 이상 랜덤 문자열" },
   { key: "REPORT_TOKEN_SECRET", label: "Report Token Secret", sensitive: true, placeholder: "32자 이상 랜덤 문자열" },
   { key: "FIRST_FREE_FINGERPRINT_SECRET", label: "1회 무료 판정 Secret", sensitive: true, placeholder: "32자 이상 랜덤 문자열" },
+  { key: "PAYMENT_PROVIDER", label: "웹 결제 Provider", sensitive: false, placeholder: "toss 또는 polar" },
   { key: "TOSS_CLIENT_KEY", label: "Toss Payments Client Key", sensitive: true, placeholder: "test_ck_..." },
   { key: "TOSS_SECRET_KEY", label: "Toss Payments Secret Key", sensitive: true, placeholder: "test_sk_..." },
   { key: "TOSS_SECURITY_KEY", label: "Toss Payments Security Key", sensitive: true, placeholder: "64자 보안 키" },
+  { key: "POLAR_ACCESS_TOKEN", label: "Polar Access Token", sensitive: true, placeholder: "polar access token" },
+  { key: "POLAR_PRODUCT_ID", label: "Polar 정밀 리포트 상품 ID", sensitive: false, placeholder: "detailed report product id" },
+  {
+    key: "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+    label: "Polar 월간 모니터링 상품 ID",
+    sensitive: false,
+    placeholder: "monthly monitoring product id"
+  },
+  { key: "POLAR_WEBHOOK_SECRET", label: "Polar Webhook Secret", sensitive: true, placeholder: "32자 이상 랜덤 문자열" },
+  { key: "POLAR_SERVER", label: "Polar 서버", sensitive: false, placeholder: "production" },
   { key: "TOSS_CONSOLE_API_KEY", label: "Toss Console API Key", sensitive: true, placeholder: "Apps in Toss console API key" },
   { key: "TOSS_CONSOLE_APP_ID", label: "Toss Console App ID", sensitive: false, placeholder: "app_..." },
   { key: "TOSS_MINI_APP_NAME", label: "Toss Mini App Name", sensitive: false, placeholder: "id-doppelganger" },
@@ -41,6 +61,7 @@ export const launchEnvFields: LaunchEnvField[] = [
   { key: "TOSS_REVIEW_TEST_USERNAME", label: "Toss 심사용 아이디", sensitive: false, placeholder: "khstar104" },
   { key: "TOSS_REVIEW_SCENARIO", label: "Toss 심사 시나리오", sensitive: false, placeholder: "Enter the review username and run the flow." },
   { key: "WEB_DETAILED_REPORT_PAYWALL_ENABLED", label: "웹 정밀 리포트 유료잠금", sensitive: false, placeholder: "false" },
+  { key: "MONITORING_PAYWALL_ENABLED", label: "월간 모니터링 유료잠금", sensitive: false, placeholder: "false" },
   { key: "ALERT_WEBHOOK_URL", label: "런칭 알림 Webhook", sensitive: true, placeholder: "https://hooks.yourdomain.kr/..." },
   { key: "ALERT_WEBHOOK_PROVIDER", label: "알림 Provider", sensitive: false, placeholder: "slack" },
   { key: "ALERT_RUNBOOK_URL", label: "장애 대응 Runbook URL", sensitive: false, placeholder: "https://docs.yourdomain.kr/runbook" },
@@ -140,6 +161,7 @@ export function createLaunchEnvStatus(values: Record<string, string>) {
 
 export function validateLaunchEnvValues(values: Record<string, string>) {
   const errors: Record<string, string> = {};
+  const paymentProvider = normalizePaymentProvider(values.PAYMENT_PROVIDER);
 
   validateProductionDomain(values.PRODUCTION_DOMAIN, errors);
   validateEmail(values.STORE_SUPPORT_EMAIL, "STORE_SUPPORT_EMAIL", "스토어 지원 이메일", errors);
@@ -155,12 +177,29 @@ export function validateLaunchEnvValues(values: Record<string, string>) {
     "FIRST_FREE_FINGERPRINT_SECRET",
     errors
   );
-  validatePattern(values.TOSS_CLIENT_KEY, "TOSS_CLIENT_KEY", "Toss Payments Client Key", /^test_ck_|^live_ck_/, "test_ck_ 또는 live_ck_로 시작해야 해요.", errors);
-  validateMinimumLength(values.TOSS_SECRET_KEY, "TOSS_SECRET_KEY", "Toss Payments Secret Key", 12, errors);
-  validatePattern(values.TOSS_SECURITY_KEY, "TOSS_SECURITY_KEY", "Toss Payments Security Key", /^[a-f0-9]{64}$/i, "64자 hex 보안 키여야 해요.", errors);
+  validatePaymentProvider(values.PAYMENT_PROVIDER, errors);
+  if (paymentProvider === "toss") {
+    validatePattern(values.TOSS_CLIENT_KEY, "TOSS_CLIENT_KEY", "Toss Payments Client Key", /^test_ck_|^live_ck_/, "test_ck_ 또는 live_ck_로 시작해야 해요.", errors);
+    validateMinimumLength(values.TOSS_SECRET_KEY, "TOSS_SECRET_KEY", "Toss Payments Secret Key", 12, errors);
+    validatePattern(values.TOSS_SECURITY_KEY, "TOSS_SECURITY_KEY", "Toss Payments Security Key", /^[a-f0-9]{64}$/i, "64자 hex 보안 키여야 해요.", errors);
+  }
+  if (paymentProvider === "polar") {
+    validateMinimumLength(values.POLAR_ACCESS_TOKEN, "POLAR_ACCESS_TOKEN", "Polar Access Token", 12, errors);
+    validateMinimumLength(values.POLAR_PRODUCT_ID, "POLAR_PRODUCT_ID", "Polar 정밀 리포트 상품 ID", 3, errors);
+    validateMinimumLength(
+      values.POLAR_MONTHLY_MONITORING_PRODUCT_ID,
+      "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+      "Polar 월간 모니터링 상품 ID",
+      3,
+      errors
+    );
+    validateMinimumLength(values.POLAR_WEBHOOK_SECRET, "POLAR_WEBHOOK_SECRET", "Polar Webhook Secret", 32, errors);
+    validatePolarServer(values.POLAR_SERVER, errors);
+  }
   validateMinimumLength(values.TOSS_CONSOLE_API_KEY, "TOSS_CONSOLE_API_KEY", "Toss Console API Key", 12, errors);
   validateTossAllowedOrigins(values.TOSS_ALLOWED_ORIGINS, errors);
   validateBoolean(values.WEB_DETAILED_REPORT_PAYWALL_ENABLED, "WEB_DETAILED_REPORT_PAYWALL_ENABLED", errors);
+  validateBoolean(values.MONITORING_PAYWALL_ENABLED, "MONITORING_PAYWALL_ENABLED", errors);
   validateHttpsUrl(values.ALERT_WEBHOOK_URL, "ALERT_WEBHOOK_URL", "런칭 알림 Webhook", errors);
   validateWebhookProvider(values.ALERT_WEBHOOK_PROVIDER, errors);
   validateHttpsUrl(values.ALERT_RUNBOOK_URL, "ALERT_RUNBOOK_URL", "장애 대응 Runbook URL", errors);
@@ -204,6 +243,19 @@ function parseBoolean(value: unknown) {
 function formatEnvValue(value: string) {
   if (/^[A-Za-z0-9_./:@+-]+$/.test(value)) return value;
   return `"${value.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n").replace(/"/g, '\\"')}"`;
+}
+
+function normalizePaymentProvider(value: string | undefined) {
+  const input = String(value || "").trim().toLowerCase();
+  return input || "toss";
+}
+
+function validatePaymentProvider(value: string | undefined, errors: Record<string, string>) {
+  const input = String(value || "").trim().toLowerCase();
+  if (!input) return;
+  if (!["toss", "polar"].includes(input)) {
+    errors.PAYMENT_PROVIDER = "웹 결제 Provider는 toss 또는 polar 중 하나여야 해요.";
+  }
 }
 
 function validateProductionDomain(value: string | undefined, errors: Record<string, string>) {
@@ -265,6 +317,14 @@ function validateWebhookProvider(value: string | undefined, errors: Record<strin
   if (!input) return;
   if (!["generic", "slack", "discord"].includes(input)) {
     errors.ALERT_WEBHOOK_PROVIDER = "알림 Provider는 generic, slack, discord 중 하나여야 해요.";
+  }
+}
+
+function validatePolarServer(value: string | undefined, errors: Record<string, string>) {
+  const input = String(value || "").trim();
+  if (!input) return;
+  if (!["production", "sandbox"].includes(input)) {
+    errors.POLAR_SERVER = "Polar 서버는 production 또는 sandbox 이어야 해요.";
   }
 }
 
@@ -383,13 +443,22 @@ function validateJsonObject(value: string | undefined, key: string, label: strin
 }
 
 function validateNoLaunchPlaceholders(values: Record<string, string>, errors: Record<string, string>) {
+  const inactiveKeys = inactivePaymentProviderKeys(values);
   for (const field of launchEnvFields) {
+    if (inactiveKeys.has(field.key)) continue;
     const input = String(values[field.key] || "").trim();
     if (!input || errors[field.key]) continue;
     if (hasLaunchPlaceholder(input)) {
       errors[field.key] = `${field.label}에 예시값이 아닌 실제 출시 값을 입력하세요.`;
     }
   }
+}
+
+function inactivePaymentProviderKeys(values: Record<string, string>) {
+  const paymentProvider = normalizePaymentProvider(values.PAYMENT_PROVIDER);
+  if (paymentProvider === "polar") return new Set(tossPaymentKeys);
+  if (paymentProvider === "toss") return new Set(polarPaymentKeys);
+  return new Set([...tossPaymentKeys, ...polarPaymentKeys]);
 }
 
 function hasLaunchPlaceholder(value: string) {

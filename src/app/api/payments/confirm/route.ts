@@ -28,6 +28,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       scanId: order.scanId,
+      orderId: order.orderId,
+      productId: order.productId,
       reportUrl: `/reports/${order.scanId}?token=${encodeURIComponent(token)}`,
       reportToken: token
     });

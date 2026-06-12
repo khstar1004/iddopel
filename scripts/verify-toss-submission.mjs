@@ -86,15 +86,23 @@ export function createTossSubmissionReport({ files, packageJson, env = process.e
   }
 
   if (releaseCheck) {
+    const paymentProvider = value(env, "PAYMENT_PROVIDER") || "toss";
     addReleaseCheck("Env TOSS_CONSOLE_API_KEY", value(env, "TOSS_CONSOLE_API_KEY").length >= 12, "Set the Apps in Toss console API key for AX/console release automation.");
     addReleaseCheck("Env TOSS_CONSOLE_APP_ID", Boolean(value(env, "TOSS_CONSOLE_APP_ID")), "Set the Toss developer console app id.");
     addReleaseCheck("Env TOSS_MINI_APP_NAME", /^[a-z0-9-]+$/.test(value(env, "TOSS_MINI_APP_NAME")), "Set the Toss mini app name used for tossmini.com origins.");
     addReleaseCheck("Env TOSS_ALLOWED_ORIGINS", hasFinalTossOrigins(value(env, "TOSS_ALLOWED_ORIGINS")), "Set both live and private tossmini.com Origins.");
     addReleaseCheck("Env SITE_URL", isHttpsUrl(value(env, "SITE_URL")), "Set SITE_URL to the production HTTPS origin.");
-    addReleaseCheck("Env PAYMENT_PROVIDER", value(env, "PAYMENT_PROVIDER") === "toss", "Set PAYMENT_PROVIDER=toss for Toss/web checkout.");
-    addReleaseCheck("Env TOSS_CLIENT_KEY", /^test_ck_|^live_ck_/.test(value(env, "TOSS_CLIENT_KEY")), "Set the Toss Payments client key.");
-    addReleaseCheck("Env TOSS_SECRET_KEY", value(env, "TOSS_SECRET_KEY").length >= 12, "Set the Toss Payments secret key.");
-    addReleaseCheck("Env TOSS_SECURITY_KEY", /^[a-f0-9]{64}$/i.test(value(env, "TOSS_SECURITY_KEY")), "Set the 64-character Toss Payments security key.");
+    addReleaseCheck("Env PAYMENT_PROVIDER", ["toss", "polar"].includes(paymentProvider), "Set PAYMENT_PROVIDER=toss or PAYMENT_PROVIDER=polar for live checkout.");
+    if (paymentProvider === "toss") {
+      addReleaseCheck("Env TOSS_CLIENT_KEY", /^test_ck_|^live_ck_/.test(value(env, "TOSS_CLIENT_KEY")), "Set the Toss Payments client key.");
+      addReleaseCheck("Env TOSS_SECRET_KEY", value(env, "TOSS_SECRET_KEY").length >= 12, "Set the Toss Payments secret key.");
+      addReleaseCheck("Env TOSS_SECURITY_KEY", /^[a-f0-9]{64}$/i.test(value(env, "TOSS_SECURITY_KEY")), "Set the 64-character Toss Payments security key.");
+    } else if (paymentProvider === "polar") {
+      warnings.push({
+        name: "Toss mini app uses Polar web checkout",
+        detail: "Toss in-app release checks only mini-app origins and review copy when PAYMENT_PROVIDER=polar. Confirm external checkout policy with Toss review."
+      });
+    }
     addReleaseCheck("Env TOSS_REVIEW_TEST_USERNAME", value(env, "TOSS_REVIEW_TEST_USERNAME").length >= 3, "Provide a review-safe username for Toss reviewers.");
     addReleaseCheck("Env TOSS_REVIEW_SCENARIO", value(env, "TOSS_REVIEW_SCENARIO").length >= 12, "Document the Toss review scenario.");
   } else {

@@ -6,8 +6,17 @@ export const products: Record<ProductId, { amount: number; currency: "KRW"; name
     amount: 2900,
     currency: "KRW",
     name: "ID 도플갱어 정밀 리포트"
+  },
+  MONTHLY_MONITORING: {
+    amount: 3900,
+    currency: "KRW",
+    name: "ID 도플갱어 월간 모니터링"
   }
 };
+
+export function parseProductId(value: unknown): ProductId {
+  return value === "MONTHLY_MONITORING" ? "MONTHLY_MONITORING" : "DETAILED_REPORT";
+}
 
 export function createOrder(scan: ScanJob, provider: ReportOrder["provider"], productId: ProductId = "DETAILED_REPORT"): ReportOrder {
   const product = products[productId];

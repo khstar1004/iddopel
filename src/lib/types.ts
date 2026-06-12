@@ -102,7 +102,7 @@ export interface ApiErrorBody {
   };
 }
 
-export type ProductId = "DETAILED_REPORT";
+export type ProductId = "DETAILED_REPORT" | "MONTHLY_MONITORING";
 
 export type OrderStatus = "READY" | "PAID" | "FAILED" | "CANCELED";
 

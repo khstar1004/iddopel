@@ -12,6 +12,15 @@ const sensitiveEnv = {
   [["FIRST", "FREE", "FINGERPRINT", "SECRET"].join("_")]: "first-free-fingerprint-secret-value-1234567890"
 };
 
+const polarPaymentEnv = {
+  PAYMENT_PROVIDER: "polar",
+  POLAR_ACCESS_TOKEN: "polar_" + "a".repeat(32),
+  POLAR_PRODUCT_ID: "11111111-1111-4111-8111-111111111111",
+  POLAR_MONTHLY_MONITORING_PRODUCT_ID: "22222222-2222-4222-8222-222222222222",
+  POLAR_WEBHOOK_SECRET: "p".repeat(48),
+  POLAR_SERVER: "production"
+};
+
 const storeCredentialEnv = {
   [["APPLE", "KEY", "ID"].join("_")]: "ABC123DEFG",
   [["APPLE", "ISSUER", "ID"].join("_")]: "00000000-0000-0000-0000-000000000000",
@@ -125,6 +134,54 @@ describe("buildLaunchButtonPlan", () => {
     );
   });
 
+  it("requires Polar checkout keys instead of Toss payment keys when Polar is selected", () => {
+    const env = buildLaunchEnvironment({
+      fileEnv: {
+        ...completeFileEnv,
+        PAYMENT_PROVIDER: "polar",
+        TOSS_CLIENT_KEY: "",
+        TOSS_SECRET_KEY: "",
+        TOSS_SECURITY_KEY: ""
+      },
+      env: {}
+    });
+    const plan = buildLaunchButtonPlan({ env, ship: true });
+
+    expect(plan.ready).toBe(false);
+    expect(plan.missing).toEqual(
+      expect.arrayContaining([
+        "POLAR_ACCESS_TOKEN",
+        "POLAR_PRODUCT_ID",
+        "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
+        "POLAR_WEBHOOK_SECRET"
+      ])
+    );
+    expect(plan.missing).not.toContain("TOSS_CLIENT_KEY");
+    expect(plan.missing).not.toContain("TOSS_SECRET_KEY");
+    expect(plan.missing).not.toContain("TOSS_SECURITY_KEY");
+  });
+
+  it("builds a ship plan with Polar checkout credentials", () => {
+    const env = buildLaunchEnvironment({
+      fileEnv: {
+        ...completeFileEnv,
+        ...polarPaymentEnv,
+        TOSS_CLIENT_KEY: "",
+        TOSS_SECRET_KEY: "",
+        TOSS_SECURITY_KEY: ""
+      },
+      env: {}
+    });
+    const plan = buildLaunchButtonPlan({ env, ship: true });
+
+    expect(env).toMatchObject({
+      PAYMENT_PROVIDER: "polar",
+      POLAR_SERVER: "production"
+    });
+    expect(plan.ready).toBe(true);
+    expect(plan.missing).not.toEqual(expect.arrayContaining(["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY", "TOSS_SECURITY_KEY"]));
+  });
+
   it("does not ask operators for URLs that are derived from the production domain", () => {
     const env = buildLaunchEnvironment({ fileEnv: {}, env: {} });
     const plan = buildLaunchButtonPlan({ env, ship: true });
@@ -182,7 +239,7 @@ describe("buildLaunchButtonPlan", () => {
 
   it("redacts secrets and webhook URLs from the public plan", () => {
     const env = buildLaunchEnvironment({
-      fileEnv: completeFileEnv,
+      fileEnv: { ...completeFileEnv, ...polarPaymentEnv },
       env: {
         PATH: "C:/local/bin",
         APPDATA: "C:/Users/USER/AppData/Roaming",
@@ -199,6 +256,8 @@ describe("buildLaunchButtonPlan", () => {
     expect(serialized).not.toContain("launch_pass");
     expect(serialized).not.toContain("report-token-secret-value-1234567890");
     expect(serialized).not.toContain("first-free-fingerprint-secret-value-1234567890");
+    expect(serialized).not.toContain(polarPaymentEnv.POLAR_ACCESS_TOKEN);
+    expect(serialized).not.toContain(polarPaymentEnv.POLAR_WEBHOOK_SECRET);
     expect(serialized).not.toContain("launch-secret-path");
     expect(serialized).not.toContain("not-a-real-app-store-key");
     expect(serialized).not.toContain("C:/local/bin");

@@ -7,6 +7,7 @@ describe("attachCheckoutUrl", () => {
     vi.unstubAllGlobals();
     delete process.env.POLAR_ACCESS_TOKEN;
     delete process.env.POLAR_PRODUCT_ID;
+    delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
     delete process.env.POLAR_SERVER;
   });
 
@@ -63,6 +64,40 @@ describe("attachCheckoutUrl", () => {
       }
     });
   });
+
+  it("uses the monthly monitoring Polar product id for monitoring orders", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      Response.json(
+        {
+          id: "chk_monthly",
+          url: "https://polar.sh/checkout/chk_monthly"
+        },
+        { status: 201 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.POLAR_ACCESS_TOKEN = "polar_test_token";
+    process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID = "22222222-2222-4222-8222-222222222222";
+
+    const order = {
+      ...orderFixture("order_monitoring", "POLAR"),
+      productId: "MONTHLY_MONITORING" as const,
+      amount: 3900,
+      orderName: "ID 도플갱어 월간 모니터링 - brand"
+    };
+    const result = await attachCheckoutUrl(order, "https://id-doppelganger.kr");
+
+    expect(result.checkoutUrl).toBe("https://polar.sh/checkout/chk_monthly");
+    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(requestInit.body))).toMatchObject({
+      products: ["22222222-2222-4222-8222-222222222222"],
+      metadata: {
+        orderId: "order_monitoring",
+        scanId: "scan_order_monitoring",
+        productId: "MONTHLY_MONITORING"
+      }
+    });
+  });
 });
 
 describe("confirmPolarCheckout", () => {
@@ -70,6 +105,7 @@ describe("confirmPolarCheckout", () => {
     vi.unstubAllGlobals();
     delete process.env.POLAR_ACCESS_TOKEN;
     delete process.env.POLAR_PRODUCT_ID;
+    delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
     delete process.env.POLAR_SERVER;
   });
 

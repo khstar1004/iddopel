@@ -24,7 +24,7 @@ describe("admin scan settings route", () => {
     expect(body.error?.code).toBe("UNAUTHORIZED");
   });
 
-  it("allows an administrator to update the beta free scan limit", async () => {
+  it("allows an administrator to update beta scan controls", async () => {
     process.env.ENABLE_DEV_ADMIN = "true";
     process.env.DEV_ADMIN_PASSWORD = "secret-password";
     const dir = await mkdtemp(path.join(os.tmpdir(), "admin-scan-settings-"));
@@ -39,13 +39,52 @@ describe("admin scan settings route", () => {
           "Content-Type": "application/json",
           "x-dev-admin-token": token ?? ""
         },
-        body: JSON.stringify({ freeScanLimit: 9 })
+        body: JSON.stringify({
+          publicScanEnabled: false,
+          freeScanLimit: 9,
+          windowHours: 12,
+          maxConcurrentScans: 2,
+          busyRetryAfterSeconds: 45,
+          scanLeaseTtlSeconds: 120
+        })
       })
     );
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.settings).toMatchObject({ freeScanLimit: 9 });
+    expect(body.settings).toMatchObject({
+      publicScanEnabled: false,
+      freeScanLimit: 9,
+      windowHours: 12,
+      maxConcurrentScans: 2,
+      busyRetryAfterSeconds: 45,
+      scanLeaseTtlSeconds: 120
+    });
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("rejects invalid beta scan control values", async () => {
+    process.env.ENABLE_DEV_ADMIN = "true";
+    process.env.DEV_ADMIN_PASSWORD = "secret-password";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "admin-scan-settings-invalid-"));
+    resetBetaScanQuotaStoresForTests(new FileBetaScanSettingsStore(path.join(dir, "settings.json")), null);
+    const request = new Request("https://id.example.com/api/admin/scan-settings");
+    const token = createDevAdminToken(request, "admin");
+
+    const response = await PATCH(
+      new Request("https://id.example.com/api/admin/scan-settings", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-dev-admin-token": token ?? ""
+        },
+        body: JSON.stringify({ maxConcurrentScans: 0 })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error?.code).toBe("VALIDATION_ERROR");
     await rm(dir, { recursive: true, force: true });
   });
 });

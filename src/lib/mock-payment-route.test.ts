@@ -34,8 +34,29 @@ describe("mock payment confirmation route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(body.orderId).toBe(order.orderId);
+    expect(body.productId).toBe("DETAILED_REPORT");
     expect(body.reportToken).toBeTruthy();
     expect(body.reportUrl).toContain("/reports/");
+  });
+
+  it("returns the monthly monitoring product id for local monthly checkout tests", async () => {
+    const order = createOrder(
+      createScanJob({ username: "localmonthly", purpose: "SELF_CHECK", mode: "QUICK" }),
+      "MOCK",
+      "MONTHLY_MONITORING"
+    );
+    resetCommerceRepositoryForTests(new MemoryCommerceRepository([order]));
+    process.env.PAYMENT_PROVIDER = "mock";
+    process.env.ENABLE_MOCK_PAYMENTS = "true";
+
+    const response = await POST(mockPaymentRequest(order.orderId));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.orderId).toBe(order.orderId);
+    expect(body.productId).toBe("MONTHLY_MONITORING");
+    expect(body.reportToken).toBeTruthy();
   });
 
   it("does not mock-confirm Toss orders even when local mock payments are enabled", async () => {

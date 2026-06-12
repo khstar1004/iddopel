@@ -30,6 +30,7 @@ export async function completePolarCheckout(orderId: string, checkoutId: string)
   return {
     scanId: order.scanId,
     orderId: order.orderId,
+    productId: order.productId,
     reportUrl: `/reports/${order.scanId}?token=${encodeURIComponent(token)}`,
     reportToken: token
   };
