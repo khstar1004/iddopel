@@ -9,7 +9,7 @@
     "BETA_SCAN_LOAD_STORE_PATH": "/tmp/id-doppelganger-beta-scan-load.json",
     "ADMIN_AUDIT_LOG_STORE_PATH": "/tmp/id-doppelganger-admin-audit-log.json",
     "BETA_PUBLIC_SCAN_ENABLED": "true",
-    "BETA_FREE_SCAN_LIMIT": "5",
+    "BETA_FREE_SCAN_LIMIT": "1",
     "BETA_FREE_SCAN_WINDOW_HOURS": "24",
     "BETA_MAX_CONCURRENT_SCANS": "6",
     "BETA_SCAN_BUSY_RETRY_AFTER_SECONDS": "30",
@@ -22,12 +22,9 @@
     "MAIGRET_PROCESS_TIMEOUT_MS": "55000",
     "MAIGRET_MAX_CONNECTIONS": "10",
     "MAIGRET_EXTRACT_EXTENDED": "false",
-    "INLINE_SCAN_ARTIFACTS": "true",
-    "PAYMENT_PROVIDER": "mock",
+    "INLINE_SCAN_ARTIFACTS": "false",
     "SITE_URL": "https://iddopel.vercel.app",
-    "ENABLE_MOCK_PAYMENTS": "false",
-    "WEB_DETAILED_REPORT_PAYWALL_ENABLED": "false",
-    "MONITORING_PAYWALL_ENABLED": "false"
+    "ENABLE_MOCK_PAYMENTS": "false"
   },
   "functions": {
     "api/maigret_scan.py": {

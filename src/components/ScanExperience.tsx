@@ -25,7 +25,7 @@ import {
   scoreTone,
   type Locale
 } from "@/lib/labels";
-import type { PublicMonitoringSubscription, ScanResult, ScanSummary } from "@/lib/types";
+import type { LockedScanResultPreview, PublicMonitoringSubscription, ScanResult, ScanSummary } from "@/lib/types";
 import { normalizeUsername } from "@/lib/validation";
 import { BrandIcon } from "./BrandIcon";
 import { devAdminTokenKey, getOrCreateFreeScanOwnerToken } from "./client-tokens";
@@ -40,6 +40,7 @@ interface ResultsResponse {
   scanId: string;
   access: "FULL" | "PREVIEW" | "LOCKED";
   lockedCount: number;
+  lockedResults?: LockedScanResultPreview[];
   maigretReportAvailable?: boolean;
   maigretReportFilename?: string;
   results: ScanResult[];
@@ -148,7 +149,7 @@ const scanExperienceCopy = {
       reportItems: ["전체 결과 URL", "위험도 분석", "HTML/PDF 리포트"],
       monitoringTitle: "월간 모니터링",
       monitoringPrice: "3,900원/월",
-      monitoringItems: ["월 1회 자동 재점검", "새 흔적 알림", "아이디 3개 모니터링"]
+      monitoringItems: ["월 1회 자동 재점검", "대시보드 재점검 기록", "아이디 3개 모니터링"]
     },
     monitoring: {
       title: "월간 자동 재점검",
@@ -162,6 +163,11 @@ const scanExperienceCopy = {
       nextRun: "다음 자동 재점검",
       lastRun: "최근 재점검",
       noneYet: "아직 없음",
+      latestResults: "최근 재점검 결과",
+      latestResultsEmpty: "아직 cron 재점검 결과가 없어요.",
+      openLatestResult: (username: string) => `${username} 결과 열기`,
+      latestMeta: (foundCount: number, exposureScore: number) => `흔적 ${foundCount}개 · 노출도 ${exposureScore}점`,
+      deliveryNote: "현재 월간 추적은 메일 발송이 아니라 이 브라우저 대시보드에서 최신 결과를 확인하는 방식이에요.",
       cancel: "모니터링 해지",
       empty: "아직 등록된 월간 모니터링이 없어요. 무료 점검 후 같은 아이디를 바로 등록할 수 있어요."
     },
@@ -314,7 +320,7 @@ const scanExperienceCopy = {
       reportItems: ["Full result URLs", "Risk analysis", "HTML/PDF report"],
       monitoringTitle: "Monthly monitoring",
       monitoringPrice: "$3.99/mo",
-      monitoringItems: ["Monthly automatic recheck", "New match alerts", "Monitor 3 usernames"]
+      monitoringItems: ["Monthly automatic recheck", "Dashboard recheck history", "Monitor 3 usernames"]
     },
     monitoring: {
       title: "Monthly automatic recheck",
@@ -328,6 +334,11 @@ const scanExperienceCopy = {
       nextRun: "Next automatic recheck",
       lastRun: "Last recheck",
       noneYet: "Not yet",
+      latestResults: "Latest recheck results",
+      latestResultsEmpty: "No cron recheck results yet.",
+      openLatestResult: (username: string) => `Open ${username} result`,
+      latestMeta: (foundCount: number, exposureScore: number) => `${foundCount} traces · ${exposureScore} exposure pts`,
+      deliveryNote: "Monthly monitoring currently updates this browser dashboard. It does not send email yet.",
       cancel: "Cancel monitoring",
       empty: "No monthly monitoring is registered yet. You can add the same username right after a free check."
     },
@@ -660,7 +671,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   }
 
   function saveHistory(nextSummary: ScanSummary) {
-    const { sourceReportHtml: _sourceReportHtml, ...summaryForStorage } = nextSummary;
+    const { fullResults: _fullResults, sourceReportHtml: _sourceReportHtml, ...summaryForStorage } = nextSummary;
     const item: StoredScan = { ...summaryForStorage, savedAt: new Date().toISOString() };
     const next = [item, ...history.filter((entry) => entry.scanId !== item.scanId)].slice(0, 5);
     setHistory(next);
@@ -751,6 +762,25 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
       })
     );
     window.location.href = body.checkoutUrl;
+  }
+
+  async function openMonitoringScan(scanId: string) {
+    setError(null);
+    setMonitoringMessage(null);
+
+    try {
+      const response = await fetch(`/api/scans/${scanId}/summary`);
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(body?.error?.message ?? "최근 재점검 결과를 불러오지 못했어요.");
+      }
+
+      setSummary(body as ScanSummary);
+      focusResultsSection();
+    } catch (scanError) {
+      setMonitoringMessage(scanError instanceof Error ? scanError.message : "최근 재점검 결과를 불러오지 못했어요.");
+    }
   }
 
   async function deleteMonitoring() {
@@ -1031,6 +1061,11 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                       : copy.monitoring.noneYet}
                   </strong>
                 </div>
+                <MonitoringLatestScans copy={copy} locale={locale} monitoring={monitoring} onOpenScan={openMonitoringScan} />
+                <div className="mini-card monitoring-delivery-note">
+                  <Bell size={16} aria-hidden />
+                  <p>{copy.monitoring.deliveryNote}</p>
+                </div>
                 <button className="danger-button" type="button" onClick={deleteMonitoring}>
                   <Trash2 size={17} aria-hidden />
                   {copy.monitoring.cancel}
@@ -1152,6 +1187,7 @@ function ResultDashboard({
 
     async function loadDetailAccess() {
       setIsLoadingDetailAccess(true);
+      setDetailAccess(null);
       setReportError(null);
 
       try {
@@ -1458,6 +1494,7 @@ function ResultPreview({
   const isFullAccess = detailAccess.access === "FULL";
   const ctaLabel = isFullAccess ? copy.preview.fullReport : copy.preview.checkout;
   const hiddenCount = Math.max(detailAccess.lockedCount, 0);
+  const lockedPreviewResults = detailAccess.lockedResults ?? [];
   const lockedLead =
     detailAccess.label === copy.detailLabels.freePreview
       ? copy.preview.freeUsedLead
@@ -1488,15 +1525,24 @@ function ResultPreview({
 
       {!isFullAccess && hiddenCount > 0 ? (
         <div className="locked-mosaic-list" aria-label={copy.preview.lockedLabel}>
-          {Array.from({ length: Math.min(5, hiddenCount) }).map((_, index) => (
-            <div className="locked-result-mosaic" key={`locked-${index}`}>
-              <div className="mosaic-content">
-                <strong>{copy.preview.lockedResult(detailAccess.results.length + index + 1)}</strong>
-                <span>{copy.preview.lockedDescription}</span>
-              </div>
-              <LockKeyhole size={17} aria-hidden />
-            </div>
-          ))}
+          {lockedPreviewResults.length > 0
+            ? lockedPreviewResults.map((result, index) => (
+                <LockedResultMosaic
+                  copy={copy}
+                  index={detailAccess.results.length + index}
+                  key={result.id}
+                  labels={labels}
+                  result={result}
+                />
+              ))
+            : Array.from({ length: Math.min(5, hiddenCount) }).map((_, index) => (
+                <LockedResultMosaic
+                  copy={copy}
+                  index={detailAccess.results.length + index}
+                  key={`locked-${index}`}
+                  labels={labels}
+                />
+              ))}
         </div>
       ) : null}
 
@@ -1513,6 +1559,35 @@ function ResultPreview({
           {isLoadingFull ? copy.preview.ordering : ctaLabel}
         </button>
       </div>
+    </div>
+  );
+}
+
+function LockedResultMosaic({
+  copy,
+  index,
+  labels,
+  result
+}: {
+  copy: ScanExperienceCopy;
+  index: number;
+  labels: LocalizedLabelSets;
+  result?: LockedScanResultPreview;
+}) {
+  return (
+    <div className="locked-result-mosaic">
+      <div className="toss-locked-icon" aria-hidden>
+        {result?.platform.slice(0, 1).toUpperCase() ?? ""}
+      </div>
+      <div className="mosaic-content">
+        <strong>{result?.platform ?? copy.preview.lockedResult(index + 1)}</strong>
+        <span>
+          {result
+            ? `${labels.category[result.category] ?? result.category} · ${labels.country[result.country] ?? result.country}`
+            : copy.preview.lockedDescription}
+        </span>
+      </div>
+      <LockKeyhole size={17} aria-hidden />
     </div>
   );
 }
@@ -1860,9 +1935,6 @@ async function loadDevAdminResults(scanId: string, adminToken: string, copy: Sca
 }
 
 async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExperienceCopy): Promise<DetailAccessState> {
-  const inlineAccess = inlineFullAccessFromSummary(summary, copy);
-  if (inlineAccess) return inlineAccess;
-
   const scanId = summary.scanId;
   const ownerToken = window.localStorage.getItem(freeDetailOwnerTokenKey);
   const usedScanId = window.localStorage.getItem(freeDetailUsedScanIdKey);
@@ -1939,27 +2011,12 @@ function previewAccessFromSummary(summary: ScanSummary, copy: ScanExperienceCopy
     scanId: summary.scanId,
     access: "PREVIEW",
     lockedCount: Math.max(0, summary.foundCount - summary.previewResults.length),
+    lockedResults: summary.lockedResults ?? [],
     maigretReportAvailable: summary.maigretReportAvailable,
     maigretReportFilename: summary.maigretReportFilename,
     results: summary.previewResults,
     label: copy.detailLabels.freePreview,
     description: copy.detailLabels.lockedUrl
-  };
-}
-
-function inlineFullAccessFromSummary(summary: ScanSummary, copy: ScanExperienceCopy): DetailAccessState | null {
-  if (!summary.fullResults) return null;
-
-  return {
-    scanId: summary.scanId,
-    access: "FULL",
-    lockedCount: 0,
-    maigretReportAvailable: summary.maigretReportAvailable,
-    maigretReportFilename: summary.maigretReportFilename,
-    results: summary.fullResults,
-    label: copy.detailLabels.freeDetail,
-    description: copy.detailLabels.fullOpen,
-    sourceReportHtml: summary.sourceReportHtml
   };
 }
 
@@ -2072,6 +2129,46 @@ function getUsernameValidationMessage(value: string, locale: Locale) {
 
     return englishMessages[error.message] ?? "Check the username again.";
   }
+}
+
+function MonitoringLatestScans({
+  copy,
+  locale,
+  monitoring,
+  onOpenScan
+}: {
+  copy: ScanExperienceCopy;
+  locale: Locale;
+  monitoring: PublicMonitoringSubscription;
+  onOpenScan: (scanId: string) => void;
+}) {
+  const latestScans = monitoring.latestScans ?? [];
+
+  return (
+    <div className="mini-card monitoring-latest-card">
+      <p>{copy.monitoring.latestResults}</p>
+      {latestScans.length > 0 ? (
+        <div className="monitoring-latest-list">
+          {latestScans.map((scan) => (
+            <button className="monitoring-latest-row" key={scan.scanId} type="button" onClick={() => onOpenScan(scan.scanId)}>
+              <span>
+                <strong>{scan.username}</strong>
+                <small>
+                  {new Date(scan.createdAt).toLocaleDateString(locale === "en" ? "en-US" : "ko-KR")} · {copy.monitoring.latestMeta(scan.foundCount, scan.exposureScore)}
+                </small>
+              </span>
+              <span>
+                {copy.monitoring.openLatestResult(scan.username)}
+                <ExternalLink size={14} aria-hidden />
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="monitoring-latest-empty">{copy.monitoring.latestResultsEmpty}</span>
+      )}
+    </div>
+  );
 }
 
 function PricingCard({ title, price, items, featured = false }: { title: string; price: string; items: string[]; featured?: boolean }) {

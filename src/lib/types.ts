@@ -46,6 +46,15 @@ export interface ScanResult {
   httpStatus?: number;
 }
 
+export interface LockedScanResultPreview {
+  id: string;
+  platform: string;
+  platformIconUrl?: string;
+  category: PlatformCategory;
+  country: PlatformDefinition["country"];
+  riskLevel: RiskLevel;
+}
+
 export interface MaigretReportArtifacts {
   html?: string;
   htmlFilename?: string;
@@ -73,6 +82,7 @@ export interface ScanSummary extends ScoreBundle {
   countryDistribution: Record<string, number>;
   categoryDistribution: Record<string, number>;
   previewResults: ScanResult[];
+  lockedResults?: LockedScanResultPreview[];
   scanSource?: ScanSource;
   maigretReportAvailable?: boolean;
   maigretReportFilename?: string;
@@ -147,8 +157,18 @@ export interface PublicMonitoringSubscription {
   cadence: MonitoringCadence;
   status: MonitoringStatus;
   latestScanIds: Record<string, string>;
+  latestScans?: PublicMonitoringScanSnapshot[];
   createdAt: string;
   updatedAt: string;
   lastRunAt: string | null;
   nextRunAt: string;
+}
+
+export interface PublicMonitoringScanSnapshot {
+  username: string;
+  scanId: string;
+  foundCount: number;
+  checkedCount: number;
+  exposureScore: number;
+  createdAt: string;
 }

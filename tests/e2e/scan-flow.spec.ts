@@ -244,35 +244,23 @@ test("landing form blocks disallowed identifiers before submit", async ({ page }
   expect(browserMessages).toEqual([]);
 });
 
-test("developer admin login stays hidden until the logo easter egg is unlocked", async ({ page }) => {
+test("developer admin login stays hidden until the logo easter egg opens admin", async ({ page }) => {
   const browserMessages = watchBrowserErrors(page);
-  let devAdminSessionChecks = 0;
-
-  await page.route("**/api/dev/admin-session", async (route) => {
-    if (route.request().method() === "GET") {
-      devAdminSessionChecks += 1;
-    }
-    await route.continue();
-  });
 
   await page.goto("/");
-  expect(devAdminSessionChecks).toBe(0);
   await expect(page.getByLabel("개발자 비밀번호")).toHaveCount(0);
   await expect(page.getByText("개발자 테스트 로그인")).toHaveCount(0);
 
   const logo = page.getByLabel("ID 도플갱어 홈");
-  const unlockResponsePromise = page.waitForResponse(
-    (response) => response.url().endsWith("/api/dev/admin-session") && response.request().method() === "GET"
-  );
   for (let clickIndex = 0; clickIndex < 5; clickIndex += 1) {
     await logo.click();
   }
-  await unlockResponsePromise;
-  expect(devAdminSessionChecks).toBe(1);
 
-  await page.getByLabel("개발자 비밀번호").fill("admin");
+  await expect(page).toHaveURL(/\/admin$/);
+  await page.getByLabel("비밀번호").fill("admin");
   await page.getByRole("button", { name: "로그인" }).click();
-  await expect(page.getByText("개발자 테스트 모드가 켜졌어요.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "검색 한도 관리" })).toBeVisible();
+  await expect(page.getByText("운영 상태")).toBeVisible();
 
   expect(browserMessages).toEqual([]);
 });

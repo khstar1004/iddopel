@@ -49,7 +49,7 @@ describe("admin overview route", () => {
     await recordAdminAuditEvent(request, {
       action: "scan_settings.update",
       changes: {
-        freeScanLimit: { before: 5, after: 8 }
+        freeScanLimit: { before: 1, after: 8 }
       }
     });
 
@@ -61,7 +61,7 @@ describe("admin overview route", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.settings.freeScanLimit).toBe(5);
+    expect(body.settings.freeScanLimit).toBe(1);
     expect(body.runtime).toMatchObject({
       enabled: true,
       loginConfigured: true,
@@ -72,7 +72,7 @@ describe("admin overview route", () => {
     expect(body.recentAuditEvents[0]).toMatchObject({
       action: "scan_settings.update",
       changes: {
-        freeScanLimit: { before: 5, after: 8 }
+        freeScanLimit: { before: 1, after: 8 }
       }
     });
   });

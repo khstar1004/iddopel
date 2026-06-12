@@ -3,6 +3,8 @@ import type { MonitoringRepository } from "./monitoring-repository";
 import { resetMonitoringRepositoryForTests } from "./monitoring-repository";
 import { createMonitoringSubscription } from "./monitoring";
 import { deleteMonitoringForOwner, getMonitoringForOwner, registerMonitoring, runDueMonitoringSubscriptions } from "./monitoring-service";
+import { resetScanRepositoryForTests, type ScanRepository } from "./repository";
+import { createScanJobFromResults } from "./scanner";
 import type { MonitoringSubscription, ScanJob } from "./types";
 
 class FakeMonitoringRepository implements MonitoringRepository {
@@ -47,6 +49,7 @@ describe("monitoring-service", () => {
   beforeEach(() => {
     repository = new FakeMonitoringRepository();
     resetMonitoringRepositoryForTests(repository);
+    resetScanRepositoryForTests(null);
   });
 
   it("registers, updates, reads, and deletes owner-token scoped monitoring", async () => {
@@ -117,4 +120,81 @@ describe("monitoring-service", () => {
     expect(result.monitoring[0].latestScanIds).toEqual({ alpha: "scan_alpha", beta: "scan_beta" });
     expect(result.monitoring[0].nextRunAt).toBe("2026-07-11T00:00:00.000Z");
   });
+
+  it("includes latest scan summaries when reading monitoring status", async () => {
+    const created = await registerMonitoring({ usernames: ["alpha"], purpose: "SELF_CHECK" });
+    const scan = createScanJobFromResults(
+      {
+        username: "alpha",
+        purpose: "SELF_CHECK",
+        mode: "QUICK"
+      },
+      [
+        {
+          id: "github-alpha",
+          platform: "GitHub",
+          url: "https://github.com/alpha",
+          category: "DEVELOPER",
+          country: "GLOBAL",
+          status: "FOUND",
+          riskLevel: "MEDIUM",
+          cleanupHint: "Check profile."
+        }
+      ],
+      {
+        checkedCount: 100,
+        now: new Date("2026-06-11T00:00:00.000Z")
+      }
+    );
+    resetScanRepositoryForTests(new FakeScanRepository([scan]));
+    const subscription = repository.subscriptions.get(created.monitoring.monitoringId);
+    if (!subscription) throw new Error("subscription fixture missing");
+    repository.subscriptions.set(subscription.monitoringId, {
+      ...subscription,
+      latestScanIds: { alpha: scan.scanId }
+    });
+
+    const monitoring = await getMonitoringForOwner(created.ownerToken);
+
+    expect(monitoring?.latestScans).toEqual([
+      {
+        username: "alpha",
+        scanId: scan.scanId,
+        foundCount: 1,
+        checkedCount: 100,
+        exposureScore: scan.exposureScore,
+        createdAt: "2026-06-11T00:00:00.000Z"
+      }
+    ]);
+  });
 });
+
+class FakeScanRepository implements ScanRepository {
+  private scans = new Map<string, ScanJob>();
+
+  constructor(scans: ScanJob[]) {
+    for (const scan of scans) this.scans.set(scan.scanId, scan);
+  }
+
+  async create(job: ScanJob) {
+    this.scans.set(job.scanId, job);
+    return job;
+  }
+
+  async get(scanId: string) {
+    return this.scans.get(scanId) ?? null;
+  }
+
+  async delete(scanId: string) {
+    this.scans.delete(scanId);
+  }
+
+  async extendExpiration(scanId: string, expiresAt: string) {
+    const scan = this.scans.get(scanId);
+    if (scan) this.scans.set(scanId, { ...scan, expiresAt });
+  }
+
+  async pruneExpired() {
+    return 0;
+  }
+}

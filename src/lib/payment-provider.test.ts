@@ -98,6 +98,37 @@ describe("attachCheckoutUrl", () => {
       }
     });
   });
+
+  it("returns a configuration error when Polar access token is missing", async () => {
+    process.env.POLAR_PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
+    const order = orderFixture("order_polar", "POLAR");
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).rejects.toMatchObject({
+      code: "PAYMENT_CONFIG_MISSING",
+      status: 503,
+      message: "POLAR_ACCESS_TOKEN이 설정되어 있지 않아요."
+    });
+  });
+
+  it("returns a provider-auth failure when Polar responds unauthorized", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json(
+        {
+          message: "Invalid API key"
+        },
+        { status: 401 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.POLAR_ACCESS_TOKEN = "polar_bad_token";
+    process.env.POLAR_PRODUCT_ID = "11111111-1111-4111-8111-111111111111";
+
+    const order = orderFixture("order_polar", "POLAR");
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).rejects.toMatchObject({
+      code: "PAYMENT_CONFIG_INVALID",
+      status: 503,
+      message: "Polar 인증이 실패했어요. Access Token을 확인해 주세요."
+    });
+  });
 });
 
 describe("confirmPolarCheckout", () => {

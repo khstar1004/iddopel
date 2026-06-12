@@ -84,44 +84,27 @@ try {
 
   assertCheck("scan created", scan.status === 201, scan);
   assertCheck("scan has id", typeof scan.body?.scanId === "string" && scan.body.scanId.length > 0, scan.body);
-  assertCheck("scan uses real Maigret source", scan.body?.scanSource === "PUBLIC_SCAN", scan.body);
+  assertCheck("scan uses real public scan source", scan.body?.scanSource === "PUBLIC_SCAN", scan.body);
   assertCheck("scan has candidate counts", Number.isFinite(scan.body?.foundCount), scan.body);
   assertCheck("scan checked public sites", Number(scan.body?.checkedCount) > 0, scan.body);
-  assertCheck("scan has Maigret report", scan.body?.maigretReportAvailable === true, scan.body);
-  const hasInlineResults = Array.isArray(scan.body?.fullResults);
-  assertCheck("scan carries beta inline results", hasInlineResults, {
-    fullResults: scan.body?.fullResults?.length,
+  assertCheck("scan has source report", scan.body?.maigretReportAvailable === true, scan.body);
+  assertCheck("public scan response hides full results", !Array.isArray(scan.body?.fullResults), {
+    hasFullResults: Array.isArray(scan.body?.fullResults)
+  });
+  assertCheck("public scan response hides source HTML", typeof scan.body?.sourceReportHtml !== "string", {
     hasSourceReportHtml: typeof scan.body?.sourceReportHtml === "string"
   });
-  if (typeof scan.body?.sourceReportHtml === "string") {
-    assertCheck("inline report strips scripts", !/<script\b/i.test(scan.body.sourceReportHtml), {
-      hasScript: /<script\b/i.test(scan.body.sourceReportHtml)
-    });
-    assertCheck("inline report hides scanner vendor text", !/\bMaigret\b/i.test(scan.body.sourceReportHtml), {
-      containsVendorText: /\bMaigret\b/i.test(scan.body.sourceReportHtml)
-    });
-    assertCheck("inline report is product branded", scan.body.sourceReportHtml.includes("ID 도플갱어 리포트"), {
-      hasProductTitle: scan.body.sourceReportHtml.includes("ID 도플갱어 리포트")
-    });
-  }
 
   const scanId = scan.body.scanId;
   const preview = await requestJson(`/api/scans/${scanId}/results`, { method: "GET" });
-  assertCheck(
-    "preview results available or inlined for beta",
-    preview.status === 200 || (preview.status === 404 && hasInlineResults),
-    preview
-  );
+  assertCheck("preview results available", preview.status === 200, preview);
   if (preview.status === 200) {
     assertCheck("preview returns result array", Array.isArray(preview.body?.results), preview.body);
+    assertCheck("preview includes safe locked cards", Array.isArray(preview.body?.lockedResults), preview.body);
   }
 
   const lockedFull = await requestJson(`/api/scans/${scanId}/results?access=full`, { method: "GET" });
-  assertCheck(
-    "full results stay locked or inlined for beta",
-    lockedFull.status === 402 || (lockedFull.status === 404 && hasInlineResults),
-    lockedFull
-  );
+  assertCheck("full results stay locked", lockedFull.status === 402, lockedFull);
 
   const reportPage = await requestText(`/reports/${scanId}`, { method: "GET" });
   assertCheck("report page renders", reportPage.status === 200 && reportPage.body.includes("<!DOCTYPE html"), {
@@ -136,7 +119,7 @@ try {
   });
   assertCheck(
     "first-free route responds safely",
-    freeReport.status === 201 || freeReport.status === 200 || (freeReport.status === 404 && hasInlineResults),
+    freeReport.status === 201 || freeReport.status === 200,
     freeReport
   );
 
@@ -156,11 +139,6 @@ try {
         containsVendorText: /\bMaigret\b/i.test(htmlReport.body)
       }
     );
-  } else if (freeReport.status === 404 && hasInlineResults) {
-    assertCheck("inline beta full results are present", scan.body.fullResults.length >= 0, {
-      fullResults: scan.body.fullResults.length,
-      hasSourceReportHtml: typeof scan.body.sourceReportHtml === "string"
-    });
   } else {
     assertCheck("first-free repeat is explicit", freeReport.body?.error?.code === "FIRST_FREE_USED", freeReport.body);
   }

@@ -3,7 +3,7 @@
 import { Check, CreditCard, LockKeyhole } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { categoryLabels, countryLabels, riskLabels } from "@/lib/labels";
-import type { ScanResult, ScanSummary } from "@/lib/types";
+import type { LockedScanResultPreview, ScanResult, ScanSummary } from "@/lib/types";
 import { normalizeUsername } from "@/lib/validation";
 import { BrandIcon } from "./BrandIcon";
 import { getOrCreateFreeScanOwnerToken } from "./client-tokens";
@@ -79,12 +79,6 @@ export function TossMiniApp() {
   async function startCheckout() {
     if (!summary) return;
 
-    if (summary.fullResults) {
-      setShowFullReport(true);
-      window.setTimeout(() => resultPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
-      return;
-    }
-
     setIsOrdering(true);
     setError(null);
 
@@ -109,11 +103,10 @@ export function TossMiniApp() {
   }
 
   const visibleResults = summary
-    ? showFullReport && summary.fullResults
-      ? summary.fullResults
-      : summary.previewResults.slice(0, 3)
+    ? summary.previewResults.slice(0, 3)
     : [];
   const hiddenCount = summary && !showFullReport ? Math.max(0, summary.foundCount - visibleResults.length) : 0;
+  const lockedPreviewResults = summary?.lockedResults ?? [];
 
   return (
     <main className="toss-shell">
@@ -206,7 +199,13 @@ export function TossMiniApp() {
               )}
             </div>
 
-            {hiddenCount > 0 ? <TossLockedMosaicList count={hiddenCount} startIndex={summary.previewResults.length + 1} /> : null}
+            {hiddenCount > 0 ? (
+              <TossLockedMosaicList
+                count={hiddenCount}
+                lockedResults={lockedPreviewResults}
+                startIndex={summary.previewResults.length + 1}
+              />
+            ) : null}
 
             {hiddenCount > 0 ? (
               <div className="toss-lock-note">
@@ -247,17 +246,28 @@ export function TossMiniApp() {
   );
 }
 
-function TossLockedMosaicList({ count, startIndex }: { count: number; startIndex: number }) {
+function TossLockedMosaicList({
+  count,
+  lockedResults,
+  startIndex
+}: {
+  count: number;
+  lockedResults: LockedScanResultPreview[];
+  startIndex: number;
+}) {
   const visibleCount = Math.min(count, 5);
+  const results = lockedResults.slice(0, visibleCount);
 
   return (
     <div className="toss-locked-mosaic-list" aria-label={`잠긴 공개 흔적 ${count}개`}>
-      {Array.from({ length: visibleCount }).map((_, index) => (
+      {(results.length > 0 ? results : Array.from({ length: visibleCount })).map((result, index) => (
         <article className="toss-locked-card" key={`locked-${index}`} aria-label={`잠긴 공개 흔적 ${startIndex + index}`}>
-          <div className="toss-locked-icon" aria-hidden />
+          <div className="toss-locked-icon" aria-hidden>
+            {isLockedPreview(result) ? result.platform.slice(0, 1).toUpperCase() : ""}
+          </div>
           <div className="toss-locked-body">
             <div>
-              <strong>공개 흔적 #{startIndex + index}</strong>
+              <strong>{isLockedPreview(result) ? result.platform : `공개 흔적 #${startIndex + index}`}</strong>
               <span>잠김</span>
             </div>
             <i className="mosaic-line mosaic-line-wide" aria-hidden />
@@ -268,6 +278,10 @@ function TossLockedMosaicList({ count, startIndex }: { count: number; startIndex
       ))}
     </div>
   );
+}
+
+function isLockedPreview(value: unknown): value is LockedScanResultPreview {
+  return Boolean(value && typeof value === "object" && "platform" in value);
 }
 
 function TossResultCard({ isFullAccess, result }: { isFullAccess: boolean; result: ScanResult }) {

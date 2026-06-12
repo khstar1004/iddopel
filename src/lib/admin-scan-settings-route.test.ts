@@ -68,7 +68,7 @@ describe("admin scan settings route", () => {
       action: "scan_settings.update",
       changes: {
         publicScanEnabled: { before: true, after: false },
-        freeScanLimit: { before: 5, after: 9 },
+        freeScanLimit: { before: 1, after: 9 },
         windowHours: { before: 24, after: 12 },
         maxConcurrentScans: { before: 6, after: 2 },
         busyRetryAfterSeconds: { before: 30, after: 45 },

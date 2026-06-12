@@ -18,14 +18,28 @@ describe("publicScanResponse", () => {
     expect(response).not.toHaveProperty("sourceReportHtml");
   });
 
-  it("includes sanitized inline artifacts for Vercel beta client-side rendering", () => {
+  it("keeps full results and source HTML out even when legacy inline artifacts are enabled", () => {
     process.env.INLINE_SCAN_ARTIFACTS = "true";
 
     const response = publicScanResponse(scanFixture());
 
-    expect(response.fullResults).toHaveLength(1);
-    expect(response.sourceReportHtml).toContain("<h1>Source</h1>");
-    expect(response.sourceReportHtml).not.toContain("<script>");
+    expect(response).not.toHaveProperty("fullResults");
+    expect(response).not.toHaveProperty("sourceReportHtml");
+  });
+
+  it("returns safe locked previews without exact URLs or cleanup guidance", () => {
+    const response = publicScanResponse(scanWithLockedFixture());
+
+    expect(response.lockedResults).toEqual([
+      expect.objectContaining({
+        platform: "LinkedIn",
+        category: "GLOBAL",
+        country: "GLOBAL",
+        riskLevel: "LOW"
+      })
+    ]);
+    expect(JSON.stringify(response.lockedResults)).not.toContain("https://");
+    expect(JSON.stringify(response.lockedResults)).not.toContain("Check profile.");
   });
 });
 
@@ -55,6 +69,42 @@ function scanFixture() {
         htmlFilename: "report_inlinebeta_plain.html"
       },
       scanSource: "PUBLIC_SCAN",
+      now: new Date("2026-06-12T00:00:00.000Z")
+    }
+  );
+}
+
+function scanWithLockedFixture() {
+  return createScanJobFromResults(
+    {
+      username: "lockedinline",
+      purpose: "SELF_CHECK",
+      mode: "QUICK"
+    },
+    [
+      {
+        id: "locked-github",
+        platform: "GitHub",
+        url: "https://github.com/lockedinline",
+        category: "DEVELOPER",
+        country: "GLOBAL",
+        status: "FOUND",
+        riskLevel: "MEDIUM",
+        cleanupHint: "Check profile."
+      },
+      {
+        id: "locked-linkedin",
+        platform: "LinkedIn",
+        url: "https://www.linkedin.com/in/lockedinline",
+        category: "GLOBAL",
+        country: "GLOBAL",
+        status: "FOUND",
+        riskLevel: "LOW",
+        cleanupHint: "Check profile."
+      }
+    ],
+    {
+      checkedCount: 25,
       now: new Date("2026-06-12T00:00:00.000Z")
     }
   );

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ApiErrorBody } from "./types";
 import { ValidationError } from "./validation";
+import { PaymentProviderError } from "./payment-provider";
 
 export function jsonError(code: string, message: string, status: number, details?: unknown) {
   const body: ApiErrorBody = {
@@ -17,6 +18,10 @@ export function jsonError(code: string, message: string, status: number, details
 export function handleApiError(error: unknown) {
   if (error instanceof ValidationError) {
     return jsonError(error.code, error.message, error.code === "DISALLOWED_SEARCH" ? 400 : 422, error.details);
+  }
+
+  if (error instanceof PaymentProviderError) {
+    return jsonError(error.code, error.message, error.status, error.details);
   }
 
   return jsonError("INTERNAL_ERROR", "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.", 500);

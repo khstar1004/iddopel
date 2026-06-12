@@ -1,6 +1,17 @@
 import { createHash } from "node:crypto";
 import type { ReportOrder } from "./types";
 
+export class PaymentProviderError extends Error {
+  constructor(
+    public code: string,
+    message: string,
+    public status: number,
+    public details?: unknown
+  ) {
+    super(message);
+  }
+}
+
 interface TossPaymentResponse {
   checkout?: {
     url?: string;
@@ -96,7 +107,7 @@ export async function attachPolarCheckoutUrl(order: ReportOrder, origin: string)
   const body = (await response.json().catch(() => ({}))) as PolarCheckoutResponse;
 
   if (!response.ok || !body.id || !body.url) {
-    throw new Error(body.message ?? body.detail ?? "Polar 결제창을 만들지 못했어요.");
+    throw polarCheckoutError(response.status, body);
   }
 
   return {
@@ -135,7 +146,7 @@ export async function getPolarCheckout(checkoutId: string) {
   const body = (await response.json().catch(() => ({}))) as PolarCheckoutResponse;
 
   if (!response.ok) {
-    throw new Error(body.message ?? body.detail ?? "Polar 결제 정보를 확인하지 못했어요.");
+    throw polarRequestError(response.status, body, "Polar 결제 정보를 확인하지 못했어요.");
   }
 
   return body;
@@ -221,7 +232,7 @@ function tossBasicAuth(secretKey: string) {
 function requirePolarAccessToken() {
   const accessToken = process.env.POLAR_ACCESS_TOKEN?.trim();
   if (!accessToken) {
-    throw new Error("POLAR_ACCESS_TOKEN이 설정되어 있지 않아요.");
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "POLAR_ACCESS_TOKEN이 설정되어 있지 않아요.", 503);
   }
 
   return accessToken;
@@ -230,7 +241,11 @@ function requirePolarAccessToken() {
 function requirePolarProductId(productId: ReportOrder["productId"]) {
   const productIdValue = polarProductIdFor(productId);
   if (!productIdValue) {
-    throw new Error(`${polarProductEnvKey(productId)}가 설정되어 있지 않아요.`);
+    throw new PaymentProviderError(
+      "PAYMENT_CONFIG_MISSING",
+      `${polarProductEnvKey(productId)}가 설정되어 있지 않아요.`,
+      503
+    );
   }
 
   return productIdValue;
@@ -252,4 +267,38 @@ function polarApiBaseUrl() {
 function stringMetadata(metadata: Record<string, unknown> | undefined, key: string) {
   const value = metadata?.[key];
   return typeof value === "string" ? value : null;
+}
+
+function polarCheckoutError(status: number, body: PolarCheckoutResponse) {
+  return polarRequestError(status, body, "Polar 결제창을 만들지 못했어요.");
+}
+
+function polarRequestError(status: number, body: PolarCheckoutResponse, fallbackMessage: string) {
+  const message = body.message ?? body.detail ?? fallbackMessage;
+
+  if (status === 401 || status === 403) {
+    return new PaymentProviderError("PAYMENT_CONFIG_INVALID", "Polar 인증이 실패했어요. Access Token을 확인해 주세요.", 503, {
+      status,
+      providerMessage: message
+    });
+  }
+
+  if (status === 400) {
+    return new PaymentProviderError("PAYMENT_REQUEST_REJECTED", message, 400, {
+      status,
+      providerMessage: message
+    });
+  }
+
+  if (status >= 500) {
+    return new PaymentProviderError("PAYMENT_PROVIDER_UNAVAILABLE", "Polar API 호출에 실패했어요.", 502, {
+      status,
+      providerMessage: message
+    });
+  }
+
+  return new PaymentProviderError("PAYMENT_REQUEST_REJECTED", message, 400, {
+    status,
+    providerMessage: message
+  });
 }

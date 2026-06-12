@@ -63,8 +63,8 @@ function adminRecommendations(
   if (health.scanProvider !== "maigret") {
     recommendations.push({
       level: "critical",
-      title: "Maigret 스캐너 확인",
-      detail: "SCAN_PROVIDER가 maigret이 아닙니다. 실제 검색 품질을 위해 Maigret CLI 경로를 확인하세요."
+      title: "실제 스캐너 확인",
+      detail: "실제 검색 provider가 아닙니다. 공개 스캐너 경로를 확인하세요."
     });
   }
 

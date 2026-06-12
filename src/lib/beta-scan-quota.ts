@@ -74,7 +74,7 @@ let loadStore: BetaScanLoadStore | null = null;
 export function betaScanQuotaSettings(env: Record<string, string | undefined> = process.env): BetaScanQuotaSettings {
   return {
     publicScanEnabled: parseBoolean(env.BETA_PUBLIC_SCAN_ENABLED, true),
-    freeScanLimit: clampInteger(env.BETA_FREE_SCAN_LIMIT, 5, 0, 1000),
+    freeScanLimit: clampInteger(env.BETA_FREE_SCAN_LIMIT, 1, 0, 1000),
     windowHours: clampInteger(env.BETA_FREE_SCAN_WINDOW_HOURS, 24, 1, 24 * 30),
     maxConcurrentScans: clampInteger(env.BETA_MAX_CONCURRENT_SCANS, 6, 1, 50),
     busyRetryAfterSeconds: clampInteger(env.BETA_SCAN_BUSY_RETRY_AFTER_SECONDS, 30, 1, 3600),

@@ -89,6 +89,7 @@ export default defineConfig({
       ENABLE_MOCK_PAYMENTS: "true",
       ORDER_STORE_PATH: `.data/e2e-orders-${serverPort}-${e2eRunId}.json`,
       PAYMENT_PROVIDER: "mock",
+      BETA_FREE_SCAN_LIMIT: "20",
       SCAN_PROVIDER: "mock",
       SCAN_STORE_PATH: `.data/e2e-scans-${serverPort}-${e2eRunId}.json`
     },

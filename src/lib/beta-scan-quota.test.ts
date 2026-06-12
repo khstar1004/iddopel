@@ -25,13 +25,13 @@ describe("beta scan quota", () => {
     restoreEnv("BETA_MAX_CONCURRENT_SCANS", originalMaxConcurrentScans);
   });
 
-  it("defaults beta free searches to five per person", () => {
+  it("defaults beta free searches to one per person", () => {
     delete process.env.BETA_FREE_SCAN_LIMIT;
     delete process.env.BETA_FREE_SCAN_WINDOW_HOURS;
 
     expect(betaScanQuotaSettings()).toMatchObject({
       publicScanEnabled: true,
-      freeScanLimit: 5,
+      freeScanLimit: 1,
       windowHours: 24,
       maxConcurrentScans: 6
     });

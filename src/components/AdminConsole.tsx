@@ -61,7 +61,7 @@ type AdminOverviewResponse = AdminSettingsResponse & {
 
 const defaultSettings: BetaScanSettings = {
   publicScanEnabled: true,
-  freeScanLimit: 5,
+  freeScanLimit: 1,
   windowHours: 24,
   maxConcurrentScans: 6,
   busyRetryAfterSeconds: 30,
@@ -211,7 +211,7 @@ export function AdminConsole() {
             <p>베타 기간의 무료 검색량과 동시 실행 상한을 조정합니다.</p>
 
             <dl className="admin-runtime-list">
-              <RuntimeItem label="스캔" value={runtime.scanProvider || "maigret"} />
+              <RuntimeItem label="스캔" value={scanProviderLabel(runtime.scanProvider)} />
               <RuntimeItem label="저장소" value={runtime.storage || "file"} />
               <RuntimeItem label="Admin" value={runtime.enabled ? "enabled" : "local only"} />
               <RuntimeItem label="업데이트" value={settings.updatedAt ? new Date(settings.updatedAt).toLocaleString("ko-KR") : "not saved"} />
@@ -402,6 +402,12 @@ function formatAuditValue(value: string | number | boolean | null) {
   if (typeof value === "boolean") return value ? "켜짐" : "꺼짐";
   if (value === null) return "없음";
   return String(value);
+}
+
+function scanProviderLabel(value: string | undefined) {
+  if (value === "maigret") return "실제 검색";
+  if (value === "mock") return "테스트 검색";
+  return value || "실제 검색";
 }
 
 function RuntimeItem({ label, value }: { label: string; value: string }) {

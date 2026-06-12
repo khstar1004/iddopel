@@ -9,10 +9,10 @@ import {
   publicMonitoring,
   updateMonitoringSubscription
 } from "./monitoring";
-import { createStoredScan } from "./scan-store";
+import { createStoredScan, getStoredSummary } from "./scan-store";
 import { extendStoredScanExpiration } from "./scan-store";
 import { expiresAtForMonitoring } from "./retention";
-import type { CreateScanInput, MonitoringSubscription, PublicMonitoringSubscription, ScanJob, ScanPurpose } from "./types";
+import type { CreateScanInput, MonitoringSubscription, PublicMonitoringScanSnapshot, PublicMonitoringSubscription, ScanJob, ScanPurpose } from "./types";
 import { ValidationError } from "./validation";
 
 const purposeMap: Record<string, ScanPurpose> = {
@@ -53,7 +53,7 @@ export async function registerMonitoring(input: {
 
 export async function getMonitoringForOwner(ownerToken: string): Promise<PublicMonitoringSubscription | null> {
   const subscription = await getMonitoringRepository().getByOwnerTokenHash(hashOwnerToken(ownerToken));
-  return subscription ? publicMonitoring(subscription) : null;
+  return subscription ? publicMonitoringWithLatestScans(subscription) : null;
 }
 
 export async function deleteMonitoringForOwner(monitoringId: string, ownerToken: string): Promise<PublicMonitoringSubscription | null> {
@@ -121,4 +121,30 @@ function parseMonitoringPurpose(raw: unknown): ScanPurpose {
     throw new ValidationError("VALIDATION_ERROR", "모니터링 목적을 선택해 주세요.");
   }
   return purpose;
+}
+
+async function publicMonitoringWithLatestScans(subscription: MonitoringSubscription): Promise<PublicMonitoringSubscription> {
+  const snapshots: PublicMonitoringScanSnapshot[] = [];
+
+  for (const username of subscription.usernames) {
+    const scanId = subscription.latestScanIds[username];
+    if (!scanId) continue;
+
+    const summary = await getStoredSummary(scanId);
+    if (!summary) continue;
+
+    snapshots.push({
+      username,
+      scanId,
+      foundCount: summary.foundCount,
+      checkedCount: summary.checkedCount,
+      exposureScore: summary.exposureScore,
+      createdAt: summary.createdAt
+    });
+  }
+
+  return {
+    ...publicMonitoring(subscription),
+    latestScans: snapshots
+  };
 }

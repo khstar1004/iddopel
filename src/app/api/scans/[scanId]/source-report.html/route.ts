@@ -1,1 +1,1 @@
-export { GET } from "../maigret-report.html/route";
+export { GET, OPTIONS } from "../maigret-report.html/route";
