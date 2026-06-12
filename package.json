@@ -20,6 +20,7 @@
     "release:local": "node scripts/verify-release-candidate.mjs",
     "release:production": "node scripts/verify-production-release.mjs",
     "launch:button": "node scripts/launch-button.mjs",
+    "vercel:prepare": "node scripts/prepare-vercel-production.mjs",
     "e2e:install": "playwright install chromium",
     "e2e": "playwright test",
     "assets:store": "node scripts/generate-store-assets.mjs",

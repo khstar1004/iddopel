@@ -39,4 +39,5 @@ ios/App/build
 ios/DerivedData
 
 .vercel
+.vercel-env
 .env*

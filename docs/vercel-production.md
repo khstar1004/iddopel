@@ -1,0 +1,55 @@
+# Vercel Production
+
+Use this only when the Vercel beta is being promoted to paid production. The beta can keep `/tmp` storage and inline artifacts; production cannot.
+
+## Prepare Env
+
+1. Fill `.env.launch` from `.env.launch.example`.
+2. Run:
+
+```bash
+npm run vercel:prepare
+```
+
+The command prints a redacted plan and one `vercel env add` command per key. Secret values are not printed. For each listed key, create a local file under `.vercel-env/production/KEY` with the value, then run the matching command:
+
+```bash
+vercel env add DATABASE_URL production --sensitive < .vercel-env/production/DATABASE_URL
+vercel env add CRON_SECRET production --sensitive < .vercel-env/production/CRON_SECRET
+```
+
+Keep `.vercel-env/` uncommitted. Vercel documents this stdin form for `vercel env add`, and the generated commands mark secret-like keys with `--sensitive` so Vercel hides them in the dashboard.
+
+## Required Production Shape
+
+- Durable Postgres is configured with `DATABASE_URL` or a supported Vercel Postgres alias.
+- `CRON_SECRET`, `REPORT_TOKEN_SECRET`, `FIRST_FREE_FINGERPRINT_SECRET`, and `MAIGRET_API_SECRET` are unique random secrets.
+- `SCAN_PROVIDER=maigret`.
+- `INLINE_SCAN_ARTIFACTS=false`.
+- `PAYMENT_PROVIDER=toss` or `PAYMENT_PROVIDER=polar`.
+- `ENABLE_MOCK_PAYMENTS=false`.
+- `WEB_DETAILED_REPORT_PAYWALL_ENABLED=true`.
+- `MONITORING_PAYWALL_ENABLED=true`.
+- Toss in-app console origin values are set.
+- Apple and Google receipt verification values are present before native paid reports are enabled.
+
+## Migrate And Verify
+
+After adding production env values to the linked Vercel project, run the migration with production env loaded from Vercel:
+
+```bash
+vercel env run -e production -- npm run db:migrate
+```
+
+Redeploy production, then verify the live site:
+
+```bash
+VERCEL_PRODUCTION_BASE_URL="https://YOUR_DOMAIN" npm run vercel:production
+```
+
+For cron routes, Vercel sends the configured `CRON_SECRET` as the bearer authorization value. Keep both `/api/cron/prune` and `/api/cron/monitoring` scheduled in `vercel.json`.
+
+References:
+
+- https://vercel.com/docs/cli/env
+- https://vercel.com/docs/cron-jobs/manage-cron-jobs

@@ -45,6 +45,7 @@
 - [x] Webhook alert routing for client errors, unhandled rejections, poor Web Vitals, and launch test-fire
 - [x] One-command production release preparation script for Compose env, launch runbook, store URLs, and native app config
 - [x] Launch button orchestration for `.env.launch`, release asset generation, release preparation, Compose deployment, and production verification
+- [x] Vercel production env preparation script and runbook for paid web promotion
 - [x] Local `/launch` operator console for developer-login launch dry-runs, validated `.env.launch` saves, and guarded execution
 - [x] Fastlane App Store / Google Play metadata upload lanes and manual store submission workflow
 - [x] iPhone, iPad, Android phone, Android tablet screenshots and store icon dimensions verified
@@ -61,6 +62,7 @@
 - [x] `npm run release:prepare` prepares final Compose env, store URLs, and native app config when production external values are provided
 - [x] `npm run release:local` runs the local web, Maigret runtime, code hygiene, high/critical security audit, secret scan, E2E, release asset regeneration, store, Toss, mobile, Android, deploy, and readiness gates
 - [x] `npm run launch:button` dry-run reports production asset generation, release plan, and missing values without exposing secrets
+- [x] `npm run vercel:prepare` reports required production Vercel env values and commands without exposing secrets
 - [x] Browser E2E verifies `/launch` shows the dry-run plan, blocks invalid launch values, saves `.env.launch`, redacts secrets, and keeps execution locked by default
 - [x] `npm run e2e` covers 320, 768, 1024, and 1440 px local release smoke widths, paid report unlock, and landing scan-to-delete flow
 - [x] `npm run e2e` verifies the result share-card PNG endpoint during the landing scan flow

@@ -14,6 +14,7 @@ export const requiredPackageScripts = [
   "release:local",
   "release:production",
   "launch:button",
+  "vercel:prepare",
   "e2e",
   "assets:store",
   "assets:promotion",
@@ -50,6 +51,7 @@ export const requiredReadmeCommands = [
   "npm run release:local",
   "npm run release:production",
   "npm run launch:button",
+  "npm run vercel:prepare",
   "npm run e2e",
   "npm run assets:store",
   "npm run assets:marketing",
@@ -102,6 +104,7 @@ export const requiredFiles = [
   "scripts/launch-button.mjs",
   "scripts/prepare-production-release.mjs",
   "scripts/verify-production-release.mjs",
+  "scripts/prepare-vercel-production.mjs",
   "scripts/verify-maigret-runtime.mjs",
   "scripts/verify-code-hygiene.mjs",
   "scripts/verify-product-positioning.mjs",
@@ -116,6 +119,7 @@ export const requiredFiles = [
   "scripts/verify-vercel-production.mjs",
   "scripts/test-alert-webhook.mjs",
   "tests/e2e/launch-console.spec.ts",
+  "docs/vercel-production.md",
   "vercel.json"
 ];
 
@@ -190,6 +194,7 @@ export const requiredLaunchEnvExampleKeys = [
   "CRON_SECRET",
   "REPORT_TOKEN_SECRET",
   "FIRST_FREE_FINGERPRINT_SECRET",
+  "MAIGRET_API_SECRET",
   "PAYMENT_PROVIDER",
   "TOSS_CLIENT_KEY",
   "TOSS_SECRET_KEY",

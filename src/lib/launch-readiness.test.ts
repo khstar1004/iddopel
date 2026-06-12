@@ -14,6 +14,7 @@ const completeScripts = {
   "release:local": "node scripts/verify-release-candidate.mjs",
   "release:production": "node scripts/verify-production-release.mjs",
   "launch:button": "node scripts/launch-button.mjs",
+  "vercel:prepare": "node scripts/prepare-vercel-production.mjs",
   e2e: "playwright test",
   "assets:store": "node scripts/generate-store-assets.mjs",
   "assets:promotion": "node scripts/generate-promotion-assets.mjs",
@@ -69,6 +70,7 @@ const completeFiles = new Set([
   "scripts/launch-button.mjs",
   "scripts/prepare-production-release.mjs",
   "scripts/verify-production-release.mjs",
+  "scripts/prepare-vercel-production.mjs",
   "scripts/verify-maigret-runtime.mjs",
   "scripts/verify-code-hygiene.mjs",
   "scripts/verify-product-positioning.mjs",
@@ -83,6 +85,7 @@ const completeFiles = new Set([
   "scripts/verify-vercel-production.mjs",
   "scripts/test-alert-webhook.mjs",
   "tests/e2e/launch-console.spec.ts",
+  "docs/vercel-production.md",
   "vercel.json"
 ]);
 
@@ -100,6 +103,7 @@ npm run release:prepare
 npm run release:local
 npm run release:production
 npm run launch:button
+npm run vercel:prepare
 npm run e2e
 npm run assets:store
 npm run assets:marketing
@@ -185,6 +189,7 @@ DATABASE_SSL=true
 CRON_SECRET=your_32_plus_character_random_secret
 REPORT_TOKEN_SECRET=your_32_plus_character_random_report_token_secret
 FIRST_FREE_FINGERPRINT_SECRET=your_32_plus_character_random_fingerprint_secret
+MAIGRET_API_SECRET=your_32_plus_character_random_maigret_api_secret
 PAYMENT_PROVIDER=toss
 TOSS_CLIENT_KEY=YOUR_TOSS_CLIENT_KEY
 TOSS_SECRET_KEY=YOUR_TOSS_SECRET_KEY
