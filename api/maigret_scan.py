@@ -120,6 +120,30 @@ def run_maigret_in_process(username, mode):
                 retries=retries,
             )
         )
+        priority_site_data = clone_site_data_for_scan(resolve_priority_site_data(db))
+        if should_run_priority_rescan(priority_site_data):
+            priority_results = run_async(
+                check_username(
+                    username=username,
+                    site_dict=dict(priority_site_data),
+                    logger=logger,
+                    proxy=proxy_url,
+                    timeout=positive_int(
+                        os.environ.get("MAIGRET_PRIORITY_SITE_TIMEOUT_SECONDS"),
+                        max(site_timeout, 14),
+                    ),
+                    is_parsing_enabled=parsing_enabled,
+                    id_type="username",
+                    max_connections=positive_int(
+                        os.environ.get("MAIGRET_PRIORITY_MAX_CONNECTIONS"),
+                        min(max_connections, 6),
+                    ),
+                    no_progressbar=True,
+                    retries=positive_int(os.environ.get("MAIGRET_PRIORITY_RETRIES"), max(retries, 1)),
+                )
+            )
+            results = merge_maigret_results(results, priority_results)
+
         results = sort_report_by_data_points(results)
         safe_username = username.replace("/", "_")
         report_json_path = str(Path(temp_dir) / f"report_{safe_username}_simple.json")
@@ -307,6 +331,54 @@ def resolve_site_data(db, top_sites, mode="QUICK"):
     remove_excluded_sites(site_data, resolve_excluded_sites())
     remove_excluded_tagged_sites(site_data, excluded_tags)
     return limit_site_data(site_data, resolve_site_cap(mode))
+
+
+def resolve_priority_site_data(db):
+    priority_sites = resolve_priority_sites()
+    if not priority_sites:
+        return {}
+
+    excluded_tags = resolve_excluded_tags()
+    site_data = db.ranked_sites_dict(
+        top=sys.maxsize,
+        names=priority_sites,
+        excluded_tags=excluded_tags,
+        disabled=False,
+        id_type="username",
+    )
+    remove_excluded_sites(site_data, resolve_excluded_sites())
+    remove_excluded_tagged_sites(site_data, excluded_tags)
+    return site_data
+
+
+def should_run_priority_rescan(priority_site_data):
+    if os.environ.get("MAIGRET_PRIORITY_RESCAN") == "false":
+        return False
+
+    return bool(priority_site_data)
+
+
+def merge_maigret_results(primary_results, priority_results):
+    merged = dict(primary_results)
+    for site_name, priority_result in priority_results.items():
+        current_result = merged.get(site_name)
+        if should_prefer_maigret_result(priority_result, current_result):
+            merged[site_name] = priority_result
+
+    return merged
+
+
+def should_prefer_maigret_result(candidate, current):
+    if is_claimed_result(candidate):
+        return True
+
+    return current is None or not is_claimed_result(current)
+
+
+def is_claimed_result(result):
+    status = result.get("status") if isinstance(result, dict) else None
+    check_status = getattr(status, "status", status)
+    return getattr(check_status, "value", str(check_status)) == "Claimed"
 
 
 def resolve_priority_sites():

@@ -155,6 +155,10 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_PROCESS_TIMEOUT_MS`: process kill timeout
 - `MAIGRET_MAX_CONNECTIONS`: Maigret concurrent connection limit; keep it low on Vercel serverless functions
 - `MAIGRET_PRIORITY_SITES`: comma-separated site names always included in the scan scope, useful for high-demand platforms such as Instagram, X/Twitter, Threads, TikTok, YouTube, Naver, and GitHub
+- `MAIGRET_PRIORITY_RESCAN`: keep `true` on Vercel so high-demand SNS sites get a second slower pass after the broad quick scan
+- `MAIGRET_PRIORITY_SITE_TIMEOUT_SECONDS`: timeout for the priority rescan; beta uses `14` because X/Twitter and Instagram mirrors can be slower on cloud IPs
+- `MAIGRET_PRIORITY_MAX_CONNECTIONS`: lower concurrency for the priority rescan, default `6`
+- `MAIGRET_PRIORITY_RETRIES`: retry count for the priority rescan, default `1`
 - `MAIGRET_BOOST_TAGS`: comma-separated `tag:limit` boosts merged into the scan scope. The Vercel beta default, `kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8`, improves Korean/SNS/creator/developer coverage without scanning all 3,000+ sites.
 - `MAIGRET_EXCLUDED_SITES`: comma-separated Maigret site names to remove from the scan scope and parsed results. The default excludes `Geeksfor Geeks`, which returns false claimed hits for random usernames in Maigret 0.6.1.
 - `MAIGRET_EXCLUDED_TAGS`: comma-separated Maigret tags to remove from the scan scope and parsed results. The beta default is `porn` so adult-site false positives do not surface in the product UI.
@@ -170,7 +174,7 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `TOSS_CLIENT_KEY`: Toss Payments live client key starting with `live_ck_`, required when `PAYMENT_PROVIDER=toss`
 - `TOSS_SECRET_KEY`: Toss Payments live API secret key starting with `live_sk_`, required when `PAYMENT_PROVIDER=toss`
 
-Instagram and X/Twitter checks depend on public unauthenticated responses from those platforms, so cloud IPs can see bot pages, rate limits, or stale HTML. Keep them in `MAIGRET_PRIORITY_SITES`, keep `social`/`photo` in `MAIGRET_BOOST_TAGS`, and use `MAIGRET_PROXY_URL` for the next quality step if production misses known accounts. Instagram and X/Twitter mirror hits are normalized back to the canonical platform in the product UI, while the source HTML report still shows the exact Maigret evidence site.
+Instagram and X/Twitter checks depend on public unauthenticated responses from those platforms, so cloud IPs can see bot pages, rate limits, or stale HTML. Keep them in `MAIGRET_PRIORITY_SITES`, leave `MAIGRET_PRIORITY_RESCAN=true`, keep `social`/`photo` in `MAIGRET_BOOST_TAGS`, and use `MAIGRET_PROXY_URL` for the next quality step if production misses known accounts. Instagram and X/Twitter mirror hits are normalized back to the canonical platform in the product UI, while the source HTML report still shows the exact Maigret evidence site.
 - `TOSS_SECURITY_KEY`: Toss Payments 64-character security key, required when `PAYMENT_PROVIDER=toss`
 - `POLAR_ACCESS_TOKEN`: Polar organization access token, required when `PAYMENT_PROVIDER=polar`
 - `POLAR_PRODUCT_ID`: Polar detailed-report product id, required when `PAYMENT_PROVIDER=polar`

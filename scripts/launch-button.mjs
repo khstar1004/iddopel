@@ -78,6 +78,10 @@ const publicLaunchEnvKeys = new Set([
   "MAIGRET_PROCESS_TIMEOUT_MS",
   "MAIGRET_MAX_CONNECTIONS",
   "MAIGRET_PRIORITY_SITES",
+  "MAIGRET_PRIORITY_RESCAN",
+  "MAIGRET_PRIORITY_SITE_TIMEOUT_SECONDS",
+  "MAIGRET_PRIORITY_MAX_CONNECTIONS",
+  "MAIGRET_PRIORITY_RETRIES",
   "MAIGRET_BOOST_TAGS",
   "MAIGRET_EXCLUDED_SITES",
   "MAIGRET_EXCLUDED_TAGS",
@@ -200,6 +204,10 @@ export function buildLaunchEnvironment({ fileEnv = {}, env = {} } = {}) {
   merged.MAIGRET_PROCESS_TIMEOUT_MS ||= "58000";
   merged.MAIGRET_MAX_CONNECTIONS ||= "20";
   merged.MAIGRET_PRIORITY_SITES ||= "Instagram,Twitter,Threads,TikTok,YouTube,Facebook,LinkedIn,Naver,GitHub,GitHubGist,Reddit";
+  merged.MAIGRET_PRIORITY_RESCAN ||= "true";
+  merged.MAIGRET_PRIORITY_SITE_TIMEOUT_SECONDS ||= "14";
+  merged.MAIGRET_PRIORITY_MAX_CONNECTIONS ||= "6";
+  merged.MAIGRET_PRIORITY_RETRIES ||= "1";
   merged.MAIGRET_BOOST_TAGS ||= "kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8";
   merged.MAIGRET_EXCLUDED_SITES ||= "Geeksfor Geeks";
   merged.MAIGRET_EXCLUDED_TAGS ||= "porn";
