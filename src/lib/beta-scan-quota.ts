@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { Pool } from "pg";
 import { defaultFileStorePath } from "./file-store-path";
 
 export interface BetaScanQuotaSettings {
@@ -30,7 +31,7 @@ interface BetaScanSettingsStore {
 }
 
 interface BetaScanUsageStore {
-  consume(key: string, settings: BetaScanQuotaSettings, now?: Date): Promise<BetaScanUsageResult>;
+  consume(keys: string | string[], settings: BetaScanQuotaSettings, now?: Date): Promise<BetaScanUsageResult>;
 }
 
 let settingsStore: BetaScanSettingsStore | null = null;
@@ -45,7 +46,10 @@ export function betaScanQuotaSettings(env: Record<string, string | undefined> = 
 
 export function getBetaScanSettingsStore(): BetaScanSettingsStore {
   if (!settingsStore) {
-    settingsStore = new FileBetaScanSettingsStore(process.env.BETA_SCAN_SETTINGS_STORE_PATH);
+    const databaseUrl = process.env.DATABASE_URL;
+    settingsStore = databaseUrl?.startsWith("postgres")
+      ? new PostgresBetaScanSettingsStore(databaseUrl)
+      : new FileBetaScanSettingsStore(process.env.BETA_SCAN_SETTINGS_STORE_PATH);
   }
 
   return settingsStore;
@@ -53,7 +57,10 @@ export function getBetaScanSettingsStore(): BetaScanSettingsStore {
 
 export function getBetaScanUsageStore(): BetaScanUsageStore {
   if (!usageStore) {
-    usageStore = new FileBetaScanUsageStore(process.env.BETA_SCAN_USAGE_STORE_PATH);
+    const databaseUrl = process.env.DATABASE_URL;
+    usageStore = databaseUrl?.startsWith("postgres")
+      ? new PostgresBetaScanUsageStore(databaseUrl)
+      : new FileBetaScanUsageStore(process.env.BETA_SCAN_USAGE_STORE_PATH);
   }
 
   return usageStore;
@@ -67,15 +74,25 @@ export function resetBetaScanQuotaStoresForTests(
   usageStore = nextUsageStore;
 }
 
-export function betaScanQuotaKey(ownerToken: string | null | undefined, requestKey: string) {
-  const normalizedOwnerToken = ownerToken?.trim();
-  const principal = normalizedOwnerToken ? `${normalizedOwnerToken}:${requestKey}` : requestKey;
+export function betaScanQuotaKey(scope: "request" | "owner", value: string) {
+  const principal = `${scope}:${value.trim().slice(0, 256)}`;
   return createHash("sha256").update(`beta-free-scan:${principal}`).digest("hex");
+}
+
+export function betaScanQuotaKeys(ownerToken: string | null | undefined, requestKey: string) {
+  const normalizedOwnerToken = ownerToken?.trim().slice(0, 256);
+  const keys = [betaScanQuotaKey("request", requestKey)];
+
+  if (normalizedOwnerToken) {
+    keys.push(betaScanQuotaKey("owner", normalizedOwnerToken));
+  }
+
+  return [...new Set(keys)];
 }
 
 export async function assertBetaScanQuota(
   store: BetaScanUsageStore,
-  key: string,
+  key: string | string[],
   settings: BetaScanQuotaSettings,
   now = new Date()
 ): Promise<BetaScanUsageResult> {
@@ -84,8 +101,8 @@ export async function assertBetaScanQuota(
 
 export async function consumeBetaScanQuota(request: Request, ownerToken: string | null | undefined) {
   const settings = await getBetaScanSettingsStore().get();
-  const key = betaScanQuotaKey(ownerToken, requestIdentity(request));
-  return getBetaScanUsageStore().consume(key, settings);
+  const keys = betaScanQuotaKeys(ownerToken, requestIdentity(request));
+  return getBetaScanUsageStore().consume(keys, settings);
 }
 
 export class FileBetaScanSettingsStore implements BetaScanSettingsStore {
@@ -166,39 +183,54 @@ export class FileBetaScanUsageStore implements BetaScanUsageStore {
     this.filePath = filePath;
   }
 
-  consume(key: string, settings: BetaScanQuotaSettings, now = new Date()): Promise<BetaScanUsageResult> {
+  consume(keys: string | string[], settings: BetaScanQuotaSettings, now = new Date()): Promise<BetaScanUsageResult> {
     return this.withQueue(async () => {
+      const quotaKeys = [...new Set(Array.isArray(keys) ? keys : [keys])];
       const usage = await this.readAll();
-      const current = usage[key];
-      const resetAt = current && new Date(current.resetAt).getTime() > now.getTime()
-        ? new Date(current.resetAt)
-        : new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
-      const activeCount = current && new Date(current.resetAt).getTime() > now.getTime() ? current.count : 0;
+      const windows: Array<{ key: string; resetAt: Date; activeCount: number }> = quotaKeys.map((key) => {
+        const current = usage[key];
+        const isActive = current && new Date(current.resetAt).getTime() > now.getTime();
+        const resetAt = isActive
+          ? new Date(current.resetAt)
+          : new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
+        const activeCount = isActive ? current.count : 0;
+        return { key, resetAt, activeCount };
+      });
+      const exhausted = windows.find((window) => window.activeCount >= settings.freeScanLimit);
 
-      if (activeCount >= settings.freeScanLimit) {
+      if (exhausted) {
         return {
           allowed: false,
           limit: settings.freeScanLimit,
-          used: activeCount,
+          used: exhausted.activeCount,
           remaining: 0,
-          resetAt: resetAt.toISOString(),
-          retryAfterSeconds: Math.max(1, Math.ceil((resetAt.getTime() - now.getTime()) / 1000))
+          resetAt: exhausted.resetAt.toISOString(),
+          retryAfterSeconds: Math.max(1, Math.ceil((exhausted.resetAt.getTime() - now.getTime()) / 1000))
         };
       }
 
-      const nextCount = activeCount + 1;
-      usage[key] = {
-        count: nextCount,
-        resetAt: resetAt.toISOString(),
-        updatedAt: now.toISOString()
-      };
+      let used = 0;
+      let remaining = settings.freeScanLimit;
+      let resetAt = windows[0]?.resetAt ?? new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
+
+      for (const window of windows) {
+        const nextCount = window.activeCount + 1;
+        used = Math.max(used, nextCount);
+        remaining = Math.min(remaining, Math.max(0, settings.freeScanLimit - nextCount));
+        if (window.resetAt.getTime() < resetAt.getTime()) resetAt = window.resetAt;
+        usage[window.key] = {
+          count: nextCount,
+          resetAt: window.resetAt.toISOString(),
+          updatedAt: now.toISOString()
+        };
+      }
       await this.writeAll(usage);
 
       return {
         allowed: true,
         limit: settings.freeScanLimit,
-        used: nextCount,
-        remaining: Math.max(0, settings.freeScanLimit - nextCount),
+        used,
+        remaining,
         resetAt: resetAt.toISOString()
       };
     });
@@ -237,9 +269,145 @@ export class FileBetaScanUsageStore implements BetaScanUsageStore {
   }
 }
 
+class PostgresBetaScanSettingsStore implements BetaScanSettingsStore {
+  private readonly pool: Pool;
+
+  constructor(databaseUrl: string) {
+    this.pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : undefined
+    });
+  }
+
+  async get(): Promise<BetaScanQuotaSettings> {
+    const defaults = betaScanQuotaSettings();
+    const result = await this.pool.query(
+      `select free_scan_limit, window_hours, updated_at
+       from beta_scan_settings
+       where id = 'default'
+       limit 1`
+    );
+    const row = result.rows[0];
+    if (!row) return defaults;
+
+    return {
+      freeScanLimit: normalizeFreeScanLimit(Number(row.free_scan_limit)),
+      windowHours: clampInteger(String(row.window_hours), defaults.windowHours, 1, 24 * 30),
+      updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : undefined
+    };
+  }
+
+  async update(input: { freeScanLimit: number }): Promise<BetaScanQuotaSettings> {
+    const defaults = betaScanQuotaSettings();
+    const result = await this.pool.query(
+      `insert into beta_scan_settings (id, free_scan_limit, window_hours, updated_at)
+       values ('default', $1, $2, now())
+       on conflict (id) do update set
+         free_scan_limit = excluded.free_scan_limit,
+         window_hours = excluded.window_hours,
+         updated_at = excluded.updated_at
+       returning free_scan_limit, window_hours, updated_at`,
+      [normalizeFreeScanLimit(input.freeScanLimit), defaults.windowHours]
+    );
+    const row = result.rows[0];
+    return {
+      freeScanLimit: normalizeFreeScanLimit(Number(row.free_scan_limit)),
+      windowHours: clampInteger(String(row.window_hours), defaults.windowHours, 1, 24 * 30),
+      updatedAt: new Date(String(row.updated_at)).toISOString()
+    };
+  }
+}
+
+class PostgresBetaScanUsageStore implements BetaScanUsageStore {
+  private readonly pool: Pool;
+
+  constructor(databaseUrl: string) {
+    this.pool = new Pool({
+      connectionString: databaseUrl,
+      ssl: process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: true } : undefined
+    });
+  }
+
+  async consume(keys: string | string[], settings: BetaScanQuotaSettings, now = new Date()): Promise<BetaScanUsageResult> {
+    const quotaKeys = [...new Set(Array.isArray(keys) ? keys : [keys])];
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+      const existing = await client.query(
+        `select quota_key, count, reset_at
+         from beta_scan_usage
+         where quota_key = any($1::text[])
+         for update`,
+        [quotaKeys]
+      );
+      const usageByKey = new Map(existing.rows.map((row) => [String(row.quota_key), row]));
+      const windows: Array<{ key: string; resetAt: Date; activeCount: number }> = quotaKeys.map((key) => {
+        const current = usageByKey.get(key);
+        const resetAtValue = current?.reset_at ? new Date(String(current.reset_at)) : null;
+        const isActive = resetAtValue ? resetAtValue.getTime() > now.getTime() : false;
+        const resetAt: Date = isActive && resetAtValue
+          ? resetAtValue
+          : new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
+        const activeCount = isActive ? Number(current?.count ?? 0) : 0;
+        return { key, resetAt, activeCount };
+      });
+      const exhausted = windows.find((window) => window.activeCount >= settings.freeScanLimit);
+
+      if (exhausted) {
+        await client.query("rollback");
+        return {
+          allowed: false,
+          limit: settings.freeScanLimit,
+          used: exhausted.activeCount,
+          remaining: 0,
+          resetAt: exhausted.resetAt.toISOString(),
+          retryAfterSeconds: Math.max(1, Math.ceil((exhausted.resetAt.getTime() - now.getTime()) / 1000))
+        };
+      }
+
+      let used = 0;
+      let remaining = settings.freeScanLimit;
+      let resetAt = windows[0]?.resetAt ?? new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
+
+      for (const window of windows) {
+        const nextCount = window.activeCount + 1;
+        used = Math.max(used, nextCount);
+        remaining = Math.min(remaining, Math.max(0, settings.freeScanLimit - nextCount));
+        if (window.resetAt.getTime() < resetAt.getTime()) resetAt = window.resetAt;
+        await client.query(
+          `insert into beta_scan_usage (quota_key, count, reset_at, updated_at)
+           values ($1, $2, $3, $4)
+           on conflict (quota_key) do update set
+             count = excluded.count,
+             reset_at = excluded.reset_at,
+             updated_at = excluded.updated_at`,
+          [window.key, nextCount, window.resetAt.toISOString(), now.toISOString()]
+        );
+      }
+
+      await client.query("commit");
+      return {
+        allowed: true,
+        limit: settings.freeScanLimit,
+        used,
+        remaining,
+        resetAt: resetAt.toISOString()
+      };
+    } catch (error) {
+      await client.query("rollback").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+}
+
 function requestIdentity(request: Request) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  return forwarded || request.headers.get("x-real-ip") || "anonymous";
+  const ip = forwarded || request.headers.get("x-real-ip") || "anonymous";
+  const userAgent = (request.headers.get("user-agent") ?? "unknown-agent").trim().replace(/\s+/g, " ").slice(0, 160);
+  return `${ip}\n${userAgent}`;
 }
 
 function normalizeFreeScanLimit(value: number) {

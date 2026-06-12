@@ -25,7 +25,7 @@ Utilities / Productivity
 ## Privacy Nutrition / Data Safety Notes
 - User-provided data: username string, scan purpose
 - Generated data: scan results, score, report id
-- Monitoring data: monitored username list, schedule, latest scan ids, hashed browser owner token
+- Monitoring and abuse-prevention data: monitored username list, schedule, latest scan ids, hashed browser owner token, hashed beta quota key
 - Not collected: real name, phone number, email search value, profile photo, post content, precise location
 - Purpose: app functionality, abuse prevention, customer support, paid report delivery
 - Retention: non-member 24 hours, free account 7 days, paid report 90 days, subscription during subscription period

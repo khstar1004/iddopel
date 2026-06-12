@@ -7,6 +7,7 @@ import {
   FileBetaScanUsageStore,
   assertBetaScanQuota,
   betaScanQuotaKey,
+  betaScanQuotaKeys,
   betaScanQuotaSettings
 } from "./beta-scan-quota";
 
@@ -43,7 +44,7 @@ describe("beta scan quota", () => {
   it("enforces the configured per-person quota and reports remaining scans", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-usage-"));
     const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
-    const key = betaScanQuotaKey("owner-token", "203.0.113.1");
+    const key = betaScanQuotaKey("request", "203.0.113.1");
     const now = new Date("2026-06-12T00:00:00.000Z");
 
     await expect(assertBetaScanQuota(usageStore, key, { freeScanLimit: 2, windowHours: 24 }, now)).resolves.toMatchObject({
@@ -61,6 +62,34 @@ describe("beta scan quota", () => {
     });
 
     await rm(dir, { recursive: true, force: true });
+  });
+
+  it("spends both request and owner quota keys to reduce browser-token reset abuse", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-dual-usage-"));
+    const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
+    const now = new Date("2026-06-12T00:00:00.000Z");
+    const requestKey = betaScanQuotaKey("request", "203.0.113.7\nMozilla/5.0");
+    const firstOwnerKey = betaScanQuotaKey("owner", "owner-one");
+    const secondOwnerKey = betaScanQuotaKey("owner", "owner-two");
+
+    await expect(assertBetaScanQuota(usageStore, [requestKey, firstOwnerKey], { freeScanLimit: 1, windowHours: 24 }, now)).resolves.toMatchObject({
+      allowed: true,
+      remaining: 0
+    });
+    await expect(assertBetaScanQuota(usageStore, [requestKey, secondOwnerKey], { freeScanLimit: 1, windowHours: 24 }, now)).resolves.toMatchObject({
+      allowed: false,
+      remaining: 0
+    });
+
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("builds separate quota keys for request identity and owner token", () => {
+    const keys = betaScanQuotaKeys("owner-token", "203.0.113.9\nMozilla/5.0");
+
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBe(betaScanQuotaKey("request", "203.0.113.9\nMozilla/5.0"));
+    expect(keys[1]).toBe(betaScanQuotaKey("owner", "owner-token"));
   });
 });
 

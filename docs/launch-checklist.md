@@ -32,6 +32,7 @@
 - [x] GitHub Actions release verification workflow for web, assets, audit, mobile sync, Android debug APK, and Android release AAB
 - [x] Paid report order, checkout, entitlement token, locked full-result API
 - [x] First detailed report free entitlement and blurred locked-result paywall for later reports
+- [x] Beta free-search quota consumes request-identity and owner-token keys, with Postgres persistence and file fallback
 - [x] Web detailed-report paywall flag prepared; beta keeps `WEB_DETAILED_REPORT_PAYWALL_ENABLED=false` until Toss checkout is registered
 - [x] Mock payment confirmation is blocked unless `ENABLE_MOCK_PAYMENTS=true` and the order is a local mock order
 - [x] Viral-safe PNG share card for result screens without platform URLs or profile details

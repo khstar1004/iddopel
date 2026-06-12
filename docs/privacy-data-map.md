@@ -12,6 +12,7 @@
 | Monitoring username list | Monthly public username re-check | Until monitoring deletion |
 | Hashed browser owner token | Browser-scoped monitoring ownership and deletion | Until monitoring deletion |
 | Monitoring latest scan ids and schedule | Monthly re-check status and next run | Until monitoring deletion |
+| Hashed beta quota key | Free beta scan abuse prevention using request identity and owner-token aliases; raw IP, user-agent, and owner token are not stored in the quota file | Quota window, default 24h |
 | Page path, client error type, Core Web Vitals metric | Service reliability, launch monitoring, abuse/debug signal | Deployment log retention period |
 
 ## Store Privacy Declaration Mapping
@@ -20,10 +21,10 @@
 | Apple App Privacy / Search History | Username string | Used only to run public username usage checks |
 | Apple App Privacy / Other User Content | Scan purpose, generated scan summary, generated report result | Not linked to a user identity in the native shell |
 | Apple App Privacy / Diagnostics | Core Web Vitals metric, client error type, page path, release version | First-party reliability telemetry |
-| Apple App Privacy / Identifiers | Hashed browser owner token | Used only for monthly monitoring ownership, not tracking |
+| Apple App Privacy / Identifiers | Hashed browser owner token, hashed beta quota key | Used only for monthly monitoring ownership and free-scan abuse prevention, not tracking |
 | Google Play Data safety / App activity | Search history, app interactions | Username string, scan purpose, scan mode, result view path |
 | Google Play Data safety / App info and performance | Crash logs, diagnostics | First-party client error and performance telemetry |
-| Google Play Data safety / Personal info / User IDs | Hashed browser owner token | Used only for monthly monitoring ownership, not shared |
+| Google Play Data safety / Personal info / User IDs | Hashed browser owner token, hashed beta quota key | Used only for monthly monitoring ownership and free-scan abuse prevention, not shared |
 
 The full console answer source is `store-assets/privacy-declarations.json` and `docs/app-privacy-data-safety.md`.
 

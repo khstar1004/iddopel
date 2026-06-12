@@ -19,7 +19,14 @@
     "store-assets/screenshots/android-tablet-03-report.png"
   ],
   "dataSafetyNotes": {
-    "collected": ["username string", "scan purpose", "generated scan result", "payment/report entitlement id", "hashed browser owner token for monthly monitoring"],
+    "collected": [
+      "username string",
+      "scan purpose",
+      "generated scan result",
+      "payment/report entitlement id",
+      "hashed browser owner token for monthly monitoring",
+      "hashed beta quota key for free-scan abuse prevention"
+    ],
     "notCollected": ["real name", "phone number search value", "email search value", "precise location", "profile photo", "post content"],
     "purpose": ["app functionality", "abuse prevention", "customer support", "paid report delivery"],
     "retention": "non-member scans 24 hours, paid reports 90 days"

@@ -24,7 +24,7 @@ describe("scan route beta free quota", () => {
     resetBetaScanQuotaStoresForTests(null, null);
   });
 
-  it("allows only the configured number of beta free searches per owner", async () => {
+  it("allows only the configured number of beta free searches per request identity", async () => {
     process.env.SCAN_PROVIDER = "mock";
     process.env.BETA_FREE_SCAN_LIMIT = "1";
     process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
@@ -35,8 +35,8 @@ describe("scan route beta free quota", () => {
       new FileBetaScanUsageStore(path.join(dir, "usage.json"))
     );
 
-    const first = await POST(scanRequest("firstquota"));
-    const second = await POST(scanRequest("secondquota"));
+    const first = await POST(scanRequest("firstquota", { ownerToken: "owner-token-one" }));
+    const second = await POST(scanRequest("secondquota", { ownerToken: "owner-token-two" }));
     const secondBody = await second.json();
 
     expect(first.status).toBe(201);
@@ -45,15 +45,37 @@ describe("scan route beta free quota", () => {
     expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
     await rm(dir, { recursive: true, force: true });
   });
+
+  it("allows only the configured number of beta free searches per owner token", async () => {
+    process.env.SCAN_PROVIDER = "mock";
+    process.env.BETA_FREE_SCAN_LIMIT = "1";
+    process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "scan-route-owner-quota-"));
+    resetScanRepositoryForTests(new MemoryScanRepository());
+    resetBetaScanQuotaStoresForTests(
+      new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
+      new FileBetaScanUsageStore(path.join(dir, "usage.json"))
+    );
+
+    const first = await POST(scanRequest("firstownerquota", { ip: "203.0.113.21", ownerToken: "same-owner-token" }));
+    const second = await POST(scanRequest("secondownerquota", { ip: "203.0.113.22", ownerToken: "same-owner-token" }));
+    const secondBody = await second.json();
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(429);
+    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    await rm(dir, { recursive: true, force: true });
+  });
 });
 
-function scanRequest(username: string) {
+function scanRequest(username: string, options: { ip?: string; ownerToken?: string } = {}) {
   return new Request("https://id.example.com/api/scans", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-forwarded-for": "203.0.113.20",
-      "x-scan-owner-token": "owner-token"
+      "user-agent": "QuotaTest/1.0",
+      "x-forwarded-for": options.ip ?? "203.0.113.20",
+      "x-scan-owner-token": options.ownerToken ?? "owner-token"
     },
     body: JSON.stringify({ username, purpose: "SELF_CHECK", mode: "quick" })
   });

@@ -24,7 +24,7 @@ Declare these data types:
 | User Content | Other User Content | scan purpose, generated scan summary, generated report result | App Functionality, Fraud Prevention | No | No |
 | Diagnostics | Performance Data | Core Web Vitals metric name and bounded value | Analytics, App Functionality | No | No |
 | Diagnostics | Other Diagnostic Data | client error type, page path without query string, release version | Analytics, App Functionality | No | No |
-| Identifiers | User ID | hashed browser owner token for monthly monitoring | App Functionality, Fraud Prevention | No | No |
+| Identifiers | User ID | hashed browser owner token for monthly monitoring, hashed beta quota key for free-scan abuse prevention | App Functionality, Fraud Prevention | No | No |
 
 Do not declare collection for contact info, financial info, location, contacts, photos/videos, sensitive info, purchases, browsing history, or advertising data while native paid reports remain disabled.
 
@@ -44,7 +44,7 @@ Declare these data types:
 | App activity | App interactions | scan purpose, scan mode, result view path | Yes | App functionality; Fraud prevention, security, and compliance | No |
 | App info and performance | Crash logs | client error type, unhandled rejection type | No | Analytics; App functionality | No |
 | App info and performance | Diagnostics | Core Web Vitals metric name and bounded value, release version | No | Analytics; App functionality | No |
-| Personal info | User IDs | hashed browser owner token for monthly monitoring | No | App functionality; Fraud prevention, security, and compliance | No |
+| Personal info | User IDs | hashed browser owner token for monthly monitoring, hashed beta quota key for free-scan abuse prevention | No | App functionality; Fraud prevention, security, and compliance | No |
 
 Do not declare collection for name, email address, phone number, precise/approximate location, contacts, photos, videos, audio files, health info, financial info, device IDs, web browsing history, SMS/MMS, or calendar events while native paid reports remain disabled.
 

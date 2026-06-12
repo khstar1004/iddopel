@@ -77,3 +77,19 @@ create unique index if not exists monitoring_subscriptions_active_owner_idx
 create index if not exists monitoring_subscriptions_next_run_idx
   on monitoring_subscriptions (next_run_at)
   where status = 'ACTIVE';
+
+create table if not exists beta_scan_settings (
+  id text primary key,
+  free_scan_limit integer not null check (free_scan_limit >= 0 and free_scan_limit <= 1000),
+  window_hours integer not null check (window_hours >= 1 and window_hours <= 720),
+  updated_at timestamptz not null
+);
+
+create table if not exists beta_scan_usage (
+  quota_key text primary key,
+  count integer not null check (count >= 0),
+  reset_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+create index if not exists beta_scan_usage_reset_at_idx on beta_scan_usage (reset_at);

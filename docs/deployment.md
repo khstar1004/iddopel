@@ -106,7 +106,7 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 - Keep Vercel as the frontend and add a separate scan worker service in a later slice.
 - Use `SCAN_PROVIDER=mock` only for demos and smoke tests.
 
-For the public Vercel beta, keep `SCAN_PROVIDER=maigret`. Vercel installs Maigret from `requirements.txt` and the Node scan route calls the Python function at `/api/maigret_scan` for real CLI output. `vercel.json` also points the JSON stores at `/tmp` so the first scan response can complete on Vercel, sets `INLINE_SCAN_ARTIFACTS=true` so the browser can render details even when later serverless functions cannot read the same `/tmp` file, and sets beta free searches to 5 per browser/IP over 24 hours by default. Change that number from `/admin` after signing in with the developer admin account. That storage is not durable and is not a substitute for Postgres; stable detailed reports, orders, monitoring, quota settings, and deletion audits still require `DATABASE_URL`.
+For the public Vercel beta, keep `SCAN_PROVIDER=maigret`. Vercel installs Maigret from `requirements.txt` and the Node scan route calls the Python function at `/api/maigret_scan` for real CLI output. `vercel.json` also points the JSON stores at `/tmp` so the first scan response can complete on Vercel, sets `INLINE_SCAN_ARTIFACTS=true` so the browser can render details even when later serverless functions cannot read the same `/tmp` file, and sets beta free searches to 5 per request identity and browser owner token over 24 hours by default. Clearing local storage or changing the browser owner token does not reset the request-identity quota. Change the limit from `/admin` after signing in with the developer admin account. That storage is not durable and is not a substitute for Postgres; stable detailed reports, orders, monitoring, quota settings, and deletion audits still require `DATABASE_URL`.
 
 After each Vercel beta deployment, run the beta smoke. It verifies security headers, policy pages, sitemap/robots/manifest, the real scan path, beta inline report rendering, and product-branded embedded source reports:
 
@@ -124,8 +124,8 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `SCAN_PROVIDER`: `maigret` for Vercel, Docker, and Cloudtype real scans. `mock` must be used only for private smoke tests and demos.
 - `BETA_FREE_SCAN_LIMIT`: default non-admin free search quota, `5` for beta.
 - `BETA_FREE_SCAN_WINDOW_HOURS`: quota window in hours, `24` for beta.
-- `BETA_SCAN_SETTINGS_STORE_PATH`: file path for `/admin` quota settings when Postgres is absent.
-- `BETA_SCAN_USAGE_STORE_PATH`: file path for beta free search usage counts when Postgres is absent.
+- `BETA_SCAN_SETTINGS_STORE_PATH`: file path for `/admin` quota settings when Postgres is absent. With `DATABASE_URL`, quota settings are stored in `beta_scan_settings`.
+- `BETA_SCAN_USAGE_STORE_PATH`: file path for beta free search usage counts when Postgres is absent. With `DATABASE_URL`, quota usage is stored in `beta_scan_usage`.
 - `ENABLE_DEV_ADMIN`: set `true` only with `DEV_ADMIN_PASSWORD` and `DEV_ADMIN_SECRET` so `/admin` can manage beta quota.
 - `DEV_ADMIN_PASSWORD`: required before public `/admin` login is enabled.
 - `DEV_ADMIN_SECRET`: signing secret for developer admin tokens.

@@ -49,7 +49,7 @@
       {
         "category": "Identifiers",
         "dataType": "User ID",
-        "fields": ["hashed browser owner token for monthly monitoring"],
+        "fields": ["hashed browser owner token for monthly monitoring", "hashed beta quota key for free-scan abuse prevention"],
         "purposes": ["App Functionality", "Fraud Prevention"],
         "linkedToUser": false,
         "usedForTracking": false
@@ -121,7 +121,7 @@
       {
         "category": "Personal info",
         "dataType": "User IDs",
-        "fields": ["hashed browser owner token for monthly monitoring"],
+        "fields": ["hashed browser owner token for monthly monitoring", "hashed beta quota key for free-scan abuse prevention"],
         "collected": true,
         "shared": false,
         "required": false,
