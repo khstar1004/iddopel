@@ -195,7 +195,7 @@ npm run vercel:db
 npm run vercel:db -- --execute
 ```
 
-The dry run shows the exact `vercel integration add`, `vercel env pull`, `vercel env run -e production -- npm run db:migrate`, deploy, and production verification steps. It defaults to the Neon Marketplace integration on the free provider plan; pass `--integration`, `--plan`, or `--interactive-plan` if the selected Vercel Marketplace provider needs a different plan flow.
+The dry run shows the exact `vercel integration add`, `vercel env pull`, `vercel env run -e production -- npm run db:migrate`, deploy, and production verification steps. It defaults to the Neon Marketplace integration on the free provider plan; pass `--integration`, `--plan`, or `--interactive-plan` if the selected Vercel Marketplace provider needs a different plan flow. For the current free beta, use `npm run vercel:db -- --execute --skip-verify` so the database setup can complete before the paid-production gate is expected to pass.
 
 After a Vercel beta deployment, verify the public beta surface. This checks security headers, policy pages, sitemap/robots/manifest, the real scan path, beta inline report rendering, and that the embedded source report is product-branded instead of exposing scanner vendor text:
 

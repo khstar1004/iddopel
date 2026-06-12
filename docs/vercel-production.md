@@ -27,9 +27,10 @@ npm run vercel:db -- --plan free
 npm run vercel:db -- --interactive-plan
 npm run vercel:db -- --skip-provision
 npm run vercel:db -- --skip-deploy
+npm run vercel:db -- --execute --skip-verify
 ```
 
-The default integration is Neon because it is the Postgres provider surfaced through Vercel Marketplace storage. Use `--integration` and `--metadata` if the selected Marketplace provider or region changes.
+The default integration is Neon because it is the Postgres provider surfaced through Vercel Marketplace storage. Use `--integration` and `--metadata` if the selected Marketplace provider or region changes. Use `--skip-verify` only for the free beta phase; paid production should keep the final `vercel:production` gate.
 
 ## Prepare Env
 

@@ -73,6 +73,19 @@ describe("Vercel Postgres setup plan", () => {
     });
   });
 
+  it("can skip the paid-production verification gate for beta database setup", () => {
+    withTempProject(true, (cwd) => {
+      const plan = createVercelPostgresSetupPlan({
+        cwd,
+        options: { skipVerify: true }
+      });
+
+      expect(plan.commands.map((command: { id: string }) => command.id)).not.toContain("verify-vercel-production");
+      expect(plan.commands.map((command: { id: string }) => command.id)).toContain("migrate-production-db");
+      expect(plan.commands.map((command: { id: string }) => command.id)).toContain("deploy-production");
+    });
+  });
+
   it("accepts custom integration, environments, metadata, env file, and production URL", () => {
     withTempProject(true, (cwd) => {
       const plan = createVercelPostgresSetupPlan({

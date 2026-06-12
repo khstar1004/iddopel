@@ -82,15 +82,17 @@ export function createVercelPostgresSetupPlan({
     );
   }
 
-  commands.push(
-    commandStep(
-      "verify-vercel-production",
-      vercelBin,
-      ["env", "run", "-e", "production", "--", "npm", "run", "vercel:production"],
-      { VERCEL_PRODUCTION_BASE_URL: productionBaseUrl },
-      "Verify the live production shape: Postgres storage, paid report locking, live checkout provider, and closed cron routes."
-    )
-  );
+  if (!options.skipVerify) {
+    commands.push(
+      commandStep(
+        "verify-vercel-production",
+        vercelBin,
+        ["env", "run", "-e", "production", "--", "npm", "run", "vercel:production"],
+        { VERCEL_PRODUCTION_BASE_URL: productionBaseUrl },
+        "Verify the live production shape: Postgres storage, paid report locking, live checkout provider, and closed cron routes."
+      )
+    );
+  }
 
   return {
     ok: true,
@@ -192,6 +194,7 @@ function parseArgs(argv) {
     jsonOnly: false,
     skipProvision: false,
     skipDeploy: false,
+    skipVerify: false,
     interactivePlan: false,
     environments: [],
     metadata: []
@@ -207,6 +210,8 @@ function parseArgs(argv) {
       options.skipProvision = true;
     } else if (item === "--skip-deploy") {
       options.skipDeploy = true;
+    } else if (item === "--skip-verify") {
+      options.skipVerify = true;
     } else if (item === "--interactive-plan") {
       options.interactivePlan = true;
     } else if (item === "--integration") {
