@@ -14,7 +14,7 @@ npm run vercel:db -- --execute
 The default plan is a dry run. It prints the exact sequence before touching Vercel:
 
 1. `vercel link` if the workspace is not already linked.
-2. `vercel integration add neon --plan free` to provision a Marketplace Postgres resource and connect it to production.
+2. `vercel integration add neon --plan free_v3` to provision a Marketplace Postgres resource and connect it to production.
 3. `vercel env pull .vercel/.env.production.local --environment=production --yes` to inspect the injected Postgres aliases locally.
 4. `vercel env run -e production -- npm run db:migrate` to run migrations with Vercel-held credentials.
 5. `vercel deploy --prod`.
@@ -25,7 +25,7 @@ In non-interactive terminals, set `VERCEL_TOKEN` before using `--execute`. Verce
 Useful variants:
 
 ```bash
-npm run vercel:db -- --plan free
+npm run vercel:db -- --plan free_v3
 npm run vercel:db -- --interactive-plan
 npm run vercel:db -- --skip-provision
 npm run vercel:db -- --skip-deploy

@@ -24,8 +24,10 @@
     "MAIGRET_EXTRACT_EXTENDED": "false",
     "INLINE_SCAN_ARTIFACTS": "true",
     "PAYMENT_PROVIDER": "mock",
+    "SITE_URL": "https://iddopel.vercel.app",
     "ENABLE_MOCK_PAYMENTS": "false",
-    "WEB_DETAILED_REPORT_PAYWALL_ENABLED": "false"
+    "WEB_DETAILED_REPORT_PAYWALL_ENABLED": "false",
+    "MONITORING_PAYWALL_ENABLED": "false"
   },
   "functions": {
     "api/maigret_scan.py": {

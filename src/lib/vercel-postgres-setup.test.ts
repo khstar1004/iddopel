@@ -28,7 +28,7 @@ describe("Vercel Postgres setup plan", () => {
       });
 
       expect(plan.linked).toBe(false);
-      expect(plan.plan).toBe("free");
+      expect(plan.plan).toBe("free_v3");
       expect(plan.commands.map((command: { id: string }) => command.id)).toEqual([
         "link-project",
         "provision-postgres",
@@ -39,7 +39,7 @@ describe("Vercel Postgres setup plan", () => {
       ]);
       expect(plan.commands[1]).toEqual(
         expect.objectContaining({
-          command: "vercel",
+          command: expect.stringMatching(/^vercel(\.cmd)?$/),
           args: expect.arrayContaining([
             "integration",
             "add",
@@ -49,7 +49,7 @@ describe("Vercel Postgres setup plan", () => {
             "--environment",
             "production",
             "--plan",
-            "free",
+            "free_v3",
             "--no-env-pull"
           ])
         })

@@ -4,6 +4,7 @@ node_modules
 .agents
 .cursor
 .logs
+.tmp
 out
 dist
 coverage

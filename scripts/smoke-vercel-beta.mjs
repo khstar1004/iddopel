@@ -147,9 +147,14 @@ try {
 
     const htmlReport = await requestText(`/api/scans/${scanId}/report.html?embed=1&token=${token}`, { method: "GET" });
     assertCheck(
-      "Maigret HTML report opens with first-free token",
-      htmlReport.status === 200 && htmlReport.body.includes("Username search report"),
-      { status: htmlReport.status, length: htmlReport.body.length }
+      "HTML report opens with first-free token",
+      htmlReport.status === 200 && htmlReport.body.includes("ID 도플갱어 리포트") && !/\bMaigret\b/i.test(htmlReport.body),
+      {
+        status: htmlReport.status,
+        length: htmlReport.body.length,
+        hasProductTitle: htmlReport.body.includes("ID 도플갱어 리포트"),
+        containsVendorText: /\bMaigret\b/i.test(htmlReport.body)
+      }
     );
   } else if (freeReport.status === 404 && hasInlineResults) {
     assertCheck("inline beta full results are present", scan.body.fullResults.length >= 0, {

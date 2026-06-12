@@ -6,8 +6,9 @@ import { fileURLToPath } from "node:url";
 const defaultIntegration = "neon";
 const defaultResourceName = "id-doppelganger-postgres";
 const defaultEnvironment = "production";
-const defaultProviderPlan = "free";
+const defaultProviderPlan = "free_v3";
 const defaultPulledEnvFile = ".vercel/.env.production.local";
+const defaultVercelBin = process.platform === "win32" ? "vercel.cmd" : "vercel";
 const sourceReferences = [
   "https://vercel.com/docs/storage",
   "https://vercel.com/docs/marketplace-storage",
@@ -29,7 +30,7 @@ export function createVercelPostgresSetupPlan({
   const metadata = uniqueValues([...(options.metadata || []), ...(parseCsv(env.VERCEL_POSTGRES_METADATA) || [])]);
   const pulledEnvFile = options.envFile || env.VERCEL_PRODUCTION_ENV_FILE || defaultPulledEnvFile;
   const productionBaseUrl = options.productionBaseUrl || env.VERCEL_PRODUCTION_BASE_URL || env.PRODUCTION_BASE_URL || "https://iddopel.vercel.app";
-  const vercelBin = options.vercelBin || env.VERCEL_CLI_BIN || "vercel";
+  const vercelBin = options.vercelBin || env.VERCEL_CLI_BIN || defaultVercelBin;
   const linked = existsSync(resolve(cwd, ".vercel", "project.json"));
 
   const commands = [];
@@ -151,7 +152,7 @@ export function runVercelPostgresSetupPlan(plan, { cwd = process.cwd(), env = pr
       cwd,
       env: { ...env, ...step.env },
       stdio: "inherit",
-      shell: false
+      shell: process.platform === "win32"
     });
     const ok = !result.error && result.status === 0;
     results.push({
