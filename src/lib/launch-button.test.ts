@@ -7,7 +7,9 @@ const sensitiveEnv = {
   [["TOSS", "SECRET", "KEY"].join("_")]: "toss-secret-value-123456",
   [["TOSS", "SECURITY", "KEY"].join("_")]: "a".repeat(64),
   [["DATABASE", "URL"].join("_")]: "postgres://launch_user:launch_pass@db.iddoppelganger.kr:5432/id_doppelganger",
-  [["CRON", "SECRET"].join("_")]: "cron-secret-value-1234567890"
+  [["CRON", "SECRET"].join("_")]: "cron-secret-value-1234567890",
+  [["REPORT", "TOKEN", "SECRET"].join("_")]: "report-token-secret-value-1234567890",
+  [["FIRST", "FREE", "FINGERPRINT", "SECRET"].join("_")]: "first-free-fingerprint-secret-value-1234567890"
 };
 
 const storeCredentialEnv = {
@@ -114,6 +116,8 @@ describe("buildLaunchButtonPlan", () => {
         "TOSS_ALLOWED_ORIGINS",
         "DATABASE_URL",
         "CRON_SECRET",
+        "REPORT_TOKEN_SECRET",
+        "FIRST_FREE_FINGERPRINT_SECRET",
         "ALERT_WEBHOOK_URL",
         "APPLE_KEY_ID",
         "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
@@ -193,6 +197,8 @@ describe("buildLaunchButtonPlan", () => {
     expect(serialized).not.toContain("toss-secret-value-123456");
     expect(serialized).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     expect(serialized).not.toContain("launch_pass");
+    expect(serialized).not.toContain("report-token-secret-value-1234567890");
+    expect(serialized).not.toContain("first-free-fingerprint-secret-value-1234567890");
     expect(serialized).not.toContain("launch-secret-path");
     expect(serialized).not.toContain("not-a-real-app-store-key");
     expect(serialized).not.toContain("C:/local/bin");

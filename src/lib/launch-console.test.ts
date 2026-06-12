@@ -17,6 +17,8 @@ const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
 const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
 const tossConsoleApiKey = ["TOSS", "CONSOLE", "API", "KEY"].join("_");
 const cronSecretKey = ["CRON", "SECRET"].join("_");
+const reportTokenSecretKey = ["REPORT", "TOKEN", "SECRET"].join("_");
+const firstFreeFingerprintSecretKey = ["FIRST", "FREE", "FINGERPRINT", "SECRET"].join("_");
 const applePrivateKey = ["APPLE", "PRIVATE", "KEY"].join("_");
 const googlePlayServiceAccountJsonKey = ["GOOGLE", "PLAY", "SERVICE", "ACCOUNT", "JSON"].join("_");
 
@@ -80,7 +82,9 @@ describe("launch-console", () => {
       [tossClientKey]: "test_ck_123456789",
       [tossSecretKey]: "placeholder-value",
       [tossSecurityKey]: "a".repeat(64),
-      [tossConsoleApiKey]: "console-api-key-value"
+      [tossConsoleApiKey]: "console-api-key-value",
+      [reportTokenSecretKey]: "report-token-secret-value-1234567890",
+      [firstFreeFingerprintSecretKey]: "first-free-fingerprint-secret-1234567890"
     });
 
     expect(status.find((item) => item.key === "PRODUCTION_DOMAIN")).toMatchObject({
@@ -108,10 +112,22 @@ describe("launch-console", () => {
       sensitive: true,
       value: ""
     });
+    expect(status.find((item) => item.key === reportTokenSecretKey)).toMatchObject({
+      configured: true,
+      sensitive: true,
+      value: ""
+    });
+    expect(status.find((item) => item.key === firstFreeFingerprintSecretKey)).toMatchObject({
+      configured: true,
+      sensitive: true,
+      value: ""
+    });
     expect(JSON.stringify(status)).not.toContain("test_ck_123456789");
     expect(JSON.stringify(status)).not.toContain("placeholder-value");
     expect(JSON.stringify(status)).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
     expect(JSON.stringify(status)).not.toContain("console-api-key-value");
+    expect(JSON.stringify(status)).not.toContain("report-token-secret-value-1234567890");
+    expect(JSON.stringify(status)).not.toContain("first-free-fingerprint-secret-1234567890");
   });
 
   it("renders launch env files with safe quoting", () => {
@@ -146,6 +162,8 @@ describe("launch-console", () => {
       DATABASE_URL: "mysql://db.example.com/app",
       DATABASE_SSL: "maybe",
       [cronSecretKey]: "short",
+      [reportTokenSecretKey]: "shared-secret-value-123456789012345",
+      [firstFreeFingerprintSecretKey]: "shared-secret-value-123456789012345",
       [tossClientKey]: "wrong-client-key",
       [tossSecretKey]: "short",
       [tossSecurityKey]: "not-64-hex",
@@ -173,6 +191,8 @@ describe("launch-console", () => {
       DATABASE_URL: expect.stringContaining("Postgres"),
       DATABASE_SSL: expect.stringContaining("true 또는 false"),
       [cronSecretKey]: expect.stringContaining("32자 이상"),
+      [reportTokenSecretKey]: expect.stringContaining("서로 달라야"),
+      [firstFreeFingerprintSecretKey]: expect.stringContaining("서로 달라야"),
       [tossClientKey]: expect.stringContaining("test_ck_ 또는 live_ck_"),
       [tossSecretKey]: expect.stringContaining("12자 이상"),
       [tossSecurityKey]: expect.stringContaining("64자 hex"),
@@ -219,6 +239,8 @@ describe("launch-console", () => {
         DATABASE_URL: "postgres://db.verified-domain.kr:5432/id_doppelganger",
         DATABASE_SSL: "true",
         [cronSecretKey]: "launch-cron-secret-value-1234567890",
+        [reportTokenSecretKey]: "launch-report-token-secret-value-1234567890",
+        [firstFreeFingerprintSecretKey]: "launch-fingerprint-secret-value-1234567890",
         [tossClientKey]: "test_ck_123456789",
         [tossSecretKey]: "test_sk_123456789",
         [tossSecurityKey]: "a".repeat(64),
@@ -259,6 +281,14 @@ describe("launch-console", () => {
   });
 
   it("includes the Apps in Toss console API key as a sensitive launch field", () => {
+    expect(launchEnvFields.find((field) => field.key === reportTokenSecretKey)).toMatchObject({
+      label: "Report Token Secret",
+      sensitive: true
+    });
+    expect(launchEnvFields.find((field) => field.key === firstFreeFingerprintSecretKey)).toMatchObject({
+      label: "1회 무료 판정 Secret",
+      sensitive: true
+    });
     expect(launchEnvFields.find((field) => field.key === tossClientKey)).toMatchObject({
       label: "Toss Payments Client Key",
       sensitive: true

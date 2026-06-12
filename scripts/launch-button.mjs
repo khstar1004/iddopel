@@ -21,7 +21,7 @@ const prepareRequiredKeys = [
   "ALERT_RUNBOOK_URL"
 ];
 
-const shipRequiredKeys = ["DATABASE_URL"];
+const shipRequiredKeys = ["DATABASE_URL", "REPORT_TOKEN_SECRET", "FIRST_FREE_FINGERPRINT_SECRET"];
 const shipRequiredValues = {
   MOBILE_PAYMENTS_ENABLED: "true"
 };
@@ -46,6 +46,8 @@ const publicLaunchEnvKeys = new Set([
   "DATABASE_URL",
   "DATABASE_SSL",
   "CRON_SECRET",
+  "REPORT_TOKEN_SECRET",
+  "FIRST_FREE_FINGERPRINT_SECRET",
   "MONITORING_CRON_LIMIT",
   "SCAN_PROVIDER",
   "MAIGRET_BIN",

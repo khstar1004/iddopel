@@ -9,7 +9,16 @@ const launchRequirementGroups = [
   {
     id: "web",
     label: "웹/운영 배포",
-    keys: ["PRODUCTION_DOMAIN", "DATABASE_URL", "CRON_SECRET", "WEB_DETAILED_REPORT_PAYWALL_ENABLED", "ALERT_WEBHOOK_URL", "ALERT_RUNBOOK_URL"]
+    keys: [
+      "PRODUCTION_DOMAIN",
+      "DATABASE_URL",
+      "CRON_SECRET",
+      "REPORT_TOKEN_SECRET",
+      "FIRST_FREE_FINGERPRINT_SECRET",
+      "WEB_DETAILED_REPORT_PAYWALL_ENABLED",
+      "ALERT_WEBHOOK_URL",
+      "ALERT_RUNBOOK_URL"
+    ]
   },
   {
     id: "toss",

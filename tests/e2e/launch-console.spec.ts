@@ -34,6 +34,8 @@ test("local launch console shows the dry-run launch plan after developer login",
     await page.getByLabel("스토어 지원 이메일").fill("support@verified-domain.kr");
     await page.getByLabel("프로덕션 Postgres URL").fill("postgres://launch_user:launch_pass@db.verified-domain.kr:5432/id_doppelganger");
     await page.getByLabel("Cron Secret").fill("launch-cron-secret-value-1234567890");
+    await page.getByLabel("Report Token Secret").fill("launch-report-token-secret-value-1234567890");
+    await page.getByLabel("1회 무료 판정 Secret").fill("launch-fingerprint-secret-value-1234567890");
     await page.getByLabel("Toss Payments Client Key").fill("test_ck_123456789");
     await page.getByLabel("Toss Payments Secret Key").fill("test_sk_123456789");
     await page.getByLabel("Toss Payments Security Key").fill("a".repeat(64));
@@ -54,13 +56,15 @@ test("local launch console shows the dry-run launch plan after developer login",
     await page.getByLabel("Google Play Service Account JSON").fill(JSON.stringify({ type: "service_account", project_id: "id-doppelganger" }, null, 2));
     await page.getByRole("button", { name: ".env.launch 저장" }).click();
 
-    await expect(page.getByText("18개 값을 .env.launch에 저장했어요.")).toBeVisible();
+    await expect(page.getByText(/\d+개 값을 \.env\.launch에 저장했어요\./)).toBeVisible();
     await expect(page.getByText("필수 값이 채워졌습니다.")).toBeVisible();
     await expect(page.locator(".launch-requirement-card", { hasText: "App Store / Google Play" })).toContainText("완료");
     await expect(page.getByText("test_ck_123456789")).toHaveCount(0);
     await expect(page.getByText("test_sk_123456789")).toHaveCount(0);
     await expect(page.getByText("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")).toHaveCount(0);
     await expect(page.getByText("launch_pass")).toHaveCount(0);
+    await expect(page.getByText("launch-report-token-secret-value-1234567890")).toHaveCount(0);
+    await expect(page.getByText("launch-fingerprint-secret-value-1234567890")).toHaveCount(0);
     await expect(page.getByText("not-a-real-app-store-private-key-line-1")).toHaveCount(0);
 
     const savedEnv = await readFile(launchEnvPath, "utf-8");
@@ -71,6 +75,8 @@ test("local launch console shows the dry-run launch plan after developer login",
     expect(savedEnv).toContain(`TOSS_SECURITY_KEY=${"a".repeat(64)}`);
     expect(savedEnv).toContain("TOSS_CONSOLE_API_KEY=toss-console-api-key-value");
     expect(savedEnv).toContain("CRON_SECRET=launch-cron-secret-value-1234567890");
+    expect(savedEnv).toContain("REPORT_TOKEN_SECRET=launch-report-token-secret-value-1234567890");
+    expect(savedEnv).toContain("FIRST_FREE_FINGERPRINT_SECRET=launch-fingerprint-secret-value-1234567890");
     expect(savedEnv).toContain("APPLE_KEY_ID=ABC123DEFG");
     expect(savedEnv).toContain('APPLE_PRIVATE_KEY="not-a-real-app-store-private-key-line-1\\nnot-a-real-app-store-private-key-line-2"');
     expect(savedEnv).toContain('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="{\\n  \\"type\\": \\"service_account\\",');

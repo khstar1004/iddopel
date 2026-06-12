@@ -24,6 +24,8 @@ export const launchEnvFields: LaunchEnvField[] = [
   { key: "DATABASE_URL", label: "프로덕션 Postgres URL", sensitive: true, placeholder: "postgres://USER:PASSWORD@HOST:5432/DB" },
   { key: "DATABASE_SSL", label: "DB SSL", sensitive: false, placeholder: "true" },
   { key: "CRON_SECRET", label: "Cron Secret", sensitive: true, placeholder: "32자 이상 랜덤 문자열" },
+  { key: "REPORT_TOKEN_SECRET", label: "Report Token Secret", sensitive: true, placeholder: "32자 이상 랜덤 문자열" },
+  { key: "FIRST_FREE_FINGERPRINT_SECRET", label: "1회 무료 판정 Secret", sensitive: true, placeholder: "32자 이상 랜덤 문자열" },
   { key: "TOSS_CLIENT_KEY", label: "Toss Payments Client Key", sensitive: true, placeholder: "test_ck_..." },
   { key: "TOSS_SECRET_KEY", label: "Toss Payments Secret Key", sensitive: true, placeholder: "test_sk_..." },
   { key: "TOSS_SECURITY_KEY", label: "Toss Payments Security Key", sensitive: true, placeholder: "64자 보안 키" },
@@ -144,6 +146,15 @@ export function validateLaunchEnvValues(values: Record<string, string>) {
   validatePostgresUrl(values.DATABASE_URL, errors);
   validateBoolean(values.DATABASE_SSL, "DATABASE_SSL", errors);
   validateMinimumLength(values.CRON_SECRET, "CRON_SECRET", "Cron Secret", 32, errors);
+  validateMinimumLength(values.REPORT_TOKEN_SECRET, "REPORT_TOKEN_SECRET", "Report Token Secret", 32, errors);
+  validateMinimumLength(values.FIRST_FREE_FINGERPRINT_SECRET, "FIRST_FREE_FINGERPRINT_SECRET", "1회 무료 판정 Secret", 32, errors);
+  validateDistinctSecrets(
+    values.REPORT_TOKEN_SECRET,
+    values.FIRST_FREE_FINGERPRINT_SECRET,
+    "REPORT_TOKEN_SECRET",
+    "FIRST_FREE_FINGERPRINT_SECRET",
+    errors
+  );
   validatePattern(values.TOSS_CLIENT_KEY, "TOSS_CLIENT_KEY", "Toss Payments Client Key", /^test_ck_|^live_ck_/, "test_ck_ 또는 live_ck_로 시작해야 해요.", errors);
   validateMinimumLength(values.TOSS_SECRET_KEY, "TOSS_SECRET_KEY", "Toss Payments Secret Key", 12, errors);
   validatePattern(values.TOSS_SECURITY_KEY, "TOSS_SECURITY_KEY", "Toss Payments Security Key", /^[a-f0-9]{64}$/i, "64자 hex 보안 키여야 해요.", errors);
@@ -319,6 +330,20 @@ function validateMinimumLength(
   if (input.length < minimumLength) {
     errors[key] = `${label}은 ${minimumLength}자 이상이어야 해요.`;
   }
+}
+
+function validateDistinctSecrets(
+  left: string | undefined,
+  right: string | undefined,
+  leftKey: string,
+  rightKey: string,
+  errors: Record<string, string>
+) {
+  const leftValue = String(left || "").trim();
+  const rightValue = String(right || "").trim();
+  if (!leftValue || !rightValue || leftValue !== rightValue) return;
+  errors[leftKey] ||= "Report Token Secret과 1회 무료 판정 Secret은 서로 달라야 해요.";
+  errors[rightKey] ||= "Report Token Secret과 1회 무료 판정 Secret은 서로 달라야 해요.";
 }
 
 function validatePattern(
