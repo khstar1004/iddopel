@@ -40,6 +40,7 @@
     "android:debug": "node scripts/verify-android-debug-build.mjs",
     "android:bundle": "node scripts/verify-android-bundle-build.mjs",
     "smoke:vercel-beta": "node scripts/smoke-vercel-beta.mjs",
+    "vercel:production": "node scripts/verify-vercel-production.mjs",
     "smoke:release": "node scripts/smoke-release.mjs",
     "verify:production": "node scripts/verify-production-config.mjs",
     "launch:readiness": "node scripts/launch-readiness.mjs",

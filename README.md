@@ -183,7 +183,15 @@ After a Vercel beta deployment, verify the public beta surface. This checks secu
 SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 ```
 
-That command assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss in-app, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The Toss web-checkout manual sequence is:
+When the Vercel deployment is promoted from beta to paid production, run the stricter production gate:
+
+```bash
+VERCEL_PRODUCTION_BASE_URL="https://iddopel.vercel.app" npm run vercel:production
+```
+
+This gate is expected to fail for the current free beta. It requires durable Postgres storage, Maigret scanning, a live Toss or Polar checkout provider, paid full-result locking, disabled one-time free detailed reports, and no inline beta report artifacts in scan responses.
+
+The full production release flow assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss in-app, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The Toss web-checkout manual sequence is:
 
 ```bash
 PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" REPORT_TOKEN_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_REPORT_TOKEN_SECRET" FIRST_FREE_FINGERPRINT_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_FINGERPRINT_SECRET" PAYMENT_PROVIDER="toss" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
@@ -197,6 +205,7 @@ DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" npm run db:migrate
 # or, on Vercel/Neon integrations:
 POSTGRES_URL="postgres://USER:PASSWORD@HOST:5432/DB" npm run db:migrate
 PRODUCTION_BASE_URL="https://YOUR_DOMAIN" npm run verify:production
+VERCEL_PRODUCTION_BASE_URL="https://YOUR_DOMAIN" npm run vercel:production
 ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" npm run alerts:test
 SMOKE_BASE_URL="https://YOUR_DOMAIN" SMOKE_CONFIRM_PAYMENT=skip npm run smoke:release
 TOSS_RELEASE_CHECK=true npm run toss:verify

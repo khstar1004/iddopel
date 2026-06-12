@@ -31,6 +31,7 @@ const completeScripts = {
   "deploy:verify": "node scripts/verify-deploy-compose.mjs",
   "verify:production": "node scripts/verify-production-config.mjs",
   "smoke:vercel-beta": "node scripts/smoke-vercel-beta.mjs",
+  "vercel:production": "node scripts/verify-vercel-production.mjs",
   "smoke:release": "node scripts/smoke-release.mjs",
   "alerts:test": "node scripts/test-alert-webhook.mjs",
   "db:migrate": "node scripts/migrate-postgres.mjs",
@@ -79,6 +80,7 @@ const completeFiles = new Set([
   "scripts/verify-secret-scan.mjs",
   "scripts/verify-android-debug-build.mjs",
   "scripts/verify-android-bundle-build.mjs",
+  "scripts/verify-vercel-production.mjs",
   "scripts/test-alert-webhook.mjs",
   "tests/e2e/launch-console.spec.ts",
   "vercel.json"
@@ -115,6 +117,7 @@ npm run android:debug
 npm run android:bundle
 npm run alerts:test
 npm run smoke:vercel-beta
+npm run vercel:production
 npm run smoke:release
 `;
 

@@ -31,6 +31,7 @@ export const requiredPackageScripts = [
   "deploy:verify",
   "verify:production",
   "smoke:vercel-beta",
+  "vercel:production",
   "smoke:release",
   "alerts:test",
   "db:migrate",
@@ -64,6 +65,7 @@ export const requiredReadmeCommands = [
   "npm run android:bundle",
   "npm run deploy:verify",
   "npm run smoke:vercel-beta",
+  "npm run vercel:production",
   "npm run smoke:release",
   "npm run alerts:test",
   "npm run launch:readiness"
@@ -111,6 +113,7 @@ export const requiredFiles = [
   "scripts/verify-secret-scan.mjs",
   "scripts/verify-android-debug-build.mjs",
   "scripts/verify-android-bundle-build.mjs",
+  "scripts/verify-vercel-production.mjs",
   "scripts/test-alert-webhook.mjs",
   "tests/e2e/launch-console.spec.ts",
   "vercel.json"
@@ -222,7 +225,7 @@ const externalBlockerPatterns = [
   /PAYMENT_PROVIDER=(toss|polar)|TOSS_CLIENT_KEY|TOSS_SECRET_KEY|TOSS_SECURITY_KEY|POLAR_ACCESS_TOKEN|POLAR_PRODUCT_ID|POLAR_MONTHLY_MONITORING_PRODUCT_ID|POLAR_WEBHOOK_SECRET|Toss Payments|Polar|Toss/i,
   /selected-provider test checkout|test checkout|checkout to `\/reports/i,
   /TOSS_RELEASE_CHECK|Toss console|토스/i,
-  /SMOKE_BASE_URL|PRODUCTION_BASE_URL|verify:production|Security headers checked/i,
+  /SMOKE_BASE_URL|PRODUCTION_BASE_URL|VERCEL_PRODUCTION_BASE_URL|verify:production|vercel:production|Security headers checked/i,
   /final SITE_URL|sitemap\.xml|robots\.txt/i,
   /STORE_|store upload|App Store Connect|Google Play credentials|STORE_RELEASE_CHECK|support@domain/i,
   /MOBILE_|native archive|mobile:configure|mobile:verify/i,
