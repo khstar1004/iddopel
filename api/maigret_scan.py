@@ -24,6 +24,14 @@ DEFAULT_PRIORITY_SITES = [
     "GitHubGist",
     "Reddit",
 ]
+DEFAULT_BOOST_TAG_SPECS = [
+    ("kr", 25),
+    ("social", 25),
+    ("photo", 12),
+    ("video", 12),
+    ("blog", 15),
+    ("coding", 15),
+]
 
 
 class handler(BaseHTTPRequestHandler):
@@ -91,7 +99,7 @@ def run_maigret_in_process(username, mode):
         logger = logging.getLogger("id-doppelganger-maigret")
         logger.addHandler(logging.NullHandler())
         db = MaigretDatabase().load_from_path(BUNDLED_DB_PATH)
-        site_data = resolve_site_data(db, top_sites)
+        site_data = resolve_site_data(db, top_sites, mode)
         results = run_async(
             check_username(
                 username=username,
@@ -238,18 +246,26 @@ def resolve_top_sites(mode):
     return positive_int(os.environ.get("MAIGRET_TOP_SITES_QUICK"), 50)
 
 
-def resolve_site_data(db, top_sites):
-    site_data = db.ranked_sites_dict(top=top_sites, disabled=False, id_type="username")
+def resolve_site_data(db, top_sites, mode="QUICK"):
+    site_data = {}
     priority_sites = resolve_priority_sites()
     if priority_sites:
-        priority_site_data = db.ranked_sites_dict(
+        site_data.update(db.ranked_sites_dict(
             top=sys.maxsize,
             names=priority_sites,
             disabled=False,
             id_type="username",
-        )
-        site_data.update(priority_site_data)
-    return site_data
+        ))
+
+    if mode == "DEEP" and os.environ.get("MAIGRET_DEEP_ALL") == "true":
+        site_data.update(db.ranked_sites_dict(top=sys.maxsize, disabled=False, id_type="username"))
+    else:
+        site_data.update(db.ranked_sites_dict(top=top_sites, disabled=False, id_type="username"))
+
+    for tag, limit in resolve_boost_tag_specs():
+        site_data.update(db.ranked_sites_dict(top=limit, tags=[tag], disabled=False, id_type="username"))
+
+    return limit_site_data(site_data, resolve_site_cap(mode))
 
 
 def resolve_priority_sites():
@@ -258,6 +274,39 @@ def resolve_priority_sites():
         return []
     parsed = split_comma_list(configured)
     return parsed if parsed else DEFAULT_PRIORITY_SITES
+
+
+def resolve_boost_tag_specs():
+    configured = os.environ.get("MAIGRET_BOOST_TAGS")
+    if configured == "":
+        return []
+    if not configured:
+        return DEFAULT_BOOST_TAG_SPECS
+
+    specs = []
+    for raw_item in split_comma_list(configured):
+        if ":" in raw_item:
+            tag, raw_limit = raw_item.split(":", 1)
+            limit = positive_int(raw_limit, 0)
+        else:
+            tag = raw_item
+            limit = 20
+        tag = tag.strip().lower()
+        if tag and limit > 0:
+            specs.append((tag, limit))
+    return specs
+
+
+def resolve_site_cap(mode):
+    if mode == "DEEP":
+        return positive_int(os.environ.get("MAIGRET_SITE_CAP_DEEP"), 260)
+    return positive_int(os.environ.get("MAIGRET_SITE_CAP_QUICK"), 120)
+
+
+def limit_site_data(site_data, cap):
+    if cap <= 0 or len(site_data) <= cap:
+        return site_data
+    return dict(list(site_data.items())[:cap])
 
 
 def split_comma_list(value):

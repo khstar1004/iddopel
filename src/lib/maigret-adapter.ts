@@ -30,6 +30,7 @@ interface MaigretCliScope {
   topSites?: number;
   allSites?: boolean;
   siteNames?: string[];
+  tags?: string[];
 }
 
 interface RemoteMaigretResponse {
@@ -80,6 +81,19 @@ const defaultPrioritySiteNames = [
   "GitHubGist",
   "Reddit"
 ];
+const defaultBoostTagSpecs: MaigretBoostTagSpec[] = [
+  { tag: "kr", limit: 25 },
+  { tag: "social", limit: 25 },
+  { tag: "photo", limit: 12 },
+  { tag: "video", limit: 12 },
+  { tag: "blog", limit: 15 },
+  { tag: "coding", limit: 15 }
+];
+
+interface MaigretBoostTagSpec {
+  tag: string;
+  limit: number;
+}
 
 export async function runMaigretScan(input: CreateScanInput, options: MaigretRunOptions = {}): Promise<MaigretRunOutput> {
   if (shouldUseRemoteMaigret()) {
@@ -113,12 +127,23 @@ export async function runMaigretScan(input: CreateScanInput, options: MaigretRun
           maxConnections: Number(process.env.MAIGRET_PRIORITY_MAX_CONNECTIONS || Math.min(maxConnections, 6))
         })
       : null;
-  const report = priority ? mergeMaigretSimpleReports(primary.reportJson, priority.reportJson) : primary.reportJson;
+  const boostScope = resolveBoostTagCliScope();
+  const boost =
+    boostScope.tags.length > 0
+      ? await runMaigretCli(command, input, {
+          processTimeoutMs: Number(process.env.MAIGRET_BOOST_PROCESS_TIMEOUT_MS || Math.min(processTimeoutMs, 45000)),
+          scope: { tags: boostScope.tags, topSites: boostScope.topSites },
+          timeoutSeconds: Number(process.env.MAIGRET_BOOST_SITE_TIMEOUT_SECONDS || timeoutSeconds),
+          retries: Number(process.env.MAIGRET_BOOST_RETRIES || retries),
+          maxConnections: Number(process.env.MAIGRET_BOOST_MAX_CONNECTIONS || Math.min(maxConnections, 20))
+        })
+      : null;
+  const report = mergeMaigretSimpleReports(primary.reportJson, priority?.reportJson, boost?.reportJson);
   const results = parseMaigretSimpleReport(report, input);
 
   return {
     results,
-    checkedCount: priority ? primary.checkedCount + priority.checkedCount : primary.checkedCount,
+    checkedCount: [primary, priority, boost].reduce((total, item) => total + (item?.checkedCount ?? 0), 0),
     failedRate: 0,
     report: primary.htmlReport
   };
@@ -210,6 +235,8 @@ export function buildMaigretCliArgs(
     for (const siteName of scope.siteNames) {
       args.push("--site", siteName);
     }
+  } else if (scope.tags?.length) {
+    args.push("--tags", scope.tags.join(","), "--top-sites", String(scope.topSites ?? scope.tags.length * 20));
   } else if (scope.allSites) {
     args.push("-a");
   } else {
@@ -226,10 +253,35 @@ export function resolvePrioritySiteNames() {
   return splitCommaList(configured).length > 0 ? splitCommaList(configured) : defaultPrioritySiteNames;
 }
 
-function mergeMaigretSimpleReports(primaryReport: string, priorityReport: string) {
-  const primary = JSON.parse(primaryReport) as Record<string, unknown>;
-  const priority = JSON.parse(priorityReport) as Record<string, unknown>;
-  return JSON.stringify({ ...primary, ...priority });
+export function resolveBoostTagSpecs(): MaigretBoostTagSpec[] {
+  const configured = process.env.MAIGRET_BOOST_TAGS;
+  if (configured === "") return [];
+
+  const parsed = splitCommaList(configured).flatMap((item) => {
+    const [rawTag, rawLimit] = item.split(":", 2);
+    const tag = rawTag?.trim().toLowerCase();
+    const limit = Number(rawLimit ?? "20");
+    return tag && Number.isFinite(limit) && limit > 0 ? [{ tag, limit }] : [];
+  });
+
+  return parsed.length > 0 ? parsed : defaultBoostTagSpecs;
+}
+
+function resolveBoostTagCliScope() {
+  const specs = resolveBoostTagSpecs();
+  return {
+    tags: Array.from(new Set(specs.map((spec) => spec.tag))),
+    topSites: specs.reduce((total, spec) => total + spec.limit, 0)
+  };
+}
+
+function mergeMaigretSimpleReports(...reports: Array<string | undefined>) {
+  return JSON.stringify(
+    reports.reduce<Record<string, unknown>>((merged, report) => {
+      if (!report) return merged;
+      return { ...merged, ...(JSON.parse(report) as Record<string, unknown>) };
+    }, {})
+  );
 }
 
 async function runRemoteMaigretScan(input: CreateScanInput, options: MaigretRunOptions): Promise<MaigretRunOutput> {

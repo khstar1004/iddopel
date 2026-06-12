@@ -3,6 +3,7 @@ import {
   buildMaigretCliArgs,
   maigretRecordToScanResult,
   parseMaigretSimpleReport,
+  resolveBoostTagSpecs,
   resolvePrioritySiteNames,
   runMaigretScan
 } from "./maigret-adapter";
@@ -98,9 +99,11 @@ describe("maigretRecordToScanResult", () => {
 
 describe("Maigret CLI quality options", () => {
   const originalPrioritySites = process.env.MAIGRET_PRIORITY_SITES;
+  const originalBoostTags = process.env.MAIGRET_BOOST_TAGS;
 
   afterEach(() => {
     restoreEnv("MAIGRET_PRIORITY_SITES", originalPrioritySites);
+    restoreEnv("MAIGRET_BOOST_TAGS", originalBoostTags);
   });
 
   it("keeps high-demand social platforms in the priority scan scope", () => {
@@ -122,6 +125,30 @@ describe("Maigret CLI quality options", () => {
     expect(args).toContain("--site");
     expect(args).toEqual(expect.arrayContaining(["Instagram", "Twitter", "Threads"]));
     expect(args).not.toContain("--top-sites");
+    expect(args).not.toContain("-a");
+  });
+
+  it("adds a tag-scoped boost scan for Korean, social, creator, and developer coverage", () => {
+    process.env.MAIGRET_BOOST_TAGS = "kr:25,social:25,photo:12,video:12,blog:15,coding:15";
+
+    expect(resolveBoostTagSpecs()).toEqual([
+      { tag: "kr", limit: 25 },
+      { tag: "social", limit: 25 },
+      { tag: "photo", limit: 12 },
+      { tag: "video", limit: 12 },
+      { tag: "blog", limit: 15 },
+      { tag: "coding", limit: 15 }
+    ]);
+
+    const args = buildMaigretCliArgs("im9route", "out", {
+      maxConnections: 20,
+      retries: 1,
+      scope: { tags: ["kr", "social", "photo", "video", "blog", "coding"], topSites: 104 },
+      timeoutSeconds: 7
+    });
+
+    expect(args).toEqual(expect.arrayContaining(["--tags", "kr,social,photo,video,blog,coding", "--top-sites", "104"]));
+    expect(args).not.toContain("--site");
     expect(args).not.toContain("-a");
   });
 });
