@@ -42,6 +42,7 @@
     "android:bundle": "node scripts/verify-android-bundle-build.mjs",
     "smoke:vercel-beta": "node scripts/smoke-vercel-beta.mjs",
     "vercel:production": "node scripts/verify-vercel-production.mjs",
+    "vercel:db": "node scripts/setup-vercel-postgres.mjs",
     "smoke:release": "node scripts/smoke-release.mjs",
     "verify:production": "node scripts/verify-production-config.mjs",
     "launch:readiness": "node scripts/launch-readiness.mjs",

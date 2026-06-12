@@ -15,6 +15,7 @@ const completeScripts = {
   "release:production": "node scripts/verify-production-release.mjs",
   "launch:button": "node scripts/launch-button.mjs",
   "vercel:prepare": "node scripts/prepare-vercel-production.mjs",
+  "vercel:db": "node scripts/setup-vercel-postgres.mjs",
   e2e: "playwright test",
   "assets:store": "node scripts/generate-store-assets.mjs",
   "assets:promotion": "node scripts/generate-promotion-assets.mjs",
@@ -71,6 +72,7 @@ const completeFiles = new Set([
   "scripts/prepare-production-release.mjs",
   "scripts/verify-production-release.mjs",
   "scripts/prepare-vercel-production.mjs",
+  "scripts/setup-vercel-postgres.mjs",
   "scripts/verify-maigret-runtime.mjs",
   "scripts/verify-code-hygiene.mjs",
   "scripts/verify-product-positioning.mjs",
@@ -104,6 +106,7 @@ npm run release:local
 npm run release:production
 npm run launch:button
 npm run vercel:prepare
+npm run vercel:db
 npm run e2e
 npm run assets:store
 npm run assets:marketing

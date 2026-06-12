@@ -114,6 +114,15 @@ Vercel is suitable for the web app, policy pages, Toss route, and API shell. For
 
 For the public Vercel beta, keep `SCAN_PROVIDER=maigret`. Vercel installs Maigret from `requirements.txt` and the Node scan route calls the Python function at `/api/maigret_scan` for real CLI output. `vercel.json` also points the JSON stores at `/tmp` so the first scan response can complete on Vercel, sets `INLINE_SCAN_ARTIFACTS=true` so the browser can render details even when later serverless functions cannot read the same `/tmp` file, schedules daily `/api/cron/prune` and `/api/cron/monitoring` invocations, and sets beta free searches to 5 per request identity and browser owner token over 24 hours by default. The daily cron cadence is intentional so the configuration stays compatible with Vercel Hobby limits. Clearing local storage or changing the browser owner token does not reset the request-identity quota. Change the limit from `/admin` after signing in with the developer admin account. That storage is not durable and is not a substitute for Postgres; stable detailed reports, orders, monitoring, quota settings, and deletion audits require a managed Postgres URL. The runtime accepts `DATABASE_URL` first, then Vercel/Neon-style `POSTGRES_URL`, `POSTGRES_PRISMA_URL`, or `POSTGRES_URL_NON_POOLING`. Set `CRON_SECRET` in Vercel so cron invocations include the bearer authorization header expected by both cron routes.
 
+To let Vercel create and connect the database, use the CLI setup plan:
+
+```bash
+npm run vercel:db
+npm run vercel:db -- --execute
+```
+
+The dry run shows the Marketplace Postgres provisioning command, production env pull, `vercel env run -e production -- npm run db:migrate`, production deploy, and `vercel:production` verification. It defaults to Neon on the free provider plan and can be adjusted with `--integration`, `--plan`, `--metadata`, or `--interactive-plan`.
+
 After each Vercel beta deployment, run the beta smoke. It verifies security headers, policy pages, sitemap/robots/manifest, the real scan path, beta inline report rendering, and product-branded embedded source reports:
 
 ```bash

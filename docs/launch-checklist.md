@@ -63,6 +63,7 @@
 - [x] `npm run release:local` runs the local web, Maigret runtime, code hygiene, high/critical security audit, secret scan, E2E, release asset regeneration, store, Toss, mobile, Android, deploy, and readiness gates
 - [x] `npm run launch:button` dry-run reports production asset generation, release plan, and missing values without exposing secrets
 - [x] `npm run vercel:prepare` reports required production Vercel env values and commands without exposing secrets
+- [x] `npm run vercel:db` dry-runs Vercel Marketplace Postgres provisioning, env pull, migration, production deploy, and live verification commands without exposing database credentials
 - [x] Browser E2E verifies `/launch` shows the dry-run plan, blocks invalid launch values, saves `.env.launch`, redacts secrets, and keeps execution locked by default
 - [x] `npm run e2e` covers 320, 768, 1024, and 1440 px local release smoke widths, paid report unlock, and landing scan-to-delete flow
 - [x] `npm run e2e` verifies the result share-card PNG endpoint during the landing scan flow
@@ -71,7 +72,7 @@
 - [x] `npm run e2e` covers Capacitor NativeBilling adapter mapping and Google Play consumable completion after server entitlement
 - [x] `npm run e2e` covers monthly monitoring registration and cancellation
 - [x] `npm run e2e` covers Toss in-app scan-to-checkout flow
-- [ ] `DATABASE_URL=... npm run db:migrate` or `POSTGRES_URL=... npm run db:migrate` succeeds for production database
+- [ ] `npm run vercel:db -- --execute` or `vercel env run -e production -- npm run db:migrate` succeeds for the production database
 - [ ] Set `CRON_SECRET`, `REPORT_TOKEN_SECRET`, and `FIRST_FREE_FINGERPRINT_SECRET` in production and confirm scheduled prune invocations
 - [ ] Confirm scheduled monthly monitoring invocations via `/api/cron/monitoring`
 - [ ] Deploy Docker image with `SCAN_PROVIDER=maigret` for real username scanning

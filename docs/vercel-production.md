@@ -2,6 +2,35 @@
 
 Use this only when the Vercel beta is being promoted to paid production. The beta can keep `/tmp` storage and inline artifacts; production cannot.
 
+## Provision Postgres With Vercel CLI
+
+Use this path when you want Vercel to create and connect the managed Postgres resource instead of pasting a separate `DATABASE_URL` manually:
+
+```bash
+npm run vercel:db
+npm run vercel:db -- --execute
+```
+
+The default plan is a dry run. It prints the exact sequence before touching Vercel:
+
+1. `vercel link` if the workspace is not already linked.
+2. `vercel integration add neon --plan free` to provision a Marketplace Postgres resource and connect it to production.
+3. `vercel env pull .vercel/.env.production.local --environment=production --yes` to inspect the injected Postgres aliases locally.
+4. `vercel env run -e production -- npm run db:migrate` to run migrations with Vercel-held credentials.
+5. `vercel deploy --prod`.
+6. `vercel env run -e production -- npm run vercel:production`.
+
+Useful variants:
+
+```bash
+npm run vercel:db -- --plan free
+npm run vercel:db -- --interactive-plan
+npm run vercel:db -- --skip-provision
+npm run vercel:db -- --skip-deploy
+```
+
+The default integration is Neon because it is the Postgres provider surfaced through Vercel Marketplace storage. Use `--integration` and `--metadata` if the selected Marketplace provider or region changes.
+
 ## Prepare Env
 
 1. Fill `.env.launch` from `.env.launch.example`.
@@ -51,5 +80,7 @@ For cron routes, Vercel sends the configured `CRON_SECRET` as the bearer authori
 
 References:
 
+- https://vercel.com/docs/marketplace-storage
+- https://vercel.com/docs/cli/integration
 - https://vercel.com/docs/cli/env
 - https://vercel.com/docs/cron-jobs/manage-cron-jobs

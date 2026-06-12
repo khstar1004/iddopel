@@ -58,6 +58,7 @@ npm run mobile:verify
 npm run android:debug
 npm run android:bundle
 npm run deploy:verify
+npm run vercel:db
 npm run launch:readiness
 ```
 
@@ -186,6 +187,15 @@ npm run vercel:prepare
 ```
 
 This lists the required `vercel env add KEY production --sensitive < .vercel-env/production/KEY` commands for secret-like values without printing the values. See [docs/vercel-production.md](docs/vercel-production.md).
+
+If you want Vercel to provision the database too, use the CLI database setup plan:
+
+```bash
+npm run vercel:db
+npm run vercel:db -- --execute
+```
+
+The dry run shows the exact `vercel integration add`, `vercel env pull`, `vercel env run -e production -- npm run db:migrate`, deploy, and production verification steps. It defaults to the Neon Marketplace integration on the free provider plan; pass `--integration`, `--plan`, or `--interactive-plan` if the selected Vercel Marketplace provider needs a different plan flow.
 
 After a Vercel beta deployment, verify the public beta surface. This checks security headers, policy pages, sitemap/robots/manifest, the real scan path, beta inline report rendering, and that the embedded source report is product-branded instead of exposing scanner vendor text:
 
