@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Gauge, RefreshCw, ShieldAlert, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Activity, CheckCircle2, Gauge, History, RefreshCw, ShieldAlert, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 const devAdminTokenKey = "id-doppelganger-dev-admin-token";
@@ -40,6 +40,25 @@ type AdminSettingsResponse = {
   error?: { message?: string };
 };
 
+type AdminRecommendation = {
+  level: "critical" | "warning" | "info" | "ok";
+  title: string;
+  detail: string;
+};
+
+type AdminAuditEvent = {
+  id: string;
+  action: string;
+  actor: string;
+  changes: Record<string, { before: string | number | boolean | null; after: string | number | boolean | null }>;
+  createdAt: string;
+};
+
+type AdminOverviewResponse = AdminSettingsResponse & {
+  recommendations?: AdminRecommendation[];
+  recentAuditEvents?: AdminAuditEvent[];
+};
+
 const defaultSettings: BetaScanSettings = {
   publicScanEnabled: true,
   freeScanLimit: 5,
@@ -56,6 +75,8 @@ export function AdminConsole() {
   const [settings, setSettings] = useState<BetaScanSettings>(defaultSettings);
   const [runtime, setRuntime] = useState<AdminRuntime>({});
   const [statusText, setStatusText] = useState("");
+  const [recommendations, setRecommendations] = useState<AdminRecommendation[]>([]);
+  const [recentAuditEvents, setRecentAuditEvents] = useState<AdminAuditEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -71,16 +92,18 @@ export function AdminConsole() {
       setIsLoading(true);
       setStatusText("");
       try {
-        const response = await fetch("/api/admin/scan-settings", {
+        const response = await fetch("/api/admin/overview", {
           headers: { "x-dev-admin-token": nextToken }
         });
-        const body = (await response.json()) as AdminSettingsResponse;
+        const body = (await response.json()) as AdminOverviewResponse;
         if (!response.ok) {
           setStatusText(body.error?.message || "운영 설정을 불러오지 못했어요.");
           return;
         }
         setSettings(body.settings);
         setRuntime(body.runtime);
+        setRecommendations(body.recommendations || []);
+        setRecentAuditEvents(body.recentAuditEvents || []);
       } finally {
         setIsLoading(false);
       }
@@ -150,6 +173,7 @@ export function AdminConsole() {
       }
       setSettings(body.settings);
       setRuntime(body.runtime);
+      await loadSettings(adminToken);
       setStatusText("운영 설정을 저장했어요.");
     } finally {
       setIsSaving(false);
@@ -192,104 +216,192 @@ export function AdminConsole() {
               <RuntimeItem label="Admin" value={runtime.enabled ? "enabled" : "local only"} />
               <RuntimeItem label="업데이트" value={settings.updatedAt ? new Date(settings.updatedAt).toLocaleString("ko-KR") : "not saved"} />
             </dl>
+
+            {adminToken ? (
+              <section className="admin-panel admin-ops-panel" aria-labelledby="admin-ops-title">
+                <div className="admin-panel-title">
+                  <Activity size={20} aria-hidden="true" />
+                  <div>
+                    <h2 id="admin-ops-title">운영 상태</h2>
+                    <p>출시 전 막히기 쉬운 설정만 우선 점검합니다.</p>
+                  </div>
+                </div>
+                <ul className="admin-recommendation-list">
+                  {recommendations.map((item) => (
+                    <li key={`${item.level}-${item.title}`} data-level={item.level}>
+                      <strong>{item.title}</strong>
+                      <span>{item.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
           </div>
 
-          {runtime.setupRequired ? (
-            <section className="admin-panel admin-setup-panel" aria-labelledby="admin-setup-title">
-              <div className="admin-panel-title">
-                <ShieldAlert size={20} aria-hidden="true" />
-                <div>
-                  <h2 id="admin-setup-title">관리자 보안 설정 필요</h2>
-                  <p>공개 배포에서는 기본 비밀번호를 열지 않습니다. 아래 환경변수를 설정한 뒤 재배포하면 로그인 폼이 열립니다.</p>
+          <div className="admin-side-stack">
+            {runtime.setupRequired ? (
+              <section className="admin-panel admin-setup-panel" aria-labelledby="admin-setup-title">
+                <div className="admin-panel-title">
+                  <ShieldAlert size={20} aria-hidden="true" />
+                  <div>
+                    <h2 id="admin-setup-title">관리자 보안 설정 필요</h2>
+                    <p>공개 배포에서는 기본 비밀번호를 열지 않습니다. 아래 환경변수를 설정한 뒤 재배포하면 로그인 폼이 열립니다.</p>
+                  </div>
                 </div>
-              </div>
-              <ul className="admin-check-list">
-                <li>
-                  <CheckCircle2 size={16} aria-hidden="true" />
-                  <span>`ENABLE_DEV_ADMIN=true`</span>
-                </li>
-                <li>
-                  <CheckCircle2 size={16} aria-hidden="true" />
-                  <span>`DEV_ADMIN_PASSWORD`에 긴 비밀번호 설정</span>
-                </li>
-                <li>
-                  <CheckCircle2 size={16} aria-hidden="true" />
-                  <span>`DEV_ADMIN_SECRET`에 32자 이상 랜덤 문자열 설정</span>
-                </li>
-              </ul>
-              <p className="admin-note">이 상태에서는 운영 설정 API가 잠겨 있어 검색 한도 변경이 적용되지 않습니다.</p>
-            </section>
-          ) : !adminToken ? (
-            <form className="admin-login admin-panel" onSubmit={handleLogin}>
-              <h2>관리자 로그인</h2>
-              <label htmlFor="admin-username">
-                <span>아이디</span>
-                <input id="admin-username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
-              </label>
-              <label htmlFor="admin-password">
-                <span>비밀번호</span>
-                <input
-                  id="admin-password"
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
-                />
-              </label>
-              <button className="primary-button" type="submit" disabled={isLoading}>
-                로그인
-              </button>
-              {statusText ? <div className="admin-alert">{statusText}</div> : null}
-            </form>
-          ) : (
-            <section className="admin-panel" aria-labelledby="settings-title">
-              <div className="admin-panel-title">
-                <SlidersHorizontal size={20} aria-hidden="true" />
-                <div>
-                  <h2 id="settings-title">베타 검색 설정</h2>
-                  <p>저장 즉시 새 검색 요청부터 적용됩니다.</p>
-                </div>
-              </div>
-
-              <form className="admin-settings-form" onSubmit={handleSave}>
-                <label className="admin-switch-field">
-                  <input
-                    type="checkbox"
-                    checked={settings.publicScanEnabled}
-                    onChange={(event) => setSettings((current) => ({ ...current, publicScanEnabled: event.target.checked }))}
-                  />
-                  <span>
-                    <strong>공개 검색 허용</strong>
-                    <small>끄면 베타 공개 검색 요청을 막습니다.</small>
-                  </span>
+                <ul className="admin-check-list">
+                  <li>
+                    <CheckCircle2 size={16} aria-hidden="true" />
+                    <span>`ENABLE_DEV_ADMIN=true`</span>
+                  </li>
+                  <li>
+                    <CheckCircle2 size={16} aria-hidden="true" />
+                    <span>`DEV_ADMIN_PASSWORD`에 긴 비밀번호 설정</span>
+                  </li>
+                  <li>
+                    <CheckCircle2 size={16} aria-hidden="true" />
+                    <span>`DEV_ADMIN_SECRET`에 32자 이상 랜덤 문자열 설정</span>
+                  </li>
+                </ul>
+                <p className="admin-note">이 상태에서는 운영 설정 API가 잠겨 있어 검색 한도 변경이 적용되지 않습니다.</p>
+              </section>
+            ) : !adminToken ? (
+              <form className="admin-login admin-panel" onSubmit={handleLogin}>
+                <h2>관리자 로그인</h2>
+                <label htmlFor="admin-username">
+                  <span>아이디</span>
+                  <input id="admin-username" value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" />
                 </label>
-
-                <div className="admin-field-grid">
-                  <NumberField id="free-scan-limit" label="무료 검색" unit="회" min={0} max={1000} value={settings.freeScanLimit} onChange={(value) => updateNumber("freeScanLimit", value)} />
-                  <NumberField id="window-hours" label="기준 시간" unit="시간" min={1} max={720} value={settings.windowHours} onChange={(value) => updateNumber("windowHours", value)} />
-                  <NumberField id="max-concurrent-scans" label="동시 검색" unit="개" min={1} max={50} value={settings.maxConcurrentScans} onChange={(value) => updateNumber("maxConcurrentScans", value)} />
-                  <NumberField id="busy-retry-after-seconds" label="재시도" unit="초" min={1} max={3600} value={settings.busyRetryAfterSeconds} onChange={(value) => updateNumber("busyRetryAfterSeconds", value)} />
-                  <NumberField id="scan-lease-ttl-seconds" label="슬롯 TTL" unit="초" min={10} max={600} value={settings.scanLeaseTtlSeconds} onChange={(value) => updateNumber("scanLeaseTtlSeconds", value)} />
-                </div>
-
-                <div className="admin-action-row">
-                  <button className="primary-button" type="submit" disabled={isSaving}>
-                    <CheckCircle2 size={17} aria-hidden="true" />
-                    {isSaving ? "저장 중" : "설정 저장"}
-                  </button>
-                  <button className="secondary-button" type="button" onClick={() => loadSettings()} disabled={isLoading}>
-                    <RefreshCw size={17} aria-hidden="true" />
-                    새로고침
-                  </button>
-                </div>
-                {statusText ? <div className={statusText.includes("저장했어요") ? "admin-status" : "admin-alert"}>{statusText}</div> : null}
+                <label htmlFor="admin-password">
+                  <span>비밀번호</span>
+                  <input
+                    id="admin-password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                  />
+                </label>
+                <button className="primary-button" type="submit" disabled={isLoading}>
+                  로그인
+                </button>
+                {statusText ? <div className="admin-alert">{statusText}</div> : null}
               </form>
-            </section>
-          )}
+            ) : (
+              <section className="admin-panel" aria-labelledby="settings-title">
+                <div className="admin-panel-title">
+                  <SlidersHorizontal size={20} aria-hidden="true" />
+                  <div>
+                    <h2 id="settings-title">베타 검색 설정</h2>
+                    <p>저장 즉시 새 검색 요청부터 적용됩니다.</p>
+                  </div>
+                </div>
+
+                <form className="admin-settings-form" onSubmit={handleSave}>
+                  <label className="admin-switch-field">
+                    <input
+                      type="checkbox"
+                      checked={settings.publicScanEnabled}
+                      onChange={(event) => setSettings((current) => ({ ...current, publicScanEnabled: event.target.checked }))}
+                    />
+                    <span>
+                      <strong>공개 검색 허용</strong>
+                      <small>끄면 베타 공개 검색 요청을 막습니다.</small>
+                    </span>
+                  </label>
+
+                  <div className="admin-field-grid">
+                    <NumberField id="free-scan-limit" label="무료 검색" unit="회" min={0} max={1000} value={settings.freeScanLimit} onChange={(value) => updateNumber("freeScanLimit", value)} />
+                    <NumberField id="window-hours" label="기준 시간" unit="시간" min={1} max={720} value={settings.windowHours} onChange={(value) => updateNumber("windowHours", value)} />
+                    <NumberField id="max-concurrent-scans" label="동시 검색" unit="개" min={1} max={50} value={settings.maxConcurrentScans} onChange={(value) => updateNumber("maxConcurrentScans", value)} />
+                    <NumberField id="busy-retry-after-seconds" label="재시도" unit="초" min={1} max={3600} value={settings.busyRetryAfterSeconds} onChange={(value) => updateNumber("busyRetryAfterSeconds", value)} />
+                    <NumberField id="scan-lease-ttl-seconds" label="슬롯 TTL" unit="초" min={10} max={600} value={settings.scanLeaseTtlSeconds} onChange={(value) => updateNumber("scanLeaseTtlSeconds", value)} />
+                  </div>
+
+                  <div className="admin-action-row">
+                    <button className="primary-button" type="submit" disabled={isSaving}>
+                      <CheckCircle2 size={17} aria-hidden="true" />
+                      {isSaving ? "저장 중" : "설정 저장"}
+                    </button>
+                    <button className="secondary-button" type="button" onClick={() => loadSettings()} disabled={isLoading}>
+                      <RefreshCw size={17} aria-hidden="true" />
+                      새로고침
+                    </button>
+                  </div>
+                  {statusText ? <div className={statusText.includes("저장했어요") ? "admin-status" : "admin-alert"}>{statusText}</div> : null}
+                </form>
+              </section>
+            )}
+
+            {adminToken ? (
+              <section className="admin-panel" aria-labelledby="admin-audit-title">
+                <div className="admin-panel-title">
+                  <History size={20} aria-hidden="true" />
+                  <div>
+                    <h2 id="admin-audit-title">최근 변경</h2>
+                    <p>운영 설정 변경 이력을 최신순으로 표시합니다.</p>
+                  </div>
+                </div>
+                <ul className="admin-audit-list">
+                  {recentAuditEvents.length > 0 ? (
+                    recentAuditEvents.map((event) => (
+                      <li key={event.id}>
+                        <div>
+                          <strong>{auditActionLabel(event.action)}</strong>
+                          <span>
+                            {event.actor} · {new Date(event.createdAt).toLocaleString("ko-KR")}
+                          </span>
+                        </div>
+                        <p>{summarizeAuditChanges(event.changes)}</p>
+                      </li>
+                    ))
+                  ) : (
+                    <li>
+                      <div>
+                        <strong>변경 이력 없음</strong>
+                        <span>설정을 저장하면 여기에 기록됩니다.</span>
+                      </div>
+                    </li>
+                  )}
+                </ul>
+              </section>
+            ) : null}
+          </div>
         </section>
       </div>
     </main>
   );
+}
+
+function auditActionLabel(action: string) {
+  if (action === "scan_settings.update") return "검색 설정 변경";
+  return action;
+}
+
+function summarizeAuditChanges(changes: AdminAuditEvent["changes"]) {
+  const entries = Object.entries(changes);
+  if (entries.length === 0) return "표시할 변경 항목이 없습니다.";
+
+  return entries
+    .map(([key, change]) => `${settingLabel(key)} ${formatAuditValue(change.before)} -> ${formatAuditValue(change.after)}`)
+    .join(", ");
+}
+
+function settingLabel(key: string) {
+  const labels: Record<string, string> = {
+    publicScanEnabled: "공개 검색",
+    freeScanLimit: "무료 검색",
+    windowHours: "기준 시간",
+    maxConcurrentScans: "동시 검색",
+    busyRetryAfterSeconds: "재시도",
+    scanLeaseTtlSeconds: "슬롯 TTL"
+  };
+  return labels[key] || key;
+}
+
+function formatAuditValue(value: string | number | boolean | null) {
+  if (typeof value === "boolean") return value ? "켜짐" : "꺼짐";
+  if (value === null) return "없음";
+  return String(value);
 }
 
 function RuntimeItem({ label, value }: { label: string; value: string }) {

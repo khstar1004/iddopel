@@ -7,6 +7,7 @@
     "BETA_SCAN_SETTINGS_STORE_PATH": "/tmp/id-doppelganger-beta-scan-settings.json",
     "BETA_SCAN_USAGE_STORE_PATH": "/tmp/id-doppelganger-beta-scan-usage.json",
     "BETA_SCAN_LOAD_STORE_PATH": "/tmp/id-doppelganger-beta-scan-load.json",
+    "ADMIN_AUDIT_LOG_STORE_PATH": "/tmp/id-doppelganger-admin-audit-log.json",
     "BETA_PUBLIC_SCAN_ENABLED": "true",
     "BETA_FREE_SCAN_LIMIT": "5",
     "BETA_FREE_SCAN_WINDOW_HOURS": "24",

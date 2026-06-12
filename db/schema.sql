@@ -115,3 +115,14 @@ create table if not exists beta_scan_leases (
 );
 
 create index if not exists beta_scan_leases_expires_at_idx on beta_scan_leases (expires_at);
+
+create table if not exists admin_audit_events (
+  id text primary key,
+  action text not null,
+  actor text not null,
+  request_key_hash text not null,
+  changes jsonb not null,
+  created_at timestamptz not null
+);
+
+create index if not exists admin_audit_events_created_at_idx on admin_audit_events (created_at desc);

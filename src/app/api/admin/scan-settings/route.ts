@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { AdminAuditChanges, recordAdminAuditEvent } from "@/lib/admin-audit-log";
+import { adminRuntimeStatus } from "@/lib/admin-runtime";
 import { jsonError, readJson } from "@/lib/api";
-import { BetaScanSettingsUpdate, getBetaScanSettingsStore } from "@/lib/beta-scan-quota";
-import { devAdminRuntimeStatus, isDevAdminRequest } from "@/lib/dev-admin";
-import { hasPostgresUrl } from "@/lib/postgres-env";
+import { BetaScanQuotaSettings, BetaScanSettingsUpdate, getBetaScanSettingsStore } from "@/lib/beta-scan-quota";
+import { devAdminUsername, isDevAdminRequest } from "@/lib/dev-admin";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   }
 
   const settings = await getBetaScanSettingsStore().get();
-  return NextResponse.json({ settings, runtime: runtimeStatus(request) });
+  return NextResponse.json({ settings, runtime: adminRuntimeStatus(request) });
 }
 
 export async function PATCH(request: Request) {
@@ -47,14 +48,35 @@ export async function PATCH(request: Request) {
     input[field] = value;
   }
 
-  const settings = await getBetaScanSettingsStore().update(input);
-  return NextResponse.json({ settings, runtime: runtimeStatus(request) });
+  const store = getBetaScanSettingsStore();
+  const previousSettings = await store.get();
+  const settings = await store.update(input);
+  await recordAdminAuditEvent(request, {
+    action: "scan_settings.update",
+    actor: devAdminUsername(),
+    changes: betaScanSettingsChanges(previousSettings, settings)
+  });
+  return NextResponse.json({ settings, runtime: adminRuntimeStatus(request) });
 }
 
-function runtimeStatus(request: Request) {
-  return {
-    ...devAdminRuntimeStatus(request),
-    scanProvider: process.env.SCAN_PROVIDER ?? "maigret",
-    storage: hasPostgresUrl() ? "postgres" : "file"
-  };
+function betaScanSettingsChanges(before: BetaScanQuotaSettings, after: BetaScanQuotaSettings): AdminAuditChanges {
+  const fields = [
+    "publicScanEnabled",
+    "freeScanLimit",
+    "windowHours",
+    "maxConcurrentScans",
+    "busyRetryAfterSeconds",
+    "scanLeaseTtlSeconds"
+  ] as const;
+  const changes: AdminAuditChanges = {};
+
+  for (const field of fields) {
+    if (before[field] === after[field]) continue;
+    changes[field] = {
+      before: before[field],
+      after: after[field]
+    };
+  }
+
+  return changes;
 }

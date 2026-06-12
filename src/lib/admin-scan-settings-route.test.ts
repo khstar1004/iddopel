@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { GET, PATCH } from "../app/api/admin/scan-settings/route";
+import { FileAdminAuditLogStore, listAdminAuditEvents, resetAdminAuditLogStoreForTests } from "./admin-audit-log";
 import { createDevAdminToken } from "./dev-admin";
 import { FileBetaScanSettingsStore, resetBetaScanQuotaStoresForTests } from "./beta-scan-quota";
 
@@ -14,6 +15,7 @@ describe("admin scan settings route", () => {
     restoreEnv("ENABLE_DEV_ADMIN", originalEnableDevAdmin);
     restoreEnv("DEV_ADMIN_PASSWORD", originalDevAdminPassword);
     resetBetaScanQuotaStoresForTests(null, null);
+    resetAdminAuditLogStoreForTests(null);
   });
 
   it("requires an authenticated developer admin token", async () => {
@@ -29,6 +31,7 @@ describe("admin scan settings route", () => {
     process.env.DEV_ADMIN_PASSWORD = "secret-password";
     const dir = await mkdtemp(path.join(os.tmpdir(), "admin-scan-settings-"));
     resetBetaScanQuotaStoresForTests(new FileBetaScanSettingsStore(path.join(dir, "settings.json")), null);
+    resetAdminAuditLogStoreForTests(new FileAdminAuditLogStore(path.join(dir, "audit.json")));
     const request = new Request("https://id.example.com/api/admin/scan-settings");
     const token = createDevAdminToken(request, "admin");
 
@@ -59,6 +62,18 @@ describe("admin scan settings route", () => {
       maxConcurrentScans: 2,
       busyRetryAfterSeconds: 45,
       scanLeaseTtlSeconds: 120
+    });
+    const auditEvents = await listAdminAuditEvents();
+    expect(auditEvents[0]).toMatchObject({
+      action: "scan_settings.update",
+      changes: {
+        publicScanEnabled: { before: true, after: false },
+        freeScanLimit: { before: 5, after: 9 },
+        windowHours: { before: 24, after: 12 },
+        maxConcurrentScans: { before: 6, after: 2 },
+        busyRetryAfterSeconds: { before: 30, after: 45 },
+        scanLeaseTtlSeconds: { before: 90, after: 120 }
+      }
     });
     await rm(dir, { recursive: true, force: true });
   });
