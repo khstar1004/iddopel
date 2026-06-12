@@ -4,7 +4,9 @@ const tokenMaxAgeMs = 7 * 24 * 60 * 60 * 1000;
 
 export function isDevAdminEnabled(request: Request) {
   if (process.env.ENABLE_DEV_ADMIN === "false") return false;
-  if (process.env.ENABLE_DEV_ADMIN === "true") return true;
+  if (process.env.ENABLE_DEV_ADMIN === "true") {
+    return isLocalRequest(request) || Boolean(process.env.DEV_ADMIN_PASSWORD);
+  }
   return isLocalRequest(request);
 }
 

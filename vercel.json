@@ -8,6 +8,7 @@
     "BETA_SCAN_USAGE_STORE_PATH": "/tmp/id-doppelganger-beta-scan-usage.json",
     "BETA_FREE_SCAN_LIMIT": "5",
     "BETA_FREE_SCAN_WINDOW_HOURS": "24",
+    "ENABLE_DEV_ADMIN": "true",
     "MAIGRET_TOP_SITES_QUICK": "25",
     "MAIGRET_TOP_SITES_DEEP": "100",
     "MAIGRET_SITE_TIMEOUT_SECONDS": "6",
