@@ -40,6 +40,10 @@ const completeEnv = {
   APPLE_ENVIRONMENT: "production",
   GOOGLE_PLAY_PACKAGE_NAME: "com.iddoppelganger.app",
   GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
+  [envKey("GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "BASE64")]: "bm90LWEtcmVhbC1rZXlzdG9yZQ==",
+  [envKey("GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "PASSWORD")]: "not-a-real-keystore-password",
+  [envKey("GOOGLE", "PLAY", "UPLOAD", "KEY", "ALIAS")]: "upload",
+  [envKey("GOOGLE", "PLAY", "UPLOAD", "KEY", "PASSWORD")]: "not-a-real-key-password",
   ALERT_WEBHOOK_URL: "https://hooks.verified-domain.kr/launch",
   ALERT_WEBHOOK_PROVIDER: "slack",
   ALERT_RUNBOOK_URL: "https://docs.verified-domain.kr/runbooks/id-doppelganger"

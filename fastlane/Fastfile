@@ -37,6 +37,15 @@ def google_play_credentials
   end
 end
 
+def require_android_upload_signing!
+  if ENV["GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64"].to_s.empty? && ENV["GOOGLE_PLAY_UPLOAD_KEYSTORE_PATH"].to_s.empty?
+    UI.user_error!("Set GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64 or GOOGLE_PLAY_UPLOAD_KEYSTORE_PATH for Play upload signing.")
+  end
+  UI.user_error!("Set GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD.") if ENV["GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD"].to_s.empty?
+  UI.user_error!("Set GOOGLE_PLAY_UPLOAD_KEY_ALIAS.") if ENV["GOOGLE_PLAY_UPLOAD_KEY_ALIAS"].to_s.empty?
+  UI.user_error!("Set GOOGLE_PLAY_UPLOAD_KEY_PASSWORD.") if ENV["GOOGLE_PLAY_UPLOAD_KEY_PASSWORD"].to_s.empty?
+end
+
 platform :ios do
   desc "Upload App Store Connect metadata and screenshots without submitting a binary."
   lane :metadata do
@@ -103,6 +112,7 @@ platform :android do
 
   desc "Build an Android App Bundle and validate an internal-track Play upload without releasing."
   lane :validate_internal do
+    require_android_upload_signing!
     gradle(project_dir: "android", task: "bundle", build_type: "Release")
     upload_to_play_store(
       **google_play_credentials,
@@ -117,6 +127,7 @@ platform :android do
 
   desc "Build and upload an Android App Bundle to the selected Play track as draft."
   lane :internal do
+    require_android_upload_signing!
     gradle(project_dir: "android", task: "bundle", build_type: "Release")
     upload_to_play_store(
       **google_play_credentials,

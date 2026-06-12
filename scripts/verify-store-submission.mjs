@@ -80,6 +80,13 @@ async function main() {
       "Set APP_STORE_CONNECT_API_KEY_P8_BASE64, APP_STORE_CONNECT_API_KEY_P8, or APPLE_PRIVATE_KEY."
     );
     requireEnv("GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "Google Play upload requires Android Publisher service account JSON.");
+    requireOneOf(
+      ["GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64", "GOOGLE_PLAY_UPLOAD_KEYSTORE_PATH"],
+      "Google Play internal upload requires the upload keystore as base64 for CI signing or a local upload keystore path."
+    );
+    requireEnv("GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD", "Google Play internal upload requires the upload keystore password.");
+    requireEnv("GOOGLE_PLAY_UPLOAD_KEY_ALIAS", "Google Play internal upload requires the upload key alias.");
+    requireEnv("GOOGLE_PLAY_UPLOAD_KEY_PASSWORD", "Google Play internal upload requires the upload key password.");
     requireEnv("MOBILE_APP_ORIGIN", "Native release requires MOBILE_APP_ORIGIN.");
     addCheck("Mobile origin is HTTPS", isHttpsUrl(process.env.MOBILE_APP_ORIGIN ?? ""), "MOBILE_APP_ORIGIN must be the production HTTPS origin.");
   } else {

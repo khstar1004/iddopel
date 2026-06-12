@@ -24,6 +24,10 @@ const reportTokenSecretKey = ["REPORT", "TOKEN", "SECRET"].join("_");
 const firstFreeFingerprintSecretKey = ["FIRST", "FREE", "FINGERPRINT", "SECRET"].join("_");
 const applePrivateKey = ["APPLE", "PRIVATE", "KEY"].join("_");
 const googlePlayServiceAccountJsonKey = ["GOOGLE", "PLAY", "SERVICE", "ACCOUNT", "JSON"].join("_");
+const googlePlayUploadKeystoreBase64Key = ["GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "BASE64"].join("_");
+const googlePlayUploadKeystorePasswordKey = ["GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "PASSWORD"].join("_");
+const googlePlayUploadKeyAliasKey = ["GOOGLE", "PLAY", "UPLOAD", "KEY", "ALIAS"].join("_");
+const googlePlayUploadKeyPasswordKey = ["GOOGLE", "PLAY", "UPLOAD", "KEY", "PASSWORD"].join("_");
 
 describe("launch-console", () => {
   it("allows dry-run access only from loopback requests", () => {
@@ -89,7 +93,10 @@ describe("launch-console", () => {
       [polarAccessToken]: "polar_" + "a".repeat(32),
       [polarWebhookSecret]: "p".repeat(48),
       [reportTokenSecretKey]: "report-token-secret-value-1234567890",
-      [firstFreeFingerprintSecretKey]: "first-free-fingerprint-secret-1234567890"
+      [firstFreeFingerprintSecretKey]: "first-free-fingerprint-secret-1234567890",
+      [googlePlayUploadKeystoreBase64Key]: "bm90LWEtcmVhbC1rZXlzdG9yZQ==",
+      [googlePlayUploadKeystorePasswordKey]: "not-a-real-keystore-password",
+      [googlePlayUploadKeyPasswordKey]: "not-a-real-key-password"
     });
 
     expect(status.find((item) => item.key === "PRODUCTION_DOMAIN")).toMatchObject({
@@ -137,6 +144,21 @@ describe("launch-console", () => {
       sensitive: true,
       value: ""
     });
+    expect(status.find((item) => item.key === googlePlayUploadKeystoreBase64Key)).toMatchObject({
+      configured: true,
+      sensitive: true,
+      value: ""
+    });
+    expect(status.find((item) => item.key === googlePlayUploadKeystorePasswordKey)).toMatchObject({
+      configured: true,
+      sensitive: true,
+      value: ""
+    });
+    expect(status.find((item) => item.key === googlePlayUploadKeyPasswordKey)).toMatchObject({
+      configured: true,
+      sensitive: true,
+      value: ""
+    });
     expect(JSON.stringify(status)).not.toContain("test_ck_123456789");
     expect(JSON.stringify(status)).not.toContain("placeholder-value");
     expect(JSON.stringify(status)).not.toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
@@ -145,6 +167,9 @@ describe("launch-console", () => {
     expect(JSON.stringify(status)).not.toContain("p".repeat(48));
     expect(JSON.stringify(status)).not.toContain("report-token-secret-value-1234567890");
     expect(JSON.stringify(status)).not.toContain("first-free-fingerprint-secret-1234567890");
+    expect(JSON.stringify(status)).not.toContain("bm90LWEtcmVhbC1rZXlzdG9yZQ==");
+    expect(JSON.stringify(status)).not.toContain("not-a-real-keystore-password");
+    expect(JSON.stringify(status)).not.toContain("not-a-real-key-password");
   });
 
   it("renders launch env files with safe quoting", () => {
@@ -206,7 +231,11 @@ describe("launch-console", () => {
       APPLE_APP_APPLE_ID: "app-id",
       GOOGLE_PLAY_PACKAGE_NAME: "com.other.app",
       GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "invalid product",
-      [googlePlayServiceAccountJsonKey]: "{not-json"
+      [googlePlayServiceAccountJsonKey]: "{not-json",
+      [googlePlayUploadKeystoreBase64Key]: "not base64",
+      [googlePlayUploadKeystorePasswordKey]: "short",
+      [googlePlayUploadKeyAliasKey]: "bad alias",
+      [googlePlayUploadKeyPasswordKey]: "short"
     });
 
     expect(errors).toMatchObject({
@@ -236,7 +265,11 @@ describe("launch-console", () => {
       APPLE_APP_APPLE_ID: expect.stringContaining("숫자"),
       GOOGLE_PLAY_PACKAGE_NAME: expect.stringContaining("com.iddoppelganger.app"),
       GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: expect.stringContaining("영문, 숫자"),
-      [googlePlayServiceAccountJsonKey]: expect.stringContaining("JSON")
+      [googlePlayServiceAccountJsonKey]: expect.stringContaining("JSON"),
+      [googlePlayUploadKeystoreBase64Key]: expect.stringContaining("base64"),
+      [googlePlayUploadKeystorePasswordKey]: expect.stringContaining("8자 이상"),
+      [googlePlayUploadKeyAliasKey]: expect.stringContaining("공백 없는"),
+      [googlePlayUploadKeyPasswordKey]: expect.stringContaining("8자 이상")
     });
   });
 
@@ -313,7 +346,11 @@ describe("launch-console", () => {
         APPLE_APP_APPLE_ID: "1234567890",
         GOOGLE_PLAY_PACKAGE_NAME: "com.iddoppelganger.app",
         GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID: "detailed_report",
-        [googlePlayServiceAccountJsonKey]: JSON.stringify({ type: "service_account" })
+        [googlePlayServiceAccountJsonKey]: JSON.stringify({ type: "service_account" }),
+        [googlePlayUploadKeystoreBase64Key]: "bm90LWEtcmVhbC1rZXlzdG9yZQ==",
+        [googlePlayUploadKeystorePasswordKey]: "not-a-real-keystore-password",
+        [googlePlayUploadKeyAliasKey]: "upload",
+        [googlePlayUploadKeyPasswordKey]: "not-a-real-key-password"
       })
     ).toEqual({});
   });
@@ -330,6 +367,11 @@ describe("launch-console", () => {
     expect(launchEnvFields.find((field) => field.key === "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID")).toMatchObject({
       label: "Google Play 상세 리포트 상품 ID",
       placeholder: "detailed_report"
+    });
+    expect(launchEnvFields.find((field) => field.key === googlePlayUploadKeystoreBase64Key)).toMatchObject({
+      label: "Google Play 업로드 Keystore Base64",
+      sensitive: true,
+      multiline: true
     });
   });
 

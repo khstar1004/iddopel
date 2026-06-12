@@ -42,7 +42,11 @@ describe("production release verifier", () => {
       { script: "store:verify", command: "STORE_RELEASE_CHECK=true npm run store:verify", env: { STORE_RELEASE_CHECK: "true" } },
       { script: "mobile:configure", command: "npm run mobile:configure", env: {} },
       { script: "mobile:verify", command: "MOBILE_RELEASE_CHECK=true npm run mobile:verify", env: { MOBILE_RELEASE_CHECK: "true" } },
-      { script: "android:bundle", command: "npm run android:bundle", env: {} },
+      {
+        script: "android:bundle",
+        command: "ANDROID_RELEASE_SIGNING_REQUIRED=true npm run android:bundle",
+        env: { ANDROID_RELEASE_SIGNING_REQUIRED: "true" }
+      },
       { script: "launch:readiness", command: "LAUNCH_RELEASE_CHECK=true npm run launch:readiness", env: { LAUNCH_RELEASE_CHECK: "true" } }
     ]);
   });

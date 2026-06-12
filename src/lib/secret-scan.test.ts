@@ -10,6 +10,9 @@ describe("secret scan verifier", () => {
         "TOSS_SECRET_KEY=replace-with-toss-secret-key",
         "APPLE_PRIVATE_KEY=",
         "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON='...'",
+        "GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64=",
+        "GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD=",
+        "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD=",
         "POLAR_ACCESS_TOKEN=replace-with-polar-access-token",
         "POLAR_WEBHOOK_SECRET=replace-with-polar-webhook-secret",
         'TOSS_SECRET_KEY: "${TOSS_SECRET_KEY:?Set TOSS_SECRET_KEY}"',
@@ -72,6 +75,19 @@ describe("secret scan verifier", () => {
 
   it("flags real-looking Polar secret assignments", () => {
     const findings = scanTextForSecrets("docs/leak.md", `POLAR_ACCESS_TOKEN=${"p".repeat(36)}`);
+
+    expect(findings).toContainEqual(
+      expect.objectContaining({
+        file: "docs/leak.md",
+        line: 1,
+        type: "sensitive-env-assignment"
+      })
+    );
+  });
+
+  it("flags committed Android upload signing secrets", () => {
+    const key = ["GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "PASSWORD"].join("_");
+    const findings = scanTextForSecrets("docs/leak.md", `${key}=uploadpassword1234567890`);
 
     expect(findings).toContainEqual(
       expect.objectContaining({

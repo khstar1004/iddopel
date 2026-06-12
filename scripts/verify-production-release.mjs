@@ -19,7 +19,7 @@ export const productionReleaseSteps = [
   { script: "store:verify", env: { STORE_RELEASE_CHECK: "true" } },
   { script: "mobile:configure", env: {} },
   { script: "mobile:verify", env: { MOBILE_RELEASE_CHECK: "true" } },
-  { script: "android:bundle", env: {} },
+  { script: "android:bundle", env: { ANDROID_RELEASE_SIGNING_REQUIRED: "true" } },
   { script: "launch:readiness", env: { LAUNCH_RELEASE_CHECK: "true" } }
 ];
 

@@ -134,6 +134,8 @@ docker compose --env-file deploy/compose/.env -f deploy/compose/compose.yaml up 
 
 `npm run release:prepare` writes `deploy/compose/.env`, `deploy/compose/PRODUCTION_LAUNCH_RUNBOOK.md`, production store URLs, and `native-web/app-config.js` together. It refuses to write partial production files when required external values are missing. Use `PREPARE_RELEASE_DRY_RUN=true npm run release:prepare` to preview the file list without writing.
 
+Google Play upload signing is handled as a build-time secret, not a runtime server env. For release/store checks, set `GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64`, `GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD`, `GOOGLE_PLAY_UPLOAD_KEY_ALIAS`, and `GOOGLE_PLAY_UPLOAD_KEY_PASSWORD` in `.env.launch` or GitHub Actions secrets. Local-only builds can use `GOOGLE_PLAY_UPLOAD_KEYSTORE_PATH` instead of the base64 value.
+
 Before starting the stack, confirm real values in `deploy/compose/.env`:
 
 - `DOMAIN`
@@ -202,7 +204,7 @@ This gate is expected to fail for the current free beta. It requires durable Pos
 The full production release flow assumes `release:prepare`, `deploy:verify`, and the Compose startup above have already completed. It first regenerates and verifies release assets with `npm run assets:all`, then runs the live scanner, code, security, deployment, migration, runtime, Toss in-app, store URL finalization, store verification, native config generation, mobile verification, Android, and release-readiness checks. The Toss web-checkout manual sequence is:
 
 ```bash
-PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" REPORT_TOKEN_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_REPORT_TOKEN_SECRET" FIRST_FREE_FINGERPRINT_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_FINGERPRINT_SECRET" PAYMENT_PROVIDER="toss" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" npm run release:prepare
+PRODUCTION_DOMAIN="YOUR_DOMAIN" STORE_SUPPORT_EMAIL="support@YOUR_DOMAIN" DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB" CRON_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_SECRET" REPORT_TOKEN_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_REPORT_TOKEN_SECRET" FIRST_FREE_FINGERPRINT_SECRET="YOUR_32_PLUS_CHARACTER_RANDOM_FINGERPRINT_SECRET" PAYMENT_PROVIDER="toss" TOSS_CLIENT_KEY="YOUR_TOSS_CLIENT_KEY" TOSS_SECRET_KEY="YOUR_TOSS_SECRET_KEY" TOSS_SECURITY_KEY="YOUR_TOSS_SECURITY_KEY" TOSS_CONSOLE_API_KEY="YOUR_TOSS_CONSOLE_API_KEY" TOSS_CONSOLE_APP_ID="YOUR_TOSS_CONSOLE_APP_ID" TOSS_MINI_APP_NAME="YOUR_TOSS_MINI_APP_NAME" TOSS_ALLOWED_ORIGINS="https://YOUR_TOSS_APP_NAME.apps.tossmini.com,https://YOUR_TOSS_APP_NAME.private-apps.tossmini.com" WEB_DETAILED_REPORT_PAYWALL_ENABLED="false" ALERT_WEBHOOK_URL="https://YOUR_ALERT_WEBHOOK" ALERT_WEBHOOK_PROVIDER="slack" ALERT_RUNBOOK_URL="https://YOUR_RUNBOOK_URL" MOBILE_PAYMENTS_ENABLED="true" APPLE_BUNDLE_ID="com.iddoppelganger.app" APPLE_DETAILED_REPORT_PRODUCT_ID="detailed_report" APPLE_ENVIRONMENT="production" APPLE_KEY_ID="YOUR_APPLE_KEY_ID" APPLE_ISSUER_ID="YOUR_APPLE_ISSUER_ID" APPLE_PRIVATE_KEY="YOUR_APP_STORE_CONNECT_PRIVATE_KEY_P8" APPLE_APP_APPLE_ID="YOUR_APP_APPLE_ID" GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="YOUR_GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64="YOUR_GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64" GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD="YOUR_GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD" GOOGLE_PLAY_UPLOAD_KEY_ALIAS="upload" GOOGLE_PLAY_UPLOAD_KEY_PASSWORD="YOUR_GOOGLE_PLAY_UPLOAD_KEY_PASSWORD" npm run release:prepare
 DEPLOY_RELEASE_CHECK=true npm run deploy:verify
 npm run assets:all
 npm run scan:maigret
@@ -221,7 +223,7 @@ npm run store:finalize
 STORE_RELEASE_CHECK=true npm run store:verify
 npm run mobile:configure
 MOBILE_RELEASE_CHECK=true npm run mobile:verify
-npm run android:bundle
+ANDROID_RELEASE_SIGNING_REQUIRED=true npm run android:bundle
 LAUNCH_RELEASE_CHECK=true npm run launch:readiness
 ```
 
@@ -290,7 +292,7 @@ Native release builds must point at the production HTTPS origin:
 MOBILE_APP_ORIGIN="https://YOUR_DOMAIN" npm run mobile:configure
 MOBILE_RELEASE_CHECK=true npm run mobile:verify
 npm run android:debug
-npm run android:bundle
+ANDROID_RELEASE_SIGNING_REQUIRED=true npm run android:bundle
 ```
 
 Native paid reports must stay disabled until Apple IAP and Google Play Billing products, receipt verification credentials, sandbox purchases, restore flow, and review notes are complete. The native bridge is already wired through StoreKit and Play Billing; see `docs/mobile-packaging.md`.

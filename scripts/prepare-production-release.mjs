@@ -21,6 +21,10 @@ const commonRequiredExternalValues = [
   "APPLE_ENVIRONMENT=production",
   "GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app",
   "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report",
+  "GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64",
+  "GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD",
+  "GOOGLE_PLAY_UPLOAD_KEY_ALIAS",
+  "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD",
   "ALERT_WEBHOOK_URL",
   "ALERT_RUNBOOK_URL"
 ];
@@ -336,7 +340,7 @@ STORE_PRODUCTION_ORIGIN="${values.SITE_URL}" STORE_SUPPORT_EMAIL="${supportEmail
 STORE_RELEASE_CHECK=true npm run store:verify
 MOBILE_APP_ORIGIN="${values.SITE_URL}" npm run mobile:configure
 MOBILE_RELEASE_CHECK=true npm run mobile:verify
-npm run android:bundle
+ANDROID_RELEASE_SIGNING_REQUIRED=true npm run android:bundle
 \`\`\`
 
 \`npm run release:production\` runs the same store finalization and native configuration steps before the store and mobile release gates.

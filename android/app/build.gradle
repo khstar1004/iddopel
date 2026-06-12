@@ -1,4 +1,35 @@
+import java.util.Base64
+
 apply plugin: 'com.android.application'
+
+def envOrProperty = { name ->
+    def envValue = System.getenv(name)
+    if (envValue != null && envValue.trim()) {
+        return envValue.trim()
+    }
+    if (project.hasProperty(name)) {
+        def propValue = project.property(name)?.toString()
+        if (propValue != null && propValue.trim()) {
+            return propValue.trim()
+        }
+    }
+    return null
+}
+
+def uploadKeystorePath = envOrProperty("GOOGLE_PLAY_UPLOAD_KEYSTORE_PATH")
+def uploadKeystoreBase64 = envOrProperty("GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64")
+if (!uploadKeystorePath && uploadKeystoreBase64) {
+    def generatedSigningDir = new File(rootProject.buildDir, "generated-signing")
+    generatedSigningDir.mkdirs()
+    def generatedKeystore = new File(generatedSigningDir, "google-play-upload-key.jks")
+    generatedKeystore.bytes = Base64.getDecoder().decode(uploadKeystoreBase64)
+    uploadKeystorePath = generatedKeystore.absolutePath
+}
+
+def uploadKeystorePassword = envOrProperty("GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD")
+def uploadKeyAlias = envOrProperty("GOOGLE_PLAY_UPLOAD_KEY_ALIAS")
+def uploadKeyPassword = envOrProperty("GOOGLE_PLAY_UPLOAD_KEY_PASSWORD")
+def uploadSigningReady = uploadKeystorePath && uploadKeystorePassword && uploadKeyAlias && uploadKeyPassword
 
 android {
     namespace = "com.iddoppelganger.app"
@@ -16,10 +47,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        releaseUpload {
+            if (uploadSigningReady) {
+                storeFile file(uploadKeystorePath)
+                storePassword uploadKeystorePassword
+                keyAlias uploadKeyAlias
+                keyPassword uploadKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (uploadSigningReady) {
+                signingConfig signingConfigs.releaseUpload
+            }
         }
     }
 }

@@ -116,10 +116,14 @@ bundle exec fastlane android metadata
 
 ```bash
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON='...' \
+GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64='...' \
+GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD='...' \
+GOOGLE_PLAY_UPLOAD_KEY_ALIAS='upload' \
+GOOGLE_PLAY_UPLOAD_KEY_PASSWORD='...' \
 bundle exec fastlane android validate_internal
 ```
 
-GitHub Actions also includes a manual `Store Submission` workflow with `verify-only`, `android-metadata`, `android-internal-validate`, `ios-metadata`, `ios-testflight`, and `ios-submit-review` lanes.
+GitHub Actions also includes a manual `Store Submission` workflow with `verify-only`, `android-metadata`, `android-internal-validate`, `ios-metadata`, `ios-testflight`, and `ios-submit-review` lanes. Set `GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64`, `GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD`, `GOOGLE_PLAY_UPLOAD_KEY_ALIAS`, and `GOOGLE_PLAY_UPLOAD_KEY_PASSWORD` as repository secrets before running the Android internal validation lane.
 
 ## Native Projects
 - Capacitor config: `capacitor.config.ts`
@@ -128,6 +132,7 @@ GitHub Actions also includes a manual `Store Submission` workflow with `verify-o
 - Mobile packaging guide: `docs/mobile-packaging.md`
 - Android debug compile gate: `npm run android:debug`
 - Android release AAB compile gate: `npm run android:bundle`
+- Android upload-signed release gate: `ANDROID_RELEASE_SIGNING_REQUIRED=true npm run android:bundle`
 
 The native app shell is configured for the free scan/preview flow. Native paid reports include the WebView adapter plus Android Google Play Billing and iOS StoreKit Capacitor plugins, but must stay disabled by default until Apple IAP and Google Play Billing products and server-side receipt verification credentials are configured.
 

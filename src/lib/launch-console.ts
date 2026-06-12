@@ -87,6 +87,26 @@ export const launchEnvFields: LaunchEnvField[] = [
     sensitive: true,
     placeholder: "{\"type\":\"service_account\"...}",
     multiline: true
+  },
+  {
+    key: "GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64",
+    label: "Google Play 업로드 Keystore Base64",
+    sensitive: true,
+    placeholder: "base64로 인코딩한 .jks 또는 .keystore",
+    multiline: true
+  },
+  {
+    key: "GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD",
+    label: "Google Play Keystore Password",
+    sensitive: true,
+    placeholder: "업로드 keystore 비밀번호"
+  },
+  { key: "GOOGLE_PLAY_UPLOAD_KEY_ALIAS", label: "Google Play Key Alias", sensitive: false, placeholder: "upload" },
+  {
+    key: "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD",
+    label: "Google Play Key Password",
+    sensitive: true,
+    placeholder: "업로드 key 비밀번호"
   }
 ];
 
@@ -215,6 +235,7 @@ export function validateLaunchEnvValues(values: Record<string, string>) {
   validatePattern(values.GOOGLE_PLAY_PACKAGE_NAME, "GOOGLE_PLAY_PACKAGE_NAME", "Google Play Package", /^com\.iddoppelganger\.app$/, "com.iddoppelganger.app 이어야 해요.", errors);
   validateSlug(values.GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID, "GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID", "Google Play 상세 리포트 상품 ID", errors);
   validateJsonObject(values.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON, "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON", "Google Play Service Account JSON", errors);
+  validateGooglePlayUploadSigning(values, errors);
   validateNoLaunchPlaceholders(values, errors);
 
   return errors;
@@ -440,6 +461,63 @@ function validateJsonObject(value: string | undefined, key: string, label: strin
   } catch {
     errors[key] = `${label}은 올바른 JSON 객체여야 해요.`;
   }
+}
+
+function validateGooglePlayUploadSigning(values: Record<string, string>, errors: Record<string, string>) {
+  const signingValues = [
+    values.GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64,
+    values.GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD,
+    values.GOOGLE_PLAY_UPLOAD_KEY_ALIAS,
+    values.GOOGLE_PLAY_UPLOAD_KEY_PASSWORD
+  ].map((value) => String(value || "").trim());
+  if (!signingValues.some(Boolean)) return;
+
+  requireLaunchValue(values.GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64, "GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64", "Google Play 업로드 Keystore Base64", errors);
+  requireLaunchValue(
+    values.GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD,
+    "GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD",
+    "Google Play Keystore Password",
+    errors
+  );
+  requireLaunchValue(values.GOOGLE_PLAY_UPLOAD_KEY_ALIAS, "GOOGLE_PLAY_UPLOAD_KEY_ALIAS", "Google Play Key Alias", errors);
+  requireLaunchValue(values.GOOGLE_PLAY_UPLOAD_KEY_PASSWORD, "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD", "Google Play Key Password", errors);
+  validateBase64(
+    values.GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64,
+    "GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64",
+    "Google Play 업로드 Keystore Base64",
+    errors
+  );
+  validateMinimumLength(
+    values.GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD,
+    "GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD",
+    "Google Play Keystore Password",
+    8,
+    errors
+  );
+  validatePattern(
+    values.GOOGLE_PLAY_UPLOAD_KEY_ALIAS,
+    "GOOGLE_PLAY_UPLOAD_KEY_ALIAS",
+    "Google Play Key Alias",
+    /^\S+$/,
+    "공백 없는 alias 여야 해요.",
+    errors
+  );
+  validateMinimumLength(values.GOOGLE_PLAY_UPLOAD_KEY_PASSWORD, "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD", "Google Play Key Password", 8, errors);
+}
+
+function validateBase64(value: string | undefined, key: string, label: string, errors: Record<string, string>) {
+  const input = String(value || "").trim();
+  if (!input) {
+    return;
+  }
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(input) || input.length % 4 === 1) {
+    errors[key] = `${label}은 base64 문자열이어야 해요.`;
+  }
+}
+
+function requireLaunchValue(value: string | undefined, key: string, label: string, errors: Record<string, string>) {
+  const input = String(value || "").trim();
+  if (!input) errors[key] = `${label}을 입력하세요.`;
 }
 
 function validateNoLaunchPlaceholders(values: Record<string, string>, errors: Record<string, string>) {

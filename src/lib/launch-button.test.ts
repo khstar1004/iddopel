@@ -32,7 +32,11 @@ const storeCredentialEnv = {
   [["APPLE", "ISSUER", "ID"].join("_")]: "00000000-0000-0000-0000-000000000000",
   [["APPLE", "PRIVATE", "KEY"].join("_")]: "not-a-real-app-store-key",
   APPLE_APP_APPLE_ID: "1234567890",
-  [["GOOGLE", "PLAY", "SERVICE", "ACCOUNT", "JSON"].join("_")]: JSON.stringify({ type: "service_account" })
+  [["GOOGLE", "PLAY", "SERVICE", "ACCOUNT", "JSON"].join("_")]: JSON.stringify({ type: "service_account" }),
+  [["GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "BASE64"].join("_")]: "bm90LWEtcmVhbC1rZXlzdG9yZQ==",
+  [["GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "PASSWORD"].join("_")]: "not-a-real-keystore-password",
+  [["GOOGLE", "PLAY", "UPLOAD", "KEY", "ALIAS"].join("_")]: "upload",
+  [["GOOGLE", "PLAY", "UPLOAD", "KEY", "PASSWORD"].join("_")]: "not-a-real-key-password"
 };
 
 const completeFileEnv: Record<string, string> = {
@@ -135,7 +139,11 @@ describe("buildLaunchButtonPlan", () => {
         "FIRST_FREE_FINGERPRINT_SECRET",
         "ALERT_WEBHOOK_URL",
         "APPLE_KEY_ID",
-        "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+        "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
+        "GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64",
+        "GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD",
+        "GOOGLE_PLAY_UPLOAD_KEY_ALIAS",
+        "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD"
       ])
     );
   });
@@ -246,14 +254,34 @@ describe("buildLaunchButtonPlan", () => {
   });
 
   it("keeps ship execution blocked until store release credentials are present", () => {
-    const { APPLE_KEY_ID: _appleKeyId, APPLE_ISSUER_ID: _appleIssuerId, APPLE_PRIVATE_KEY: _applePrivateKey, GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: _googleJson, ...withoutStoreCredentials } =
-      completeFileEnv;
+    const withoutStoreCredentials = { ...completeFileEnv };
+    for (const key of [
+      "APPLE_KEY_ID",
+      "APPLE_ISSUER_ID",
+      "APPLE_PRIVATE_KEY",
+      "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
+      envKey("GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "BASE64"),
+      envKey("GOOGLE", "PLAY", "UPLOAD", "KEYSTORE", "PASSWORD"),
+      envKey("GOOGLE", "PLAY", "UPLOAD", "KEY", "ALIAS"),
+      envKey("GOOGLE", "PLAY", "UPLOAD", "KEY", "PASSWORD")
+    ]) {
+      delete withoutStoreCredentials[key];
+    }
     const env = buildLaunchEnvironment({ fileEnv: withoutStoreCredentials, env: {} });
     const plan = buildLaunchButtonPlan({ env, ship: true });
 
     expect(plan.ready).toBe(false);
     expect(plan.missing).toEqual(
-      expect.arrayContaining(["APPLE_KEY_ID", "APPLE_ISSUER_ID", "APPLE_PRIVATE_KEY", "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"])
+      expect.arrayContaining([
+        "APPLE_KEY_ID",
+        "APPLE_ISSUER_ID",
+        "APPLE_PRIVATE_KEY",
+        "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
+        "GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64",
+        "GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD",
+        "GOOGLE_PLAY_UPLOAD_KEY_ALIAS",
+        "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD"
+      ])
     );
   });
 
@@ -297,6 +325,9 @@ describe("buildLaunchButtonPlan", () => {
     expect(serialized).not.toContain(polarPaymentEnv.POLAR_WEBHOOK_SECRET);
     expect(serialized).not.toContain("launch-secret-path");
     expect(serialized).not.toContain("not-a-real-app-store-key");
+    expect(serialized).not.toContain("bm90LWEtcmVhbC1rZXlzdG9yZQ==");
+    expect(serialized).not.toContain("not-a-real-keystore-password");
+    expect(serialized).not.toContain("not-a-real-key-password");
     expect(serialized).not.toContain("C:/local/bin");
     expect(serialized).not.toContain("APPDATA");
     expect(serialized).not.toContain("LOCAL_ONLY_DEBUG_VALUE");

@@ -70,6 +70,10 @@ APPLE_APP_APPLE_ID="your-apple-app-id" \
 GOOGLE_PLAY_PACKAGE_NAME="com.iddoppelganger.app" \
 GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID="detailed_report" \
 GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="your-google-play-service-account-json" \
+GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64="your-google-play-upload-keystore-base64" \
+GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD="your-google-play-upload-keystore-password" \
+GOOGLE_PLAY_UPLOAD_KEY_ALIAS="upload" \
+GOOGLE_PLAY_UPLOAD_KEY_PASSWORD="your-google-play-upload-key-password" \
 npm run release:prepare
 npm run deploy:verify
 DEPLOY_RELEASE_CHECK=true npm run deploy:verify
@@ -181,6 +185,10 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `GOOGLE_PLAY_PACKAGE_NAME`: Google Play package name, currently `com.iddoppelganger.app`
 - `GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID`: Google Play one-time detailed report product id, currently `detailed_report`
 - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`: Android Publisher service account JSON for Google Play release checks
+- `GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64`: base64-encoded Google Play upload keystore for CI/release signing
+- `GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD`: upload keystore password
+- `GOOGLE_PLAY_UPLOAD_KEY_ALIAS`: upload key alias, for example `upload`
+- `GOOGLE_PLAY_UPLOAD_KEY_PASSWORD`: upload key password
 
 ## Runtime Assets
 - `public/fonts/NotoSansCJKkr-Regular.otf` is required for Korean PDF report generation.

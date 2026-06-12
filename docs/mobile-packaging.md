@@ -72,7 +72,18 @@ npm run android:bundle
 
 The script uses `JAVA_HOME` and `ANDROID_HOME` / `ANDROID_SDK_ROOT` when set, and also checks the local Codex tool caches at `~/.codex/jdks/temurin21` and `~/.codex/android-sdk`.
 
-Release signing still requires Google Play upload key or Play App Signing setup in the Play Console.
+Local compile checks can run unsigned. Store/release checks require Google Play upload signing values:
+
+```bash
+GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64="YOUR_GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64" \
+GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD="..." \
+GOOGLE_PLAY_UPLOAD_KEY_ALIAS="upload" \
+GOOGLE_PLAY_UPLOAD_KEY_PASSWORD="..." \
+ANDROID_RELEASE_SIGNING_REQUIRED=true \
+npm run android:bundle
+```
+
+Use `GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64` for GitHub Actions secrets. For local-only builds, `GOOGLE_PLAY_UPLOAD_KEYSTORE_PATH` can point at an uncommitted `.jks` or `.keystore` file instead of the base64 value. The generated keystore copy is written under Gradle's build directory, not the repository.
 
 ## iOS
 Generated project:
@@ -159,6 +170,10 @@ Google Play:
 - `GOOGLE_PLAY_PACKAGE_NAME`
 - `GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID`
 - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_PLAY_UPLOAD_KEYSTORE_BASE64` or local-only `GOOGLE_PLAY_UPLOAD_KEYSTORE_PATH`
+- `GOOGLE_PLAY_UPLOAD_KEYSTORE_PASSWORD`
+- `GOOGLE_PLAY_UPLOAD_KEY_ALIAS`
+- `GOOGLE_PLAY_UPLOAD_KEY_PASSWORD`
 
 The server hashes native purchase identifiers into `report_orders.payment_key` and rejects reuse of the same purchase for a different scan.
 
@@ -203,8 +218,8 @@ This gate should fail until Apple App Privacy includes Purchases / Purchase Hist
 - store submission package verification
 - mobile release-domain configuration check
 - Capacitor sync
-- Android debug APK build on Ubuntu with JDK 21 and Android SDK 36
+- Android debug APK and unsigned release AAB compile checks on Ubuntu with JDK 21 and Android SDK 36
 
 iOS archive still requires macOS/Xcode and Apple signing credentials.
 
-The manual `.github/workflows/store-submission.yml` workflow is prepared for account-backed store uploads after production URLs and store credentials are configured.
+The manual `.github/workflows/store-submission.yml` workflow is prepared for account-backed store uploads after production URLs, store credentials, and Google Play upload signing secrets are configured.
