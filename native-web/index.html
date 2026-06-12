@@ -23,13 +23,7 @@
         <h2 id="scan-title">아이디 점검</h2>
         <form id="scan-form">
           <label for="username">아이디</label>
-          <input id="username" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="@brand_id" required minlength="3" maxlength="30" />
-          <label for="purpose">점검 목적</label>
-          <select id="purpose" name="purpose">
-            <option value="SELF_CHECK">내 아이디 점검</option>
-            <option value="BRAND_CHECK">브랜드/활동명 점검</option>
-            <option value="NICKNAME_CHECK">새 닉네임 겹침 확인</option>
-          </select>
+          <input id="username" name="username" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="아이디만 입력" required minlength="3" maxlength="30" />
           <label class="check-row" for="acknowledge">
             <input id="acknowledge" name="acknowledge" type="checkbox" />
             <span>본인 아이디, 브랜드명, 사용 예정 닉네임 등 정당한 목적으로만 점검해요.</span>

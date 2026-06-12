@@ -34,7 +34,6 @@ form.addEventListener("submit", async (event) => {
 
   const data = new FormData(form);
   const username = String(data.get("username") || "").trim();
-  const purpose = String(data.get("purpose") || "SELF_CHECK");
   const validationError = validateUsername(username);
 
   if (!acknowledge.checked) {
@@ -54,7 +53,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch(`${apiBaseUrl}/api/scans`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, purpose, mode: "QUICK" })
+      body: JSON.stringify({ username, purpose: "SELF_CHECK", mode: "QUICK" })
     });
     const body = await response.json();
     if (!response.ok) throw new Error(body?.error?.message || "점검을 완료하지 못했어요.");
