@@ -126,6 +126,9 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `BETA_FREE_SCAN_WINDOW_HOURS`: quota window in hours, `24` for beta.
 - `BETA_SCAN_SETTINGS_STORE_PATH`: file path for `/admin` quota settings when Postgres is absent.
 - `BETA_SCAN_USAGE_STORE_PATH`: file path for beta free search usage counts when Postgres is absent.
+- `ENABLE_DEV_ADMIN`: set `true` only with `DEV_ADMIN_PASSWORD` and `DEV_ADMIN_SECRET` so `/admin` can manage beta quota.
+- `DEV_ADMIN_PASSWORD`: required before public `/admin` login is enabled.
+- `DEV_ADMIN_SECRET`: signing secret for developer admin tokens.
 - `MAIGRET_BIN`: CLI binary path, usually `maigret`
 - `MAIGRET_TOP_SITES_QUICK`: free scan scope, default `100`
 - `MAIGRET_TOP_SITES_DEEP`: paid/deep scan scope, default `500`

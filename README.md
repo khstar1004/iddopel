@@ -63,7 +63,7 @@ npm run launch:readiness
 
 `npm run launch:readiness` must report `localReady: true`. `releaseReady: false` is expected until production domain, secrets, store credentials, and native purchase products are configured.
 
-For local repeated testing, the scanner exposes a localhost-only developer login on `/admin`. The default local account is `admin` / `admin`; set `DEV_ADMIN_USERNAME`, `DEV_ADMIN_PASSWORD`, and `DEV_ADMIN_SECRET` to override it. Developer mode bypasses scan throttling and report payment locks only on localhost unless `ENABLE_DEV_ADMIN=true` is explicitly set. The `/admin` page is available directly or by clicking the top-left logo five times.
+For local repeated testing, the scanner exposes a localhost-only developer login on `/admin`. The default local account is `admin` / `admin`; set `DEV_ADMIN_USERNAME`, `DEV_ADMIN_PASSWORD`, and `DEV_ADMIN_SECRET` to override it. Developer mode bypasses scan throttling and report payment locks only on localhost unless `ENABLE_DEV_ADMIN=true` and `DEV_ADMIN_PASSWORD` are explicitly set. The `/admin` page is available directly or by clicking the top-left logo five times.
 
 The consumer flow grants the first detailed report once per browser owner token. After that, the free screen shows preview rows plus blurred locked rows until the user opens the paid report checkout. Result screens also expose a sanitized PNG share card with only score/count context, not platform URLs or profile details.
 

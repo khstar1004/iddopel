@@ -1,0 +1,95 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
+import { POST } from "../app/api/scans/route";
+import {
+  FileBetaScanSettingsStore,
+  FileBetaScanUsageStore,
+  resetBetaScanQuotaStoresForTests
+} from "./beta-scan-quota";
+import { resetScanRepositoryForTests, type ScanRepository } from "./repository";
+import type { ScanJob } from "./types";
+
+describe("scan route beta free quota", () => {
+  const originalScanProvider = process.env.SCAN_PROVIDER;
+  const originalBetaLimit = process.env.BETA_FREE_SCAN_LIMIT;
+  const originalBetaWindow = process.env.BETA_FREE_SCAN_WINDOW_HOURS;
+
+  afterEach(() => {
+    restoreEnv("SCAN_PROVIDER", originalScanProvider);
+    restoreEnv("BETA_FREE_SCAN_LIMIT", originalBetaLimit);
+    restoreEnv("BETA_FREE_SCAN_WINDOW_HOURS", originalBetaWindow);
+    resetScanRepositoryForTests(null);
+    resetBetaScanQuotaStoresForTests(null, null);
+  });
+
+  it("allows only the configured number of beta free searches per owner", async () => {
+    process.env.SCAN_PROVIDER = "mock";
+    process.env.BETA_FREE_SCAN_LIMIT = "1";
+    process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "scan-route-quota-"));
+    resetScanRepositoryForTests(new MemoryScanRepository());
+    resetBetaScanQuotaStoresForTests(
+      new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
+      new FileBetaScanUsageStore(path.join(dir, "usage.json"))
+    );
+
+    const first = await POST(scanRequest("firstquota"));
+    const second = await POST(scanRequest("secondquota"));
+    const secondBody = await second.json();
+
+    expect(first.status).toBe(201);
+    expect(first.headers.get("x-beta-free-scans-remaining")).toBe("0");
+    expect(second.status).toBe(429);
+    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    await rm(dir, { recursive: true, force: true });
+  });
+});
+
+function scanRequest(username: string) {
+  return new Request("https://id.example.com/api/scans", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-forwarded-for": "203.0.113.20",
+      "x-scan-owner-token": "owner-token"
+    },
+    body: JSON.stringify({ username, purpose: "SELF_CHECK", mode: "quick" })
+  });
+}
+
+class MemoryScanRepository implements ScanRepository {
+  private scans = new Map<string, ScanJob>();
+
+  async create(job: ScanJob) {
+    this.scans.set(job.scanId, job);
+    return job;
+  }
+
+  async get(scanId: string) {
+    return this.scans.get(scanId) ?? null;
+  }
+
+  async delete(scanId: string) {
+    this.scans.delete(scanId);
+  }
+
+  async extendExpiration(scanId: string, expiresAt: string) {
+    const scan = this.scans.get(scanId);
+    if (scan) this.scans.set(scanId, { ...scan, expiresAt });
+  }
+
+  async pruneExpired() {
+    return 0;
+  }
+}
+
+function restoreEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}
