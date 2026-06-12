@@ -157,6 +157,7 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `MAIGRET_PRIORITY_SITES`: comma-separated site names always included in the scan scope, useful for high-demand platforms such as Instagram, X/Twitter, Threads, TikTok, YouTube, Naver, and GitHub
 - `MAIGRET_BOOST_TAGS`: comma-separated `tag:limit` boosts merged into the scan scope. The Vercel beta default, `kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8`, improves Korean/SNS/creator/developer coverage without scanning all 3,000+ sites.
 - `MAIGRET_EXCLUDED_SITES`: comma-separated Maigret site names to remove from the scan scope and parsed results. The default excludes `Geeksfor Geeks`, which returns false claimed hits for random usernames in Maigret 0.6.1.
+- `MAIGRET_EXCLUDED_TAGS`: comma-separated Maigret tags to remove from the scan scope and parsed results. The beta default is `porn` so adult-site false positives do not surface in the product UI.
 - `MAIGRET_SITE_CAP_QUICK`: maximum merged quick-scan sites after priority and tag boosts. Vercel beta uses `155` to stay under the function timeout.
 - `MAIGRET_SITE_CAP_DEEP`: maximum merged deep-scan sites after priority and tag boosts. Use a higher value only on Docker/Cloudtype workers with longer request timeouts.
 - `MAIGRET_PROXY_URL`: optional HTTP/SOCKS proxy. A residential or mobile proxy can improve large SNS results when cloud IPs are rate-limited or blocked.

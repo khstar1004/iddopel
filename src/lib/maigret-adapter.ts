@@ -94,6 +94,7 @@ const defaultBoostTagSpecs: MaigretBoostTagSpec[] = [
   { tag: "messaging", limit: 8 }
 ];
 const defaultExcludedSiteNames = ["Geeksfor Geeks"];
+const defaultExcludedTags = ["porn"];
 
 interface MaigretBoostTagSpec {
   tag: string;
@@ -235,6 +236,10 @@ export function buildMaigretCliArgs(
   if (process.env.MAIGRET_CLOUDFLARE_BYPASS === "true") {
     args.push("--cloudflare-bypass");
   }
+  const excludedTags = resolveExcludedTags();
+  if (excludedTags.length > 0) {
+    args.push("--exclude-tags", excludedTags.join(","));
+  }
 
   if (scope.siteNames?.length) {
     for (const siteName of scope.siteNames) {
@@ -278,6 +283,14 @@ export function resolveExcludedSiteNames() {
 
   const parsed = splitCommaList(configured);
   return parsed.length > 0 ? parsed : defaultExcludedSiteNames;
+}
+
+export function resolveExcludedTags() {
+  const configured = process.env.MAIGRET_EXCLUDED_TAGS;
+  if (configured === "") return [];
+
+  const parsed = splitCommaList(configured).map((tag) => tag.toLowerCase());
+  return parsed.length > 0 ? parsed : defaultExcludedTags;
 }
 
 function resolveBoostTagCliScope() {
@@ -354,6 +367,7 @@ export function parseMaigretSimpleReport(report: string, input: Pick<CreateScanI
       .filter(([siteName]) => !shouldExcludeMaigretSite(siteName))
       .map(([siteName, record]) => maigretRecordToScanResult(siteName, record, input.purpose))
       .filter((result): result is ScanResult => Boolean(result))
+      .filter((result) => !hasExcludedTag(result.tags))
   );
 }
 
@@ -470,6 +484,13 @@ function dedupeScanResults(results: ScanResult[]) {
 function shouldExcludeMaigretSite(siteName: string) {
   const excluded = new Set(resolveExcludedSiteNames().map(normalizeSiteName));
   return excluded.has(normalizeSiteName(siteName));
+}
+
+function hasExcludedTag(tags: string[] | undefined) {
+  if (!tags?.length) return false;
+
+  const excluded = new Set(resolveExcludedTags());
+  return tags.some((tag) => excluded.has(tag.toLowerCase()));
 }
 
 function rewriteTwitterUrl(value: string) {

@@ -80,6 +80,7 @@ const publicLaunchEnvKeys = new Set([
   "MAIGRET_PRIORITY_SITES",
   "MAIGRET_BOOST_TAGS",
   "MAIGRET_EXCLUDED_SITES",
+  "MAIGRET_EXCLUDED_TAGS",
   "MAIGRET_SITE_CAP_QUICK",
   "MAIGRET_SITE_CAP_DEEP",
   "MAIGRET_EXTRACT_EXTENDED",
@@ -201,6 +202,7 @@ export function buildLaunchEnvironment({ fileEnv = {}, env = {} } = {}) {
   merged.MAIGRET_PRIORITY_SITES ||= "Instagram,Twitter,Threads,TikTok,YouTube,Facebook,LinkedIn,Naver,GitHub,GitHubGist,Reddit";
   merged.MAIGRET_BOOST_TAGS ||= "kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8";
   merged.MAIGRET_EXCLUDED_SITES ||= "Geeksfor Geeks";
+  merged.MAIGRET_EXCLUDED_TAGS ||= "porn";
   merged.MAIGRET_SITE_CAP_QUICK ||= "155";
   merged.MAIGRET_SITE_CAP_DEEP ||= "260";
   merged.MAIGRET_EXTRACT_EXTENDED ||= "false";

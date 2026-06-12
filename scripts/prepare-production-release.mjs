@@ -97,6 +97,7 @@ export function renderDeployEnv(values) {
     MAIGRET_PRIORITY_SITES: "Instagram,Twitter,Threads,TikTok,YouTube,Facebook,LinkedIn,Naver,GitHub,GitHubGist,Reddit",
     MAIGRET_BOOST_TAGS: "kr:30,social:35,photo:16,video:16,blog:20,coding:20,music:10,design:10,streaming:8,messaging:8",
     MAIGRET_EXCLUDED_SITES: "Geeksfor Geeks",
+    MAIGRET_EXCLUDED_TAGS: "porn",
     MAIGRET_SITE_CAP_QUICK: "155",
     MAIGRET_SITE_CAP_DEEP: "260",
     PAYMENT_PROVIDER: paymentProvider,

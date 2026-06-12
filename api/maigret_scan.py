@@ -38,6 +38,7 @@ DEFAULT_BOOST_TAG_SPECS = [
     ("messaging", 8),
 ]
 DEFAULT_EXCLUDED_SITES = ["Geeksfor Geeks"]
+DEFAULT_EXCLUDED_TAGS = ["porn"]
 MAIGRET_DATABASE_CACHE = None
 
 
@@ -269,23 +270,42 @@ def clone_site_data_for_scan(site_data):
 def resolve_site_data(db, top_sites, mode="QUICK"):
     site_data = {}
     priority_sites = resolve_priority_sites()
+    excluded_tags = resolve_excluded_tags()
     if priority_sites:
         site_data.update(db.ranked_sites_dict(
             top=sys.maxsize,
             names=priority_sites,
+            excluded_tags=excluded_tags,
             disabled=False,
             id_type="username",
         ))
 
     if mode == "DEEP" and os.environ.get("MAIGRET_DEEP_ALL") == "true":
-        site_data.update(db.ranked_sites_dict(top=sys.maxsize, disabled=False, id_type="username"))
+        site_data.update(db.ranked_sites_dict(
+            top=sys.maxsize,
+            excluded_tags=excluded_tags,
+            disabled=False,
+            id_type="username",
+        ))
     else:
-        site_data.update(db.ranked_sites_dict(top=top_sites, disabled=False, id_type="username"))
+        site_data.update(db.ranked_sites_dict(
+            top=top_sites,
+            excluded_tags=excluded_tags,
+            disabled=False,
+            id_type="username",
+        ))
 
     for tag, limit in resolve_boost_tag_specs():
-        site_data.update(db.ranked_sites_dict(top=limit, tags=[tag], disabled=False, id_type="username"))
+        site_data.update(db.ranked_sites_dict(
+            top=limit,
+            tags=[tag],
+            excluded_tags=excluded_tags,
+            disabled=False,
+            id_type="username",
+        ))
 
     remove_excluded_sites(site_data, resolve_excluded_sites())
+    remove_excluded_tagged_sites(site_data, excluded_tags)
     return limit_site_data(site_data, resolve_site_cap(mode))
 
 
@@ -326,6 +346,14 @@ def resolve_excluded_sites():
     return parsed if parsed else DEFAULT_EXCLUDED_SITES
 
 
+def resolve_excluded_tags():
+    configured = os.environ.get("MAIGRET_EXCLUDED_TAGS")
+    if configured == "":
+        return []
+    parsed = split_comma_list(configured)
+    return [tag.lower() for tag in parsed] if parsed else DEFAULT_EXCLUDED_TAGS
+
+
 def remove_excluded_sites(site_data, excluded_sites):
     if not excluded_sites:
         return
@@ -333,6 +361,17 @@ def remove_excluded_sites(site_data, excluded_sites):
     excluded = {site.lower() for site in excluded_sites}
     for site_name in list(site_data.keys()):
         if site_name.lower() in excluded:
+            site_data.pop(site_name, None)
+
+
+def remove_excluded_tagged_sites(site_data, excluded_tags):
+    if not excluded_tags:
+        return
+
+    excluded = set(excluded_tags)
+    for site_name, site in list(site_data.items()):
+        site_tags = {str(tag).lower() for tag in getattr(site, "tags", [])}
+        if site_tags.intersection(excluded):
             site_data.pop(site_name, None)
 
 

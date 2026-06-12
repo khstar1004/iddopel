@@ -5,6 +5,7 @@ import {
   parseMaigretSimpleReport,
   resolveBoostTagSpecs,
   resolveExcludedSiteNames,
+  resolveExcludedTags,
   resolvePrioritySiteNames,
   runMaigretScan
 } from "./maigret-adapter";
@@ -144,6 +145,13 @@ describe("parseMaigretSimpleReport", () => {
         site: {
           tags: ["coding"]
         }
+      },
+      APClips: {
+        username: "randomadult",
+        url_user: "https://apclips.com/randomadult",
+        site: {
+          tags: ["porn", "video"]
+        }
       }
     });
 
@@ -172,11 +180,13 @@ describe("Maigret CLI quality options", () => {
   const originalPrioritySites = process.env.MAIGRET_PRIORITY_SITES;
   const originalBoostTags = process.env.MAIGRET_BOOST_TAGS;
   const originalExcludedSites = process.env.MAIGRET_EXCLUDED_SITES;
+  const originalExcludedTags = process.env.MAIGRET_EXCLUDED_TAGS;
 
   afterEach(() => {
     restoreEnv("MAIGRET_PRIORITY_SITES", originalPrioritySites);
     restoreEnv("MAIGRET_BOOST_TAGS", originalBoostTags);
     restoreEnv("MAIGRET_EXCLUDED_SITES", originalExcludedSites);
+    restoreEnv("MAIGRET_EXCLUDED_TAGS", originalExcludedTags);
   });
 
   it("keeps high-demand social platforms in the priority scan scope", () => {
@@ -233,7 +243,9 @@ describe("Maigret CLI quality options", () => {
         "--tags",
         "kr,social,photo,video,blog,coding,music,design,streaming,messaging",
         "--top-sites",
-        "173"
+        "173",
+        "--exclude-tags",
+        "porn"
       ])
     );
     expect(args).not.toContain("--site");
@@ -246,6 +258,14 @@ describe("Maigret CLI quality options", () => {
 
     process.env.MAIGRET_EXCLUDED_SITES = "";
     expect(resolveExcludedSiteNames()).toEqual([]);
+  });
+
+  it("excludes adult-tagged Maigret sites by default while keeping an escape hatch", () => {
+    delete process.env.MAIGRET_EXCLUDED_TAGS;
+    expect(resolveExcludedTags()).toEqual(["porn"]);
+
+    process.env.MAIGRET_EXCLUDED_TAGS = "";
+    expect(resolveExcludedTags()).toEqual([]);
   });
 });
 
