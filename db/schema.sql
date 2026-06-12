@@ -16,6 +16,8 @@ create table if not exists scan_jobs (
   country_distribution jsonb not null,
   category_distribution jsonb not null,
   preview_results jsonb not null,
+  free_preview_locked boolean not null default false,
+  free_preview_lock_reason text,
   results jsonb not null,
   maigret_report_html text,
   maigret_report_filename text,
@@ -28,7 +30,9 @@ create table if not exists scan_jobs (
 alter table if exists scan_jobs
   add column if not exists maigret_report_html text,
   add column if not exists maigret_report_filename text,
-  add column if not exists maigret_report_generated_at timestamptz;
+  add column if not exists maigret_report_generated_at timestamptz,
+  add column if not exists free_preview_locked boolean not null default false,
+  add column if not exists free_preview_lock_reason text;
 
 create index if not exists scan_jobs_expires_at_idx on scan_jobs (expires_at);
 create index if not exists scan_jobs_username_created_at_idx on scan_jobs (username, created_at desc);

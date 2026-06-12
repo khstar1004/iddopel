@@ -124,10 +124,12 @@ export function createScanJobFromResults(
 
 export function publicSummary(job: ScanJob) {
   const { maigretReport: _maigretReport, results: _results, ...summary } = job;
+  const freePreviewLocked = Boolean(job.freePreviewLocked);
+
   return {
     ...summary,
-    previewResults: publicPreviewResultsFor(job.results),
-    lockedResults: lockedPreviewResultsFor(job.results)
+    previewResults: freePreviewLocked ? [] : publicPreviewResultsFor(job.results),
+    lockedResults: lockedPreviewResultsFor(job.results, { includeFreePreview: freePreviewLocked })
   };
 }
 
@@ -143,12 +145,18 @@ export function publicPreviewResultsFor(results: ScanResult[]) {
   return freePreviewResultsFor(results).map(publicScanResultForPreview);
 }
 
-export function lockedResultsCountFor(results: ScanResult[]) {
-  return Math.max(0, foundScanResults(results).length - freePreviewResultsFor(results).length);
+export function lockedResultsCountFor(results: ScanResult[], options: { includeFreePreview?: boolean } = {}) {
+  const visibleCount = options.includeFreePreview ? 0 : freePreviewResultsFor(results).length;
+  return Math.max(0, foundScanResults(results).length - visibleCount);
 }
 
-export function lockedPreviewResultsFor(results: ScanResult[]): LockedScanResultPreview[] {
-  const previewIds = new Set(freePreviewResultsFor(results).map((result) => result.id));
+export function lockedPreviewResultsFor(
+  results: ScanResult[],
+  options: { includeFreePreview?: boolean } = {}
+): LockedScanResultPreview[] {
+  const previewIds = options.includeFreePreview
+    ? new Set<string>()
+    : new Set(freePreviewResultsFor(results).map((result) => result.id));
 
   return foundScanResults(results)
     .filter((result) => !previewIds.has(result.id))

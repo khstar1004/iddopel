@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
-  UserRound
+  UserRound,
+  X
 } from "lucide-react";
 import { FormEvent, type MouseEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -28,18 +29,24 @@ import {
   scoreTone,
   type Locale
 } from "@/lib/labels";
-import type { LockedScanResultPreview, PublicMonitoringSubscription, ScanResult, ScanSummary } from "@/lib/types";
+import type { LockedScanResultPreview, PublicMonitoringSubscription, ScanPurpose, ScanResult, ScanSummary } from "@/lib/types";
 import {
+  filterScanResults,
+  formatExpirationStatus,
+  formatNextRunStatus,
   parseMonitoringDraft,
+  prioritizeScanResults,
   resultInsightTone,
+  resultRiskSummary,
   scanErrorPresentation,
   topDistributionEntries,
+  type ResultFilter,
   type ScanErrorPresentation as ScanErrorState
 } from "@/lib/user-experience";
 import { normalizeUsername } from "@/lib/validation";
 import { BrandIcon } from "./BrandIcon";
 import { devAdminTokenKey, getOrCreateFreeScanOwnerToken } from "./client-tokens";
-import { pendingMonitoringKey } from "./paid-monitoring-client";
+import { pendingMonitoringKey, readPaidReportAccess, removePaidReportAccess } from "./paid-monitoring-client";
 import { ScanEyeLoader } from "./ScanEyeLoader";
 
 interface StoredScan extends ScanSummary {
@@ -51,6 +58,8 @@ interface ResultsResponse {
   access: "FULL" | "PREVIEW" | "LOCKED";
   lockedCount: number;
   lockedResults?: LockedScanResultPreview[];
+  freePreviewLocked?: boolean;
+  freePreviewLockReason?: string;
   maigretReportAvailable?: boolean;
   maigretReportFilename?: string;
   results: ScanResult[];
@@ -69,6 +78,8 @@ const freeDetailOwnerTokenKey = "id-doppelganger-free-detail-owner-token";
 const freeDetailUsedScanIdKey = "id-doppelganger-free-detail-used-scan-id";
 const devAdminLogoClickWindowMs = 2500;
 const localeStorageKey = "id-doppelganger-locale";
+const scanPurposeOptions: ScanPurpose[] = ["SELF_CHECK", "BRAND_CHECK", "NICKNAME_CHECK"];
+const resultFilterOptions: ResultFilter[] = ["ALL", "HIGH_RISK", "KR", "GLOBAL"];
 const scanExperienceCopy = {
   ko: {
     brandName: "ID 도플갱어",
@@ -97,8 +108,13 @@ const scanExperienceCopy = {
       acknowledgement: "정당한 목적으로 공개 아이디 사용 현황을 점검해요.",
       safetyNote: "실명, 전화번호, 이메일 검색은 지원하지 않아요. 같은 사람이라고 단정하지 않아요.",
       withoutAt: (value: string) => `@ 없이 ${value}로 점검돼요.`,
-      examples: ["creator_id", "brand.name", "my-handle"],
-      expected: ["공개 프로필 후보 먼저 확인", "상세 URL은 잠금 상태로 미리보기", "검색 기록은 이 브라우저에만 저장"],
+      clearInput: "아이디 입력 지우기",
+      purposeLabel: "점검 목적",
+      purposeOptions: {
+        SELF_CHECK: { label: "내 아이디", description: "개인 흔적 확인" },
+        BRAND_CHECK: { label: "브랜드", description: "상표·서비스명 점검" },
+        NICKNAME_CHECK: { label: "닉네임", description: "활동명·핸들 확인" }
+      },
       ready: "검색 준비가 끝났어요.",
       blocker: {
         empty: "3자 이상 공개 아이디를 입력해 주세요.",
@@ -119,9 +135,7 @@ const scanExperienceCopy = {
       heading: (summary: ScanSummary | null) => summary ? `${summary.username}로 찾은 공개 흔적` : "아이디를 입력하면 결과가 바로 떠요",
       delete: "기록 삭제",
       emptyTitle: "아직 검색한 아이디가 없어요",
-      emptyDescription: "아이디 하나를 입력하면 공개 프로필 후보, 잠긴 상세 URL 수, 노출 점수를 한 화면에서 볼 수 있어요.",
-      emptyExamplesLabel: "예시로 채우기",
-      emptyExamples: ["creator_id", "brand.name", "my-handle"],
+      emptyDescription: "아이디를 검색하면 공개 흔적 결과를 한 화면에서 볼 수 있어요.",
       emptySteps: ["아이디 입력", "공개 흔적 확인", "필요한 결과만 저장"],
       sourceBadge: "공개 흔적",
       previewTitle: (summary: ScanSummary) =>
@@ -146,8 +160,7 @@ const scanExperienceCopy = {
       rarity: "희소성",
       exposure: "노출도",
       impersonation: "사칭 가능성",
-      cleanup: "방치 계정 위험"
-      ,
+      cleanup: "방치 계정 위험",
       insightLabel: "빠른 해석",
       insight: {
         high: {
@@ -168,17 +181,41 @@ const scanExperienceCopy = {
       },
       snapshotLabel: "핵심 분포",
       topCountries: "주요 국가",
-      topCategories: "주요 카테고리"
+      topCategories: "주요 카테고리",
+      riskOverview: "위험 요약",
+      riskHigh: "높음",
+      riskMedium: "중간",
+      riskLow: "낮음",
+      topRiskPlatforms: "우선 확인",
+      noHighRisk: "높은 위험 후보 없음",
+      lifecycle: "결과 보관",
+      createdAt: "생성",
+      finishedAt: "완료",
+      purpose: "목적"
     },
     preview: {
       fullReport: "정밀 리포트 열기",
       checkout: "전체 리포트 보기",
       noResults: "무료 점검에서 바로 보이는 공개 흔적이 없어요.",
+      lockedPreviewTitle: "검색은 완료됐고 결과가 잠겨 있어요.",
+      lockedPreviewDescription: "발견된 후보를 모자이크로 먼저 보여드려요. 정확한 URL과 정리 가이드는 정밀 리포트에서 열 수 있어요.",
       loading: "상세 결과 확인 중",
+      filtersLabel: "결과 필터",
+      filters: {
+        ALL: "전체",
+        HIGH_RISK: "고위험",
+        KR: "한국",
+        GLOBAL: "글로벌"
+      },
+      showingCount: (shown: number, total: number) => `${shown}/${total}개 표시`,
+      filteredEmpty: "선택한 필터에 맞는 열린 결과가 없어요.",
       lockedLabel: "잠긴 상세 결과",
       lockedResult: (index: number) => `잠긴 공개 흔적 #${index}`,
       lockedDescription: "URL, 위험도, 정리 가이드 잠김",
       fullOpen: (count: number) => `${count}개 상세 결과가 열렸어요.`,
+      openVisibleLinks: "무료 링크 5개 열기",
+      visibleLinksTitle: "먼저 열린 링크부터 직접 확인해보세요",
+      visibleLinksDescription: (count: number) => `무료로 열린 ${count}개 링크는 결제 없이 바로 새 탭에서 확인할 수 있어요.`,
       freeUsedLead: "1회 무료 상세 결과를 이미 사용했어요. ",
       lockedCount: (count: number) => `상세 URL ${count}개 잠김`,
       ordering: "주문 만드는 중",
@@ -269,6 +306,7 @@ const scanExperienceCopy = {
       paywallPreview: "정밀 리포트 잠김",
       freeDetail: "1회 무료 상세 결과",
       freeDetailAgain: "1회 무료 상세 결과 다시 보기",
+      paidReport: "결제 완료 리포트",
       fullOpen: "전체 결과 열림",
       lockedUrl: "상세 URL 잠김"
     },
@@ -327,8 +365,13 @@ const scanExperienceCopy = {
       acknowledgement: "I am checking public username usage for a legitimate purpose.",
       safetyNote: "Real-name, phone, and email search are not supported. We do not claim accounts belong to the same person.",
       withoutAt: (value: string) => `We'll check ${value} without the @ sign.`,
-      examples: ["creator_id", "brand.name", "my-handle"],
-      expected: ["See public profile candidates first", "Preview how many detailed URLs are locked", "History stays in this browser"],
+      clearInput: "Clear username input",
+      purposeLabel: "Check purpose",
+      purposeOptions: {
+        SELF_CHECK: { label: "My username", description: "Personal trace check" },
+        BRAND_CHECK: { label: "Brand", description: "Brand or product name" },
+        NICKNAME_CHECK: { label: "Nickname", description: "Alias or handle check" }
+      },
       ready: "Ready to search.",
       blocker: {
         empty: "Enter a public username with at least 3 characters.",
@@ -349,9 +392,7 @@ const scanExperienceCopy = {
       heading: (summary: ScanSummary | null) => summary ? `Public traces found for ${summary.username}` : "Enter a username to see results",
       delete: "Delete record",
       emptyTitle: "No username searched yet",
-      emptyDescription: "Enter one username to see public profile candidates, locked detailed URL counts, and exposure scores in one place.",
-      emptyExamplesLabel: "Fill an example",
-      emptyExamples: ["creator_id", "brand.name", "my-handle"],
+      emptyDescription: "Search a username to see public trace results in one place.",
       emptySteps: ["Enter username", "Check public traces", "Save only what matters"],
       sourceBadge: "Public trace",
       previewTitle: (summary: ScanSummary) =>
@@ -397,17 +438,41 @@ const scanExperienceCopy = {
       },
       snapshotLabel: "Key distribution",
       topCountries: "Top countries",
-      topCategories: "Top categories"
+      topCategories: "Top categories",
+      riskOverview: "Risk overview",
+      riskHigh: "High",
+      riskMedium: "Medium",
+      riskLow: "Low",
+      topRiskPlatforms: "Review first",
+      noHighRisk: "No high-risk candidates",
+      lifecycle: "Result retention",
+      createdAt: "Created",
+      finishedAt: "Finished",
+      purpose: "Purpose"
     },
     preview: {
       fullReport: "Open detailed report",
       checkout: "View full report",
       noResults: "No public account candidates were found in the free check.",
+      lockedPreviewTitle: "Search completed. Results are locked.",
+      lockedPreviewDescription: "We show the discovered candidates as a mosaic first. Exact URLs and cleanup guidance open in the detailed report.",
       loading: "Checking detailed access",
+      filtersLabel: "Result filters",
+      filters: {
+        ALL: "All",
+        HIGH_RISK: "High risk",
+        KR: "Korea",
+        GLOBAL: "Global"
+      },
+      showingCount: (shown: number, total: number) => `${shown}/${total} shown`,
+      filteredEmpty: "No open results match this filter.",
       lockedLabel: "Locked detailed results",
       lockedResult: (index: number) => `Public account candidate #${index}`,
       lockedDescription: "URL, risk, and cleanup guide locked",
       fullOpen: (count: number) => `${count} detailed results are open.`,
+      openVisibleLinks: "Open 5 free links",
+      visibleLinksTitle: "Check the opened links first",
+      visibleLinksDescription: (count: number) => `${count} free links can be opened in new tabs before payment.`,
       freeUsedLead: "You already used the one-time free detailed result. ",
       lockedCount: (count: number) => `${count} detailed URLs locked`,
       ordering: "Creating order",
@@ -498,6 +563,7 @@ const scanExperienceCopy = {
       paywallPreview: "Detailed report locked",
       freeDetail: "One-time free detailed result",
       freeDetailAgain: "View one-time free detailed result again",
+      paidReport: "Paid report restored",
       fullOpen: "Full results open",
       lockedUrl: "Detailed URL locked"
     },
@@ -555,7 +621,7 @@ type LocalizedLabelSets = {
 interface MonitoringRegistrationRequest {
   ownerToken?: string;
   usernames: string[];
-  purpose: "SELF_CHECK";
+  purpose: ScanPurpose;
 }
 
 function isLocale(value: string | null | undefined): value is Locale {
@@ -626,6 +692,7 @@ function formatDateTime(value: string, locale: Locale) {
 export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {}) {
   const [locale, setLocale] = useState<Locale>(initialLocale ?? "ko");
   const [username, setUsername] = useState("");
+  const [scanPurpose, setScanPurpose] = useState<ScanPurpose>("SELF_CHECK");
   const [acknowledged, setAcknowledged] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -771,15 +838,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     }
   }
 
-  function selectUsernameExample(nextUsername: string) {
-    setUsername(nextUsername);
-    setScanError(null);
-    window.setTimeout(() => {
-      document.querySelector<HTMLInputElement>("#username")?.focus();
-      document.querySelector("#scan")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
-  }
-
   function handleBrandClick(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
 
@@ -838,7 +896,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
           "x-scan-owner-token": scanOwnerToken,
           ...devAdminHeaders(devAdminToken)
         },
-        body: JSON.stringify({ username: normalizedUsername, purpose: "SELF_CHECK", mode: "quick" })
+        body: JSON.stringify({ username: normalizedUsername, purpose: scanPurpose, mode: "quick" })
       });
 
       const body = await response.json();
@@ -928,6 +986,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   function restoreScanFromHistory(item: StoredScan) {
     setSummary(item);
     setUsername(item.username);
+    setScanPurpose(item.purpose);
     setScanError(null);
     focusResultsSection();
   }
@@ -954,7 +1013,11 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     setIsSavingMonitoring(true);
 
     const ownerToken = window.localStorage.getItem(monitoringOwnerTokenKey) ?? undefined;
-    const payload: MonitoringRegistrationRequest = { ownerToken, usernames: monitoringDraft.usernames, purpose: "SELF_CHECK" };
+    const payload: MonitoringRegistrationRequest = {
+      ownerToken,
+      usernames: monitoringDraft.usernames,
+      purpose: summary?.purpose ?? scanPurpose
+    };
 
     try {
       const response = await fetch("/api/monitoring", {
@@ -1132,17 +1195,33 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
 
           <div className="field-stack">
             <label htmlFor="username">{copy.form.label}</label>
-            <input
-              id="username"
-              aria-label={copy.form.ariaLabel}
-              className="id-input"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              placeholder={copy.form.placeholder}
-              autoComplete="off"
-              inputMode="text"
-              maxLength={30}
-            />
+            <div className="input-shell">
+              <input
+                id="username"
+                aria-label={copy.form.ariaLabel}
+                className="id-input"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder={copy.form.placeholder}
+                autoComplete="off"
+                inputMode="text"
+                maxLength={30}
+              />
+              {username ? (
+                <button
+                  aria-label={copy.form.clearInput}
+                  className="clear-input-button"
+                  type="button"
+                  onClick={() => {
+                    setUsername("");
+                    setScanError(null);
+                    document.querySelector<HTMLInputElement>("#username")?.focus();
+                  }}
+                >
+                  <X size={16} aria-hidden />
+                </button>
+              ) : null}
+            </div>
             <div className="input-meta-row">
               <span>{copy.form.charCount((normalizedUsernamePreview ?? username.trim().replace(/^@+/, "")).length)}</span>
               {normalizedUsernamePreview ? <span>{copy.form.withoutAt(normalizedUsernamePreview)}</span> : null}
@@ -1152,19 +1231,32 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                 {usernameValidationMessage}
               </p>
             ) : null}
-            <div className="example-chip-list" aria-label={copy.results.emptyExamplesLabel}>
-              {copy.form.examples.map((example) => (
-                <button className="example-chip" key={example} type="button" onClick={() => selectUsernameExample(example)}>
-                  {example}
-                </button>
+          </div>
+
+          <fieldset className="purpose-selector">
+            <legend>{copy.form.purposeLabel}</legend>
+            <div className="purpose-option-list">
+              {scanPurposeOptions.map((purpose) => (
+                <label data-active={scanPurpose === purpose ? "true" : "false"} key={purpose}>
+                  <input
+                    type="radio"
+                    name="scan-purpose"
+                    value={purpose}
+                    checked={scanPurpose === purpose}
+                    onChange={() => setScanPurpose(purpose)}
+                  />
+                  <span>
+                    <strong>{copy.form.purposeOptions[purpose].label}</strong>
+                    <small>{copy.form.purposeOptions[purpose].description}</small>
+                  </span>
+                </label>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           {history.length > 0 ? (
             <div className="quick-history" aria-label={copy.history.quickTitle}>
               <span className="quick-history-label">
-                <History size={14} aria-hidden />
                 {copy.history.quickTitle}
               </span>
               <div className="quick-history-list">
@@ -1177,21 +1269,11 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                     onClick={() => restoreScanFromHistory(item)}
                   >
                     <strong>{item.username}</strong>
-                    <span>{copy.history.meta(item.foundCount, item.rarityScore)}</span>
                   </button>
                 ))}
               </div>
             </div>
           ) : null}
-
-          <ul className="scan-expectation-list">
-            {copy.form.expected.map((item) => (
-              <li key={item}>
-                <CheckCircle2 size={15} aria-hidden />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
 
           <label className="check-row">
             <input
@@ -1304,7 +1386,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
               locale={locale}
             />
           ) : (
-            <EmptyResultPreview copy={copy} onExampleSelect={selectUsernameExample} />
+            <EmptyResultPreview copy={copy} />
           )}
         </div>
       </section>
@@ -1414,6 +1496,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                 <div className="mini-card">
                   <p>{copy.monitoring.nextRun}</p>
                   <strong>{new Date(monitoring.nextRunAt).toLocaleDateString(locale === "en" ? "en-US" : "ko-KR")}</strong>
+                  <small className="mini-card-helper">{formatNextRunStatus(monitoring.nextRunAt, new Date(), locale)}</small>
                 </div>
                 <div className="mini-card">
                   <p>{copy.monitoring.lastRun}</p>
@@ -1422,6 +1505,10 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                       ? new Date(monitoring.lastRunAt).toLocaleDateString(locale === "en" ? "en-US" : "ko-KR")
                       : copy.monitoring.noneYet}
                   </strong>
+                </div>
+                <div className="mini-card">
+                  <p>{copy.results.purpose}</p>
+                  <strong>{copy.form.purposeOptions[monitoring.purpose]?.label ?? monitoring.purpose}</strong>
                 </div>
                 <MonitoringLatestScans copy={copy} locale={locale} monitoring={monitoring} onOpenScan={openMonitoringScan} />
                 <div className="mini-card monitoring-delivery-note">
@@ -1434,7 +1521,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                 </button>
               </div>
             ) : (
-              <p style={{ color: "#6b7684", lineHeight: 1.65, margin: "14px 0 0" }}>
+              <p style={{ color: "#5f6b7a", lineHeight: 1.65, margin: "14px 0 0" }}>
                 {copy.monitoring.empty}
               </p>
             )}
@@ -1456,7 +1543,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
             </div>
             <div className="history-list" style={{ marginTop: 14 }}>
               {history.length === 0 ? (
-                <p style={{ color: "#6b7684", margin: 0 }}>{copy.history.empty}</p>
+                <p style={{ color: "#5f6b7a", margin: 0 }}>{copy.history.empty}</p>
               ) : (
                 history.map((item) => (
                   <div className="history-row" key={item.scanId}>
@@ -1556,6 +1643,9 @@ function ResultDashboard({
   const insight = copy.results.insight[insightTone];
   const topCountries = useMemo(() => topDistributionEntries(summary.countryDistribution, 2), [summary.countryDistribution]);
   const topCategories = useMemo(() => topDistributionEntries(summary.categoryDistribution, 2), [summary.categoryDistribution]);
+  const riskSummary = useMemo(() => resultRiskSummary(activeAccess.results), [activeAccess.results]);
+  const relativeNow = useMemo(() => new Date(), [summary.scanId]);
+  const purposeLabel = copy.form.purposeOptions[summary.purpose]?.label ?? summary.purpose;
 
   useEffect(() => {
     let cancelled = false;
@@ -1686,6 +1776,44 @@ function ResultDashboard({
           labels={labels}
           onOpenFullReport={openFullReport}
         />
+        <div className="result-risk-overview" aria-label={copy.results.riskOverview}>
+          <div className="result-risk-counts">
+            <span data-tone="high">
+              <strong>{riskSummary.high}</strong>
+              {copy.results.riskHigh}
+            </span>
+            <span data-tone="medium">
+              <strong>{riskSummary.medium}</strong>
+              {copy.results.riskMedium}
+            </span>
+            <span data-tone="low">
+              <strong>{riskSummary.low}</strong>
+              {copy.results.riskLow}
+            </span>
+          </div>
+          <div className="result-risk-priority">
+            <strong>{copy.results.topRiskPlatforms}</strong>
+            <span>{riskSummary.topRiskPlatforms.length ? riskSummary.topRiskPlatforms.join(", ") : copy.results.noHighRisk}</span>
+          </div>
+        </div>
+        <div className="result-lifecycle" aria-label={copy.results.lifecycle}>
+          <span>
+            <strong>{copy.results.purpose}</strong>
+            {purposeLabel}
+          </span>
+          <span>
+            <strong>{copy.results.createdAt}</strong>
+            {formatDateTime(summary.createdAt, locale)}
+          </span>
+          <span>
+            <strong>{copy.results.finishedAt}</strong>
+            {summary.finishedAt ? formatDateTime(summary.finishedAt, locale) : "-"}
+          </span>
+          <span>
+            <strong>{copy.results.lifecycle}</strong>
+            {formatExpirationStatus(summary.expiresAt, relativeNow, locale)}
+          </span>
+        </div>
         <div className="result-first-metrics" aria-label={copy.results.metricsLabel}>
           <span>
             <strong>{visibleResultCount}</strong>
@@ -1816,13 +1944,7 @@ function LanguageSwitch({
   );
 }
 
-function EmptyResultPreview({
-  copy,
-  onExampleSelect
-}: {
-  copy: ScanExperienceCopy;
-  onExampleSelect: (username: string) => void;
-}) {
+function EmptyResultPreview({ copy }: { copy: ScanExperienceCopy }) {
   return (
     <div className="dashboard-stack">
       <section className="panel result-first-panel empty-result-panel" aria-label="검색 전 결과 상태">
@@ -1839,13 +1961,6 @@ function EmptyResultPreview({
             </li>
           ))}
         </ol>
-        <div className="empty-result-actions" aria-label={copy.results.emptyExamplesLabel}>
-          {copy.results.emptyExamples.map((example) => (
-            <button className="example-chip" key={example} type="button" onClick={() => onExampleSelect(example)}>
-              {example}
-            </button>
-          ))}
-        </div>
       </section>
     </div>
   );
@@ -1911,6 +2026,7 @@ function ResultPreview({
   labels: LocalizedLabelSets;
   onOpenFullReport: () => void;
 }) {
+  const [resultFilter, setResultFilter] = useState<ResultFilter>("ALL");
   const isFullAccess = detailAccess.access === "FULL";
   const hiddenCount = Math.max(detailAccess.lockedCount, 0);
   const lockedPreviewResults = detailAccess.lockedResults ?? [];
@@ -1921,6 +2037,12 @@ function ResultPreview({
         ? `${detailAccess.description} `
         : "";
   const hasResults = detailAccess.results.length > 0;
+  const hasLockedOnlyResults = !hasResults && hiddenCount > 0;
+  const prioritizedResults = useMemo(() => prioritizeScanResults(detailAccess.results), [detailAccess.results]);
+  const filteredResults = useMemo(
+    () => filterScanResults(prioritizedResults, resultFilter),
+    [prioritizedResults, resultFilter]
+  );
   const hasUnlockableReport = !isFullAccess && (hasResults || hiddenCount > 0);
   const showReportAction = isFullAccess || hasUnlockableReport;
   const ctaLabel = isFullAccess ? copy.preview.fullReport : copy.preview.checkoutWithPrice;
@@ -1932,16 +2054,47 @@ function ResultPreview({
         ? detailAccess.description
         : copy.preview.emptyNoCheckout;
 
+  useEffect(() => {
+    setResultFilter("ALL");
+  }, [detailAccess.scanId]);
+
   return (
-    <div className="result-list" data-result-count={detailAccess.results.length}>
+    <div className="result-list" data-result-count={filteredResults.length}>
       {hasResults ? (
-        detailAccess.results.map((result, index) => (
+        <div className="result-filter-bar" aria-label={copy.preview.filtersLabel}>
+          <div className="result-filter-buttons">
+            {resultFilterOptions.map((filter) => (
+              <button
+                aria-pressed={resultFilter === filter}
+                data-active={resultFilter === filter ? "true" : "false"}
+                key={filter}
+                type="button"
+                onClick={() => setResultFilter(filter)}
+              >
+                {copy.preview.filters[filter]}
+              </button>
+            ))}
+          </div>
+          <span>{copy.preview.showingCount(filteredResults.length, prioritizedResults.length)}</span>
+        </div>
+      ) : null}
+
+      {hasResults ? (
+        filteredResults.length > 0 ? filteredResults.map((result, index) => (
           <RichResultCard copy={copy} index={index} isFullAccess={isFullAccess} key={result.id} labels={labels} result={result} />
-        ))
+        )) : (
+          <div className="locked-results" data-empty="true">
+            <span>{copy.preview.filteredEmpty}</span>
+            <Search size={18} aria-hidden />
+          </div>
+        )
       ) : (
-        <div className="locked-results">
-          <span>{copy.preview.noResults}</span>
-          <CheckCircle2 size={18} aria-hidden />
+        <div className="locked-results" data-empty={!hasLockedOnlyResults}>
+          <span className="locked-results-copy">
+            <strong>{hasLockedOnlyResults ? copy.preview.lockedPreviewTitle : copy.preview.noResults}</strong>
+            {hasLockedOnlyResults ? <span>{copy.preview.lockedPreviewDescription}</span> : null}
+          </span>
+          {hasLockedOnlyResults ? <LockKeyhole size={18} aria-hidden /> : <CheckCircle2 size={18} aria-hidden />}
         </div>
       )}
 
@@ -1949,6 +2102,19 @@ function ResultPreview({
         <div className="detail-access-status" role="status" aria-live="polite">
           <Radar size={17} aria-hidden />
           <span>{copy.preview.loading}</span>
+        </div>
+      ) : null}
+
+      {!isFullAccess && hasResults ? (
+        <div className="preview-open-strip">
+          <div>
+            <strong>{copy.preview.visibleLinksTitle}</strong>
+            <span>{copy.preview.visibleLinksDescription(Math.min(5, detailAccess.results.length))}</span>
+          </div>
+          <button className="secondary-button" type="button" onClick={() => openVisiblePreviewLinks(detailAccess.results)}>
+            <ExternalLink size={16} aria-hidden />
+            {copy.preview.openVisibleLinks}
+          </button>
         </div>
       ) : null}
 
@@ -2374,6 +2540,13 @@ function maskUrlPreview(value: string, copy: ScanExperienceCopy) {
   }
 }
 
+function openVisiblePreviewLinks(results: ScanResult[]) {
+  const urls = [...new Set(results.map((result) => result.url).filter(Boolean))].slice(0, 5);
+  for (const url of urls) {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
 async function loadDevAdminResults(scanId: string, adminToken: string, copy: ScanExperienceCopy): Promise<DetailAccessState> {
   const response = await fetch(`/api/scans/${scanId}/results?access=full`, {
     headers: devAdminHeaders(adminToken)
@@ -2394,6 +2567,24 @@ async function loadDevAdminResults(scanId: string, adminToken: string, copy: Sca
 
 async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExperienceCopy): Promise<DetailAccessState> {
   const scanId = summary.scanId;
+  const paidAccess = readPaidReportAccess(scanId);
+
+  if (paidAccess) {
+    const paidResponse = await fetch(`/api/scans/${scanId}/results?access=full&token=${encodeURIComponent(paidAccess.reportToken)}`);
+    const paidBody = await paidResponse.json().catch(() => null);
+
+    if (paidResponse.ok) {
+      return {
+        ...(paidBody as ResultsResponse),
+        label: copy.detailLabels.paidReport,
+        description: copy.detailLabels.fullOpen,
+        reportToken: paidAccess.reportToken
+      };
+    }
+
+    removePaidReportAccess(scanId);
+  }
+
   const ownerToken = window.localStorage.getItem(freeDetailOwnerTokenKey);
   const usedScanId = window.localStorage.getItem(freeDetailUsedScanIdKey);
 
@@ -2470,6 +2661,8 @@ function previewAccessFromSummary(summary: ScanSummary, copy: ScanExperienceCopy
     access: "PREVIEW",
     lockedCount: Math.max(0, summary.foundCount - summary.previewResults.length),
     lockedResults: summary.lockedResults ?? [],
+    freePreviewLocked: summary.freePreviewLocked,
+    freePreviewLockReason: summary.freePreviewLockReason,
     maigretReportAvailable: summary.maigretReportAvailable,
     maigretReportFilename: summary.maigretReportFilename,
     results: summary.previewResults,

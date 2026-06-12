@@ -29,9 +29,10 @@ export async function GET(request: Request, context: RouteContext) {
   const fullAccess = url.searchParams.get("access") === "full";
   const hasPaidAccess = await canAccessFullReport(scanId, url.searchParams.get("token"), request);
   const foundResults = foundScanResults(job.results);
-  const previewResults = publicPreviewResultsFor(job.results);
-  const lockedCount = lockedResultsCountFor(job.results);
-  const lockedResults = lockedPreviewResultsFor(job.results);
+  const freePreviewLocked = Boolean(job.freePreviewLocked);
+  const previewResults = freePreviewLocked ? [] : publicPreviewResultsFor(job.results);
+  const lockedCount = lockedResultsCountFor(job.results, { includeFreePreview: freePreviewLocked });
+  const lockedResults = lockedPreviewResultsFor(job.results, { includeFreePreview: freePreviewLocked });
 
   if (fullAccess && !hasPaidAccess) {
     return withTossCors(request, NextResponse.json(
@@ -39,6 +40,8 @@ export async function GET(request: Request, context: RouteContext) {
         scanId,
         access: "LOCKED",
         summary: reportSummary(job),
+        freePreviewLocked,
+        freePreviewLockReason: job.freePreviewLockReason,
         lockedCount,
         lockedResults,
         maigretReportAvailable: Boolean(job.maigretReport?.html),
@@ -53,6 +56,8 @@ export async function GET(request: Request, context: RouteContext) {
     scanId,
     access: fullAccess && hasPaidAccess ? "FULL" : "PREVIEW",
     summary: reportSummary(job),
+    freePreviewLocked: fullAccess && hasPaidAccess ? false : freePreviewLocked,
+    freePreviewLockReason: fullAccess && hasPaidAccess ? undefined : job.freePreviewLockReason,
     lockedCount: fullAccess && hasPaidAccess ? 0 : lockedCount,
     lockedResults: fullAccess && hasPaidAccess ? [] : lockedResults,
     maigretReportAvailable: Boolean(job.maigretReport?.html),

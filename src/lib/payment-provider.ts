@@ -41,6 +41,7 @@ export async function attachCheckoutUrl(order: ReportOrder, origin: string): Pro
   }
 
   if (order.provider !== "TOSS") {
+    requireMockPaymentsEnabled();
     return {
       ...order,
       checkoutUrl: `${origin}/checkout/${order.orderId}`
@@ -223,6 +224,16 @@ function requireTossSecretKey() {
   }
 
   return secretKey;
+}
+
+function requireMockPaymentsEnabled() {
+  if (process.env.ENABLE_MOCK_PAYMENTS !== "true") {
+    throw new PaymentProviderError(
+      "PAYMENT_CONFIG_MISSING",
+      "테스트 결제는 로컬/E2E 환경에서만 사용할 수 있어요. 운영 결제 Provider를 설정해 주세요.",
+      503
+    );
+  }
 }
 
 function tossBasicAuth(secretKey: string) {

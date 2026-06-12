@@ -6,6 +6,8 @@ export type ScanStatus = "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED" | "DELETE
 
 export type ScanSource = "PUBLIC_SCAN" | "LOCAL_FALLBACK";
 
+export type FreePreviewLockReason = "BETA_FREE_SCAN_LIMITED";
+
 export type PlatformCategory =
   | "SNS"
   | "BLOG"
@@ -86,6 +88,8 @@ export interface ScanSummary extends ScoreBundle {
   categoryDistribution: Record<string, number>;
   previewResults: ScanResult[];
   lockedResults?: LockedScanResultPreview[];
+  freePreviewLocked?: boolean;
+  freePreviewLockReason?: FreePreviewLockReason;
   scanSource?: ScanSource;
   maigretReportAvailable?: boolean;
   maigretReportFilename?: string;

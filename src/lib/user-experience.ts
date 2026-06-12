@@ -1,8 +1,10 @@
 import { normalizeUsername, ValidationError } from "./validation";
+import type { ScanResult } from "./types";
 
 export type LocaleCode = "ko" | "en";
 export type ResultInsightTone = "low" | "medium" | "high";
 export type ScanErrorTone = "quota" | "busy" | "disabled" | "validation" | "generic";
+export type ResultFilter = "ALL" | "HIGH_RISK" | "KR" | "GLOBAL";
 
 export interface MonitoringDraft {
   usernames: string[];
@@ -23,6 +25,13 @@ export interface ScanErrorPresentation {
   message: string;
   action: string;
   tone: ScanErrorTone;
+}
+
+export interface ResultRiskSummary {
+  high: number;
+  medium: number;
+  low: number;
+  topRiskPlatforms: string[];
 }
 
 export function parseMonitoringDraft(
@@ -185,6 +194,90 @@ export function topDistributionEntries(
     .slice(0, limit);
 }
 
+export function filterScanResults(results: ScanResult[], filter: ResultFilter): ScanResult[] {
+  if (filter === "HIGH_RISK") {
+    return results.filter((result) => result.riskLevel === "HIGH");
+  }
+
+  if (filter === "KR") {
+    return results.filter((result) => result.country === "KR");
+  }
+
+  if (filter === "GLOBAL") {
+    return results.filter((result) => result.country !== "KR");
+  }
+
+  return [...results];
+}
+
+export function prioritizeScanResults(results: ScanResult[]): ScanResult[] {
+  const riskRank: Record<ScanResult["riskLevel"], number> = {
+    HIGH: 0,
+    MEDIUM: 1,
+    LOW: 2,
+  };
+
+  return [...results].sort((a, b) => {
+    const riskDelta = riskRank[a.riskLevel] - riskRank[b.riskLevel];
+    if (riskDelta !== 0) return riskDelta;
+
+    const rankDelta = (a.rank ?? Number.MAX_SAFE_INTEGER) - (b.rank ?? Number.MAX_SAFE_INTEGER);
+    if (rankDelta !== 0) return rankDelta;
+
+    return a.platform.localeCompare(b.platform);
+  });
+}
+
+export function resultRiskSummary(results: ScanResult[]): ResultRiskSummary {
+  const summary: ResultRiskSummary = {
+    high: 0,
+    medium: 0,
+    low: 0,
+    topRiskPlatforms: [],
+  };
+
+  for (const result of results) {
+    if (result.riskLevel === "HIGH") summary.high += 1;
+    if (result.riskLevel === "MEDIUM") summary.medium += 1;
+    if (result.riskLevel === "LOW") summary.low += 1;
+  }
+
+  summary.topRiskPlatforms = prioritizeScanResults(results)
+    .filter((result) => result.riskLevel === "HIGH")
+    .slice(0, 3)
+    .map((result) => result.platform);
+
+  return summary;
+}
+
+export function formatExpirationStatus(value: string, now: Date, locale: LocaleCode): string {
+  const days = daysUntil(value, now);
+
+  if (days === null || days < 0) {
+    return locale === "ko" ? "만료됨" : "Expired";
+  }
+
+  if (days === 0) {
+    return locale === "ko" ? "오늘 만료" : "Expires today";
+  }
+
+  return locale === "ko"
+    ? `${days}일 후 만료`
+    : `Expires in ${days} ${days === 1 ? "day" : "days"}`;
+}
+
+export function formatNextRunStatus(value: string, now: Date, locale: LocaleCode): string {
+  const days = daysUntil(value, now);
+
+  if (days === null || days <= 0) {
+    return locale === "ko" ? "오늘 재점검 예정" : "Recheck due today";
+  }
+
+  return locale === "ko"
+    ? `다음 재점검까지 ${days}일`
+    : `Next recheck in ${days} ${days === 1 ? "day" : "days"}`;
+}
+
 export function resultInsightTone(scores: {
   exposureScore: number;
   impersonationRiskScore?: number;
@@ -217,4 +310,21 @@ function formatShortDateTime(value: string, locale: LocaleCode): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function daysUntil(value: string, now: Date): number | null {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const diffMs = date.getTime() - now.getTime();
+
+  if (diffMs >= 0 && diffMs < msPerDay) {
+    return 0;
+  }
+
+  return Math.ceil(diffMs / msPerDay);
 }

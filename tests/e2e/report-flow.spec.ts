@@ -50,7 +50,9 @@ test("paid report entitlement unlocks browser report and downloads", async ({ pa
 
     await page.goto(payment.reportUrl);
     await expect(page.getByRole("heading", { name: "정밀 리포트" })).toBeVisible();
-    await expect(page.getByText(new RegExp(`공개 흔적\\s*${fullReport.results.length}개`))).toBeVisible();
+    const reportSummary = page.getByLabel("정밀 리포트 결과 요약");
+    await expect(reportSummary).toContainText("발견 결과");
+    await expect(reportSummary).toContainText(`${fullReport.results.length}개`);
     await expect(page.getByRole("heading", { name: "아이디가 남은 플랫폼" })).toBeVisible();
     await expect(page.getByRole("link", { name: /PDF 리포트 다운로드/ })).toBeVisible();
     const reportFrame = page.frameLocator('iframe[title="HTML 리포트 미리보기"]');

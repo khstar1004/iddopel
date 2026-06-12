@@ -55,27 +55,17 @@ export async function POST(request: Request) {
         ? null
         : await consumeBetaScanQuota(request, request.headers.get("x-scan-owner-token"), settings);
 
-      if (quota && !quota.allowed) {
-        const retryAfterSeconds = String(quota.retryAfterSeconds ?? 3600);
-        const response = jsonError(
-          "BETA_FREE_SCAN_LIMITED",
-          `베타 무료검색은 ${quota.limit}회까지 가능해요. ${retryAfterSeconds}초 후 다시 시도해 주세요.`,
-          429,
-          {
-            limit: quota.limit,
-            used: quota.used,
-            remaining: quota.remaining,
-            resetAt: quota.resetAt
-          }
-        );
-        response.headers.set("Retry-After", retryAfterSeconds);
-        setQuotaHeaders(response, quota);
-        return withTossCors(request, response);
-      }
-
-      const job = await createStoredScan(input, { origin: new URL(request.url).origin });
+      const freePreviewLocked = Boolean(quota && !quota.allowed);
+      const job = await createStoredScan(input, {
+        origin: new URL(request.url).origin,
+        freePreviewLocked,
+        freePreviewLockReason: freePreviewLocked ? "BETA_FREE_SCAN_LIMITED" : undefined
+      });
       const response = NextResponse.json(publicScanResponse(job), { status: 201 });
       if (quota) setQuotaHeaders(response, quota);
+      if (freePreviewLocked) {
+        response.headers.set("x-beta-free-preview-locked", "true");
+      }
       return withTossCors(request, response);
     } finally {
       await loadLease?.release?.();

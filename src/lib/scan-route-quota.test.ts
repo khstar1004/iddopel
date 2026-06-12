@@ -25,7 +25,7 @@ describe("scan route beta free quota", () => {
     resetBetaScanQuotaStoresForTests(null, null);
   });
 
-  it("allows only the configured number of beta free searches per request identity", async () => {
+  it("allows beta searches after the free preview quota is used and locks the preview", async () => {
     process.env.SCAN_PROVIDER = "mock";
     process.env.BETA_FREE_SCAN_LIMIT = "1";
     process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
@@ -43,12 +43,17 @@ describe("scan route beta free quota", () => {
 
     expect(first.status).toBe(201);
     expect(first.headers.get("x-beta-free-scans-remaining")).toBe("0");
-    expect(second.status).toBe(429);
-    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(second.status).toBe(201);
+    expect(second.headers.get("x-beta-free-scans-remaining")).toBe("0");
+    expect(second.headers.get("x-beta-free-preview-locked")).toBe("true");
+    expect(secondBody.freePreviewLocked).toBe(true);
+    expect(secondBody.freePreviewLockReason).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(secondBody.previewResults).toEqual([]);
+    expect(secondBody.lockedResults.length).toBeGreaterThan(0);
     await rm(dir, { recursive: true, force: true });
   });
 
-  it("allows only the configured number of beta free searches per owner token", async () => {
+  it("locks free previews after the configured number of beta searches per owner token", async () => {
     process.env.SCAN_PROVIDER = "mock";
     process.env.BETA_FREE_SCAN_LIMIT = "1";
     process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
@@ -65,8 +70,9 @@ describe("scan route beta free quota", () => {
     const secondBody = await second.json();
 
     expect(first.status).toBe(201);
-    expect(second.status).toBe(429);
-    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(second.status).toBe(201);
+    expect(secondBody.freePreviewLocked).toBe(true);
+    expect(secondBody.previewResults).toEqual([]);
     await rm(dir, { recursive: true, force: true });
   });
 

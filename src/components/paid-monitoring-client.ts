@@ -2,12 +2,22 @@
 
 export const pendingMonitoringKey = "id-doppelganger-pending-monitoring";
 export const monitoringOwnerTokenKey = "id-doppelganger-monitoring-owner-token";
+export const paidReportAccessKey = "id-doppelganger-paid-report-access";
 
 export interface PaymentAccessResponse {
   orderId: string;
+  scanId?: string;
   productId?: string;
   reportUrl?: string;
   reportToken: string;
+}
+
+export interface StoredPaidReportAccess {
+  orderId: string;
+  reportToken: string;
+  reportUrl: string;
+  savedAt: string;
+  scanId: string;
 }
 
 interface PendingMonitoringRegistration {
@@ -19,6 +29,31 @@ interface PendingMonitoringRegistration {
 
 export function isMonthlyMonitoringPayment(payment: PaymentAccessResponse) {
   return payment.productId === "MONTHLY_MONITORING";
+}
+
+export function storePaidReportAccess(payment: PaymentAccessResponse) {
+  if (isMonthlyMonitoringPayment(payment) || !payment.reportToken || !payment.reportUrl) return;
+
+  const scanId = payment.scanId ?? scanIdFromReportUrl(payment.reportUrl);
+  if (!scanId) return;
+
+  const nextAccess: StoredPaidReportAccess = {
+    orderId: payment.orderId,
+    reportToken: payment.reportToken,
+    reportUrl: payment.reportUrl,
+    savedAt: new Date().toISOString(),
+    scanId
+  };
+  const existing = readPaidReportAccessList().filter((item) => item.scanId !== scanId && item.orderId !== payment.orderId);
+  writePaidReportAccessList([nextAccess, ...existing].slice(0, 20));
+}
+
+export function readPaidReportAccess(scanId: string): StoredPaidReportAccess | null {
+  return readPaidReportAccessList().find((item) => item.scanId === scanId) ?? null;
+}
+
+export function removePaidReportAccess(scanId: string) {
+  writePaidReportAccessList(readPaidReportAccessList().filter((item) => item.scanId !== scanId));
 }
 
 export async function registerPaidMonitoringFromPayment(payment: PaymentAccessResponse) {
@@ -71,6 +106,42 @@ function readPendingMonitoringRegistration(orderId: string): PendingMonitoringRe
       usernames: parsed.usernames,
       purpose: parsed.purpose
     };
+  } catch {
+    return null;
+  }
+}
+
+function readPaidReportAccessList(): StoredPaidReportAccess[] {
+  const raw = window.localStorage.getItem(paidReportAccessKey);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.filter((item): item is StoredPaidReportAccess => (
+      item &&
+      typeof item === "object" &&
+      typeof item.orderId === "string" &&
+      typeof item.reportToken === "string" &&
+      typeof item.reportUrl === "string" &&
+      typeof item.savedAt === "string" &&
+      typeof item.scanId === "string"
+    ));
+  } catch {
+    return [];
+  }
+}
+
+function writePaidReportAccessList(items: StoredPaidReportAccess[]) {
+  window.localStorage.setItem(paidReportAccessKey, JSON.stringify(items));
+}
+
+function scanIdFromReportUrl(reportUrl: string) {
+  try {
+    const url = new URL(reportUrl, window.location.origin);
+    const match = url.pathname.match(/^\/reports\/([^/]+)$/);
+    return match ? decodeURIComponent(match[1]) : null;
   } catch {
     return null;
   }

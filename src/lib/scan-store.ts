@@ -1,15 +1,21 @@
 import { publicSummary } from "./scanner";
 import { getScanRepository } from "./repository";
 import { runScan } from "./scan-runner";
-import type { CreateScanInput, ScanJob } from "./types";
+import type { CreateScanInput, FreePreviewLockReason, ScanJob } from "./types";
 
 interface CreateStoredScanOptions {
   origin?: string;
+  freePreviewLocked?: boolean;
+  freePreviewLockReason?: FreePreviewLockReason;
 }
 
 export async function createStoredScan(input: CreateScanInput, options: CreateStoredScanOptions = {}): Promise<ScanJob> {
   const job = await runScan(input, { origin: options.origin });
-  return getScanRepository().create(job);
+  return getScanRepository().create({
+    ...job,
+    freePreviewLocked: options.freePreviewLocked,
+    freePreviewLockReason: options.freePreviewLockReason
+  });
 }
 
 export function getStoredScan(scanId: string): Promise<ScanJob | null> {

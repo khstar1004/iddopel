@@ -9,13 +9,25 @@ describe("attachCheckoutUrl", () => {
     delete process.env.POLAR_PRODUCT_ID;
     delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
     delete process.env.POLAR_SERVER;
+    delete process.env.ENABLE_MOCK_PAYMENTS;
   });
 
   it("returns an absolute checkout URL for mock orders created from a Toss-hosted mini app", async () => {
+    process.env.ENABLE_MOCK_PAYMENTS = "true";
     const order = orderFixture("order_mock", "MOCK");
 
     await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).resolves.toMatchObject({
       checkoutUrl: "https://id-doppelganger.kr/checkout/order_mock"
+    });
+  });
+
+  it("blocks mock checkout URLs unless mock payments are explicitly enabled", async () => {
+    const order = orderFixture("order_mock", "MOCK");
+
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).rejects.toMatchObject({
+      code: "PAYMENT_CONFIG_MISSING",
+      status: 503,
+      message: "테스트 결제는 로컬/E2E 환경에서만 사용할 수 있어요. 운영 결제 Provider를 설정해 주세요."
     });
   });
 
@@ -138,6 +150,7 @@ describe("confirmPolarCheckout", () => {
     delete process.env.POLAR_PRODUCT_ID;
     delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
     delete process.env.POLAR_SERVER;
+    delete process.env.ENABLE_MOCK_PAYMENTS;
   });
 
   it("accepts a succeeded Polar checkout for the matching local order", async () => {

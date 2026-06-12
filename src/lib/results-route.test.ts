@@ -46,6 +46,22 @@ describe("scan results route free preview policy", () => {
     expect(body.results.map((result: { platform: string }) => result.platform)).toEqual(["GitHub"]);
     expect(body.lockedResults.map((result: { platform: string }) => result.platform)).toEqual(["LinkedIn"]);
   });
+
+  it("returns only locked mosaics when the scan used the beta free preview quota", async () => {
+    const scan = { ...staleScanWithLeakedPreview(), freePreviewLocked: true, freePreviewLockReason: "BETA_FREE_SCAN_LIMITED" as const };
+    resetScanRepositoryForTests(new MemoryScanRepository([scan]));
+
+    const response = await GET(resultsRequest(scan.scanId), routeContext(scan.scanId));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.access).toBe("PREVIEW");
+    expect(body.freePreviewLocked).toBe(true);
+    expect(body.lockedCount).toBe(2);
+    expect(body.results).toEqual([]);
+    expect(body.lockedResults.map((result: { platform: string }) => result.platform)).toEqual(["GitHub", "LinkedIn"]);
+    expect(JSON.stringify(body.lockedResults)).not.toContain("https://");
+  });
 });
 
 function staleScanWithLeakedPreview() {

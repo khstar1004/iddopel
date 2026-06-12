@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  filterScanResults,
+  formatExpirationStatus,
+  formatNextRunStatus,
   formatRetryAfter,
   parseMonitoringDraft,
+  prioritizeScanResults,
+  resultRiskSummary,
   resultInsightTone,
   scanErrorPresentation,
   topDistributionEntries,
 } from "./user-experience";
+import type { ScanResult } from "./types";
 
 describe("parseMonitoringDraft", () => {
   it("normalizes, deduplicates, limits, and reports invalid usernames", () => {
@@ -83,5 +89,59 @@ describe("resultInsightTone", () => {
     expect(resultInsightTone({ exposureScore: 82, impersonationRiskScore: 20 })).toBe("high");
     expect(resultInsightTone({ exposureScore: 48, impersonationRiskScore: 20 })).toBe("medium");
     expect(resultInsightTone({ exposureScore: 12, impersonationRiskScore: 20 })).toBe("low");
+  });
+});
+
+const sampleResults = [
+  { id: "1", platform: "GitHub", country: "US", riskLevel: "HIGH", rank: 3 },
+  { id: "2", platform: "Naver", country: "KR", riskLevel: "MEDIUM", rank: 1 },
+  { id: "3", platform: "Blog", country: "KR", riskLevel: "LOW", rank: 2 },
+  { id: "4", platform: "Forum", country: "GLOBAL", riskLevel: "HIGH", rank: 4 },
+] as ScanResult[];
+
+describe("filterScanResults", () => {
+  it("filters by risk and region without mutating the original results", () => {
+    expect(filterScanResults(sampleResults, "HIGH_RISK").map((result) => result.platform)).toEqual(["GitHub", "Forum"]);
+    expect(filterScanResults(sampleResults, "KR").map((result) => result.platform)).toEqual(["Naver", "Blog"]);
+    expect(filterScanResults(sampleResults, "GLOBAL").map((result) => result.platform)).toEqual(["GitHub", "Forum"]);
+    expect(sampleResults.map((result) => result.platform)).toEqual(["GitHub", "Naver", "Blog", "Forum"]);
+  });
+});
+
+describe("prioritizeScanResults", () => {
+  it("sorts high-risk and lower-rank results first", () => {
+    expect(prioritizeScanResults(sampleResults).map((result) => result.platform)).toEqual([
+      "GitHub",
+      "Forum",
+      "Naver",
+      "Blog",
+    ]);
+  });
+});
+
+describe("resultRiskSummary", () => {
+  it("counts risk levels and exposes top risk platforms", () => {
+    expect(resultRiskSummary(sampleResults)).toEqual({
+      high: 2,
+      medium: 1,
+      low: 1,
+      topRiskPlatforms: ["GitHub", "Forum"],
+    });
+  });
+});
+
+describe("relative schedule copy", () => {
+  const now = new Date("2026-06-12T00:00:00.000Z");
+
+  it("formats scan expiration status", () => {
+    expect(formatExpirationStatus("2026-06-14T00:00:00.000Z", now, "ko")).toBe("2일 후 만료");
+    expect(formatExpirationStatus("2026-06-14T00:00:00.000Z", now, "en")).toBe("Expires in 2 days");
+    expect(formatExpirationStatus("2026-06-11T00:00:00.000Z", now, "ko")).toBe("만료됨");
+  });
+
+  it("formats next monitoring run status", () => {
+    expect(formatNextRunStatus("2026-06-17T00:00:00.000Z", now, "ko")).toBe("다음 재점검까지 5일");
+    expect(formatNextRunStatus("2026-06-17T00:00:00.000Z", now, "en")).toBe("Next recheck in 5 days");
+    expect(formatNextRunStatus("2026-06-12T01:00:00.000Z", now, "ko")).toBe("오늘 재점검 예정");
   });
 });

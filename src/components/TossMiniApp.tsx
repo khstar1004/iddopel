@@ -20,11 +20,17 @@ const platformBrandRules: Array<[string, string]> = [
   ["linkedin", "linkedin"],
   ["medium", "medium"]
 ];
+const historyStorageKey = "id-doppelganger-history";
+
+interface StoredScan extends ScanSummary {
+  savedAt: string;
+}
 
 export function TossMiniApp() {
   const [username, setUsername] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [summary, setSummary] = useState<ScanSummary | null>(null);
+  const [history, setHistory] = useState<StoredScan[]>([]);
   const [showFullReport, setShowFullReport] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isOrdering, setIsOrdering] = useState(false);
@@ -32,6 +38,18 @@ export function TossMiniApp() {
   const resultPanelRef = useRef<HTMLElement>(null);
   const usernameValidationMessage = useMemo(() => getUsernameValidationMessage(username), [username]);
   const canSubmit = acknowledged && username.trim().length >= 3 && !usernameValidationMessage && !isLoading;
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(historyStorageKey);
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) setHistory(parsed as StoredScan[]);
+    } catch {
+      window.localStorage.removeItem(historyStorageKey);
+    }
+  }, []);
 
   useEffect(() => {
     if (!summary) return;
@@ -68,12 +86,40 @@ export function TossMiniApp() {
         throw new Error(body?.error?.message ?? "점검을 시작하지 못했어요.");
       }
 
-      setSummary(body as ScanSummary);
+      const nextSummary = body as ScanSummary;
+      setSummary(nextSummary);
+      saveHistory(nextSummary);
     } catch (scanError) {
       setError(scanError instanceof Error ? scanError.message : "점검 중 문제가 발생했어요.");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function saveHistory(nextSummary: ScanSummary) {
+    const { fullResults: _fullResults, sourceReportHtml: _sourceReportHtml, ...summaryForStorage } = nextSummary;
+    const item: StoredScan = { ...summaryForStorage, savedAt: new Date().toISOString() };
+
+    setHistory((current) => {
+      const next = [item, ...current.filter((entry) => entry.scanId !== item.scanId)].slice(0, 5);
+      window.localStorage.setItem(historyStorageKey, JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function restoreFromHistory(item: StoredScan) {
+    setSummary(item);
+    setUsername(item.username);
+    setShowFullReport(false);
+    setError(null);
+
+    window.setTimeout(() => {
+      const panel = resultPanelRef.current;
+      if (!panel) return;
+      const top = Math.max(0, panel.getBoundingClientRect().top + window.scrollY - 10);
+      window.scrollTo({ top, behavior: "auto" });
+      panel.focus({ preventScroll: true });
+    }, 0);
   }
 
   async function startCheckout() {
@@ -140,6 +186,27 @@ export function TossMiniApp() {
               </p>
             ) : null}
           </div>
+
+          {history.length > 0 ? (
+            <div className="quick-history" aria-label="최근 점검">
+              <span className="quick-history-label">
+                최근 점검
+              </span>
+              <div className="quick-history-list">
+                {history.slice(0, 3).map((item) => (
+                  <button
+                    aria-label={`${item.username} 결과 다시 보기`}
+                    className="quick-history-button"
+                    key={`toss-history-${item.scanId}`}
+                    type="button"
+                    onClick={() => restoreFromHistory(item)}
+                  >
+                    <strong>{item.username}</strong>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <label className="check-row">
             <input

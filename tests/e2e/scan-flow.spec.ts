@@ -42,7 +42,7 @@ test("user can scan from landing page and delete the created record", async ({ p
   });
 
   await page.goto("/");
-  const usernameInput = page.getByLabel("아이디 입력");
+  const usernameInput = page.getByRole("textbox", { name: "아이디 입력" });
   await usernameInput.fill(username);
   await page.getByLabel(/정당한 목적으로/).check();
 
@@ -282,6 +282,40 @@ test("paywalled previews explain exactly what the detailed report unlocks", asyn
   expect(browserMessages).toEqual([]);
 });
 
+test("paid report access stored in this browser reopens the full report without checkout", async ({ page }) => {
+  const browserMessages = watchBrowserErrors(page);
+  const summary = paidReturnScanSummary("paidreturn-ui");
+  await installPaywalledPreviewRoutes(page, summary, {
+    scanId: summary.scanId,
+    access: "FULL",
+    lockedCount: 0,
+    lockedResults: [],
+    results: [...summary.previewResults, fullResult("linkedin-paid", "LinkedIn", "https://linkedin.com/in/paidreturn-ui")]
+  });
+
+  await page.goto("/");
+  await page.evaluate(({ scanId }) => {
+    window.localStorage.setItem(
+      "id-doppelganger-paid-report-access",
+      JSON.stringify([
+        {
+          scanId,
+          orderId: "ord_paid_return",
+          reportToken: "paid-return-token",
+          reportUrl: `/reports/${scanId}?token=paid-return-token`,
+          savedAt: new Date().toISOString()
+        }
+      ])
+    );
+  }, { scanId: summary.scanId });
+  await submitLandingScan(page, summary.username);
+
+  await expect(page.getByRole("status").filter({ hasText: "결제 완료 리포트" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "정밀 리포트 열기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /2,900원 결제/ })).toHaveCount(0);
+  expect(browserMessages).toEqual([]);
+});
+
 test("landing form blocks disallowed identifiers before submit", async ({ page }) => {
   const browserMessages = watchBrowserErrors(page);
 
@@ -317,7 +351,7 @@ test("developer admin login stays hidden until the logo easter egg opens admin",
 });
 
 async function submitLandingScan(page: Page, username: string) {
-  await page.getByLabel("아이디 입력").fill(username);
+  await page.getByRole("textbox", { name: "아이디 입력" }).fill(username);
   const acknowledgement = page.getByLabel(/정당한 목적으로/);
   if (!(await acknowledgement.isChecked())) {
     await acknowledgement.check();
@@ -360,7 +394,7 @@ async function installPaywalledPreviewRoutes(page: Page, scanBody: Record<string
       })
     });
   });
-  await page.route("**/api/scans/*/results", async (route) => {
+  await page.route("**/api/scans/*/results**", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -417,6 +451,27 @@ function paywalledScanSummary(username: string) {
     categoryDistribution: { DEVELOPER: 1, BLOG: 1, SNS: 1 },
     previewResults,
     lockedResults
+  };
+}
+
+function paidReturnScanSummary(username: string) {
+  const summary = paywalledScanSummary(username);
+  return {
+    ...summary,
+    scanId: "scan_paidreturn_ui"
+  };
+}
+
+function fullResult(id: string, platform: string, url: string) {
+  return {
+    id,
+    platform,
+    url,
+    category: "SNS",
+    country: "GLOBAL",
+    status: "FOUND",
+    riskLevel: "MEDIUM",
+    cleanupHint: "Review public profile visibility."
   };
 }
 

@@ -39,6 +39,23 @@ describe("free report route web paywall flag", () => {
     expect(body.error?.code).toBe("WEB_PAYWALL_ENABLED");
     expect(body.reportToken).toBeUndefined();
   });
+
+  it("does not issue a free detailed report token when beta free preview is locked", async () => {
+    const scan = {
+      ...createScanJob({ username: "lockedquota", purpose: "SELF_CHECK", mode: "QUICK" }),
+      freePreviewLocked: true,
+      freePreviewLockReason: "BETA_FREE_SCAN_LIMITED" as const
+    };
+    resetScanRepositoryForTests(new MemoryScanRepository([scan]));
+    resetCommerceRepositoryForTests(new MemoryCommerceRepository());
+
+    const response = await POST(freeReportRequest(scan.scanId, { soft: true }), routeContext(scan.scanId));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(body.reportToken).toBeUndefined();
+  });
 });
 
 function freeReportRequest(scanId: string, body: Record<string, unknown>) {

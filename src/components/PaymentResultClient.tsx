@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   isMonthlyMonitoringPayment,
   registerPaidMonitoringFromPayment,
+  storePaidReportAccess,
   type PaymentAccessResponse
 } from "./paid-monitoring-client";
 
@@ -43,6 +44,7 @@ export function PaymentSuccessClient() {
           }
 
           if (!body.reportUrl) throw new Error("결제 리포트 주소가 응답에 없어요.");
+          storePaidReportAccess(body);
           setMessage("정밀 리포트로 이동하고 있어요.");
           window.location.href = body.reportUrl;
         })
@@ -74,6 +76,7 @@ export function PaymentSuccessClient() {
         }
 
         if (!body.reportUrl) throw new Error("결제 리포트 주소가 응답에 없어요.");
+        storePaidReportAccess(body);
         setMessage("정밀 리포트로 이동하고 있어요.");
         window.location.href = body.reportUrl;
       })

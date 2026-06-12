@@ -8,6 +8,7 @@ import { BrandIcon } from "./BrandIcon";
 import {
   isMonthlyMonitoringPayment,
   registerPaidMonitoringFromPayment,
+  storePaidReportAccess,
   type PaymentAccessResponse
 } from "./paid-monitoring-client";
 
@@ -60,6 +61,7 @@ export function CheckoutClient() {
         return;
       }
       if (!body.reportUrl) throw new Error("결제 리포트 주소가 응답에 없어요.");
+      storePaidReportAccess(body);
       window.location.href = body.reportUrl;
     } catch (paymentError) {
       setError(paymentError instanceof Error ? paymentError.message : "테스트 결제를 완료하지 못했어요.");

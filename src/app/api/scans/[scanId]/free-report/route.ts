@@ -37,6 +37,17 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    if (scan.freePreviewLocked) {
+      return withTossCors(
+        request,
+        jsonError(
+          scan.freePreviewLockReason ?? "BETA_FREE_SCAN_LIMITED",
+          "무료 검색 한도 이후 결과 상세는 정밀 리포트에서 열 수 있어요.",
+          softFailure ? 200 : 402
+        )
+      );
+    }
+
     const ownerToken = typeof body.ownerToken === "string" && body.ownerToken.length > 0 ? body.ownerToken : null;
     const grant = await grantFirstFreeReportAccess(scan, ownerToken, firstFreeRequestFingerprint(request));
 
