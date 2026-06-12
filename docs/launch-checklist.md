@@ -70,7 +70,7 @@
 - [x] `npm run e2e` covers monthly monitoring registration and cancellation
 - [x] `npm run e2e` covers Toss in-app scan-to-checkout flow
 - [ ] `DATABASE_URL=... npm run db:migrate` succeeds for production database
-- [ ] Set `CRON_SECRET` in production and confirm scheduled prune invocations
+- [ ] Set `CRON_SECRET`, `REPORT_TOKEN_SECRET`, and `FIRST_FREE_FINGERPRINT_SECRET` in production and confirm scheduled prune invocations
 - [ ] Confirm scheduled monthly monitoring invocations via `/api/cron/monitoring`
 - [ ] Deploy Docker image with `SCAN_PROVIDER=maigret` for real username scanning
 - [ ] Set `PAYMENT_PROVIDER=toss`, `SITE_URL`, `TOSS_CLIENT_KEY`, `TOSS_SECRET_KEY`, `TOSS_SECURITY_KEY`, `TOSS_CONSOLE_API_KEY`, `TOSS_CONSOLE_APP_ID`, `TOSS_MINI_APP_NAME`, and `TOSS_ALLOWED_ORIGINS`
@@ -91,7 +91,7 @@
 - [x] `npm run launch:readiness` summarizes local release gates and remaining external blockers
 - [x] `npm run toss:verify` passes for local Toss in-app submission readiness
 - [x] `SMOKE_BASE_URL=https://iddopel.vercel.app npm run smoke:vercel-beta` verifies Vercel beta security headers, policy pages, SEO endpoints, real scan execution, inline results, and embedded report branding
-- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... TOSS_ALLOWED_ORIGINS=... WEB_DETAILED_REPORT_PAYWALL_ENABLED=false ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_BUNDLE_ID=com.iddoppelganger.app APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report APPLE_ENVIRONMENT=production APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
+- [ ] Production preparation `PRODUCTION_DOMAIN=https://production-domain STORE_SUPPORT_EMAIL=support@domain DATABASE_URL=... CRON_SECRET=... REPORT_TOKEN_SECRET=... FIRST_FREE_FINGERPRINT_SECRET=... TOSS_CLIENT_KEY=... TOSS_SECRET_KEY=... TOSS_SECURITY_KEY=... TOSS_CONSOLE_API_KEY=... TOSS_CONSOLE_APP_ID=... TOSS_MINI_APP_NAME=... TOSS_ALLOWED_ORIGINS=... WEB_DETAILED_REPORT_PAYWALL_ENABLED=false ALERT_WEBHOOK_URL=... ALERT_RUNBOOK_URL=... MOBILE_PAYMENTS_ENABLED=true APPLE_BUNDLE_ID=com.iddoppelganger.app APPLE_DETAILED_REPORT_PRODUCT_ID=detailed_report APPLE_ENVIRONMENT=production APPLE_KEY_ID=... APPLE_ISSUER_ID=... APPLE_PRIVATE_KEY=... APPLE_APP_APPLE_ID=... GOOGLE_PLAY_PACKAGE_NAME=com.iddoppelganger.app GOOGLE_PLAY_DETAILED_REPORT_PRODUCT_ID=detailed_report GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=... npm run release:prepare` has generated final deploy, launch runbook, store, and native release files
 - [ ] Production `npm run launch:button -- --execute --ship` completes with real domain, database, Toss, store, alert, and mobile release values
 - [ ] `DEPLOY_RELEASE_CHECK=true npm run deploy:verify` passes with real production `deploy/compose/.env`
 - [ ] Production `sitemap.xml` and `robots.txt` checked after final `SITE_URL` deployment

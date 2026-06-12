@@ -15,7 +15,7 @@ This stack is the single-host production path for the web service. It runs:
 cp deploy/compose/.env.example deploy/compose/.env
 ```
 
-Edit `deploy/compose/.env` and replace every placeholder. Use a URL-safe `POSTGRES_PASSWORD`, because the stack interpolates it into `DATABASE_URL`.
+Edit `deploy/compose/.env` and replace every placeholder. Use a URL-safe `POSTGRES_PASSWORD`, because the stack interpolates it into `DATABASE_URL`. Keep `REPORT_TOKEN_SECRET` and `FIRST_FREE_FINGERPRINT_SECRET` as separate 32+ character random values.
 
 Before starting production, validate the config:
 
@@ -38,7 +38,7 @@ npm run launch:button -- --execute --ship
 
 The first command is a dry run that redacts secret-like values. The ship command prepares production files, validates this Compose config, starts the stack, and runs live verification.
 
-Before using `--execute --ship`, fill `.env.launch` with the production domain, Postgres URL, cron secret, Toss Payments values, alert webhook/runbook, App Store Connect key fields, Apple app id, and Google Play service account JSON. Values derived from `PRODUCTION_DOMAIN` such as `SITE_URL`, `SMOKE_BASE_URL`, `STORE_PRODUCTION_ORIGIN`, and `MOBILE_APP_ORIGIN` are filled by the launch button automatically.
+Before using `--execute --ship`, fill `.env.launch` with the production domain, Postgres URL, cron/report secrets, Toss Payments values, alert webhook/runbook, App Store Connect key fields, Apple app id, and Google Play service account JSON. Values derived from `PRODUCTION_DOMAIN` such as `SITE_URL`, `SMOKE_BASE_URL`, `STORE_PRODUCTION_ORIGIN`, and `MOBILE_APP_ORIGIN` are filled by the launch button automatically.
 
 When the app is running locally, `/launch` shows the same launch plan after developer login. It validates and saves allowlisted production values into `.env.launch`, but command execution stays disabled unless `ENABLE_LAUNCH_CONSOLE=true` is present on that local process.
 

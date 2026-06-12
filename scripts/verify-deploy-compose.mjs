@@ -83,6 +83,7 @@ function validateComposeSource(compose) {
   addCheck("Compose waits for migrations", compose.includes("condition: service_completed_successfully"), "App should wait for the migrate service to finish successfully.");
   addCheck("Compose uses production scanner default", compose.includes("SCAN_PROVIDER: \"${SCAN_PROVIDER:-maigret}\""), "Default SCAN_PROVIDER should be maigret.");
   addCheck("Compose keeps mock payments disabled by default", compose.includes("ENABLE_MOCK_PAYMENTS: \"${ENABLE_MOCK_PAYMENTS:-false}\""), "Mock payments must be disabled by default.");
+  addCheck("Compose passes report access secrets", compose.includes("REPORT_TOKEN_SECRET") && compose.includes("FIRST_FREE_FINGERPRINT_SECRET"), "App service must receive report token and first-free fingerprint secrets.");
   addCheck("Compose passes Toss mini-app env", compose.includes("TOSS_MINI_APP_NAME") && compose.includes("TOSS_ALLOWED_ORIGINS"), "App service must receive Toss mini-app Origin settings.");
   addCheck("Compose passes alert webhook env", compose.includes("ALERT_WEBHOOK_URL") && compose.includes("ALERT_RUNBOOK_URL"), "App service must receive alert webhook settings.");
   addCheck("Compose exposes only Caddy ports", compose.includes("443:443") && !compose.includes("3000:3000"), "Only Caddy should bind public ports in production.");
@@ -103,6 +104,8 @@ function validateEnvShape(values) {
     "POSTGRES_PASSWORD",
     "APP_IMAGE",
     "CRON_SECRET",
+    "REPORT_TOKEN_SECRET",
+    "FIRST_FREE_FINGERPRINT_SECRET",
     "MONITORING_CRON_LIMIT",
     "SCAN_PROVIDER",
     "PAYMENT_PROVIDER",
@@ -139,6 +142,13 @@ function validateEnvShape(values) {
     addCheck("Deploy SITE_URL finalized", isHttpsUrl(values.SITE_URL) && !hasPlaceholder(values.SITE_URL), "SITE_URL must be the production HTTPS origin.");
     addCheck("Mobile origin matches SITE_URL", values.MOBILE_APP_ORIGIN === values.SITE_URL, "MOBILE_APP_ORIGIN should match SITE_URL for release.");
     addCheck("CRON_SECRET is strong", (values.CRON_SECRET ?? "").length >= 32 && !hasPlaceholder(values.CRON_SECRET), "Use at least 32 random characters.");
+    addCheck("REPORT_TOKEN_SECRET is strong", isStrongSecret(values.REPORT_TOKEN_SECRET), "Use at least 32 random characters for report access tokens.");
+    addCheck("FIRST_FREE_FINGERPRINT_SECRET is strong", isStrongSecret(values.FIRST_FREE_FINGERPRINT_SECRET), "Use at least 32 random characters for one-time free report fingerprints.");
+    addCheck(
+      "Report secrets are isolated",
+      values.REPORT_TOKEN_SECRET !== values.FIRST_FREE_FINGERPRINT_SECRET,
+      "Use different secrets for report tokens and first-free fingerprints."
+    );
     addCheck("Postgres password is strong", (values.POSTGRES_PASSWORD ?? "").length >= 24 && !hasPlaceholder(values.POSTGRES_PASSWORD), "Use a strong random Postgres password.");
     addCheck("Toss client key configured", /^test_ck_|^live_ck_/.test(values.TOSS_CLIENT_KEY ?? ""), "Set the Toss Payments client key.");
     addCheck("Toss secret configured", (values.TOSS_SECRET_KEY ?? "").length >= 12 && !hasPlaceholder(values.TOSS_SECRET_KEY), "Set the production Toss secret key.");
@@ -154,8 +164,15 @@ function validateEnvShape(values) {
     if (hasPlaceholder(values.DOMAIN) || hasPlaceholder(values.SITE_URL)) {
       addWarning("Production domain placeholder", "Replace DOMAIN and SITE_URL in deploy/compose/.env before deployment.");
     }
-    if (hasPlaceholder(values.CRON_SECRET) || hasPlaceholder(values.TOSS_CLIENT_KEY) || hasPlaceholder(values.TOSS_SECRET_KEY) || hasPlaceholder(values.TOSS_SECURITY_KEY)) {
-      addWarning("Production secret placeholder", "Replace CRON_SECRET and Toss payment keys in deploy/compose/.env before deployment.");
+    if (
+      hasPlaceholder(values.CRON_SECRET) ||
+      hasPlaceholder(values.REPORT_TOKEN_SECRET) ||
+      hasPlaceholder(values.FIRST_FREE_FINGERPRINT_SECRET) ||
+      hasPlaceholder(values.TOSS_CLIENT_KEY) ||
+      hasPlaceholder(values.TOSS_SECRET_KEY) ||
+      hasPlaceholder(values.TOSS_SECURITY_KEY)
+    ) {
+      addWarning("Production secret placeholder", "Replace CRON_SECRET, report secrets, and Toss payment keys in deploy/compose/.env before deployment.");
     }
     if (hasPlaceholder(values.TOSS_CONSOLE_APP_ID) || hasPlaceholder(values.TOSS_MINI_APP_NAME) || hasPlaceholder(values.TOSS_ALLOWED_ORIGINS)) {
       addWarning("Toss mini-app placeholder", "Replace Toss console and tossmini.com Origin placeholders before Toss submission.");
@@ -207,7 +224,11 @@ function isFinalDomain(value) {
 }
 
 function hasPlaceholder(value = "") {
-  return /YOUR_|replace-with|example/i.test(value);
+  return /YOUR_|your_|replace-with|placeholder|local-|example/i.test(value);
+}
+
+function isStrongSecret(value = "") {
+  return value.length >= 32 && !hasPlaceholder(value);
 }
 
 function hasFinalTossOrigins(value = "") {

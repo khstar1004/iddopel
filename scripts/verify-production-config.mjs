@@ -1,3 +1,6 @@
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
 const requiredSecurityHeaders = [
   "content-security-policy",
   "strict-transport-security",
@@ -6,21 +9,6 @@ const requiredSecurityHeaders = [
   "referrer-policy",
   "permissions-policy"
 ];
-
-const checks = [];
-const warnings = [];
-
-function addCheck(name, ok, detail) {
-  checks.push({ name, ok, detail });
-}
-
-function addWarning(name, detail) {
-  warnings.push({ name, detail });
-}
-
-function env(name) {
-  return process.env[name]?.trim() ?? "";
-}
 
 function isHttpsUrl(value) {
   try {
@@ -36,13 +24,41 @@ function isBoundedAlertTimeout(value) {
   return Number.isFinite(parsed) && parsed >= 250 && parsed <= 5000;
 }
 
-async function main() {
+function readEnv(envValues, name) {
+  return String(envValues[name] ?? "").trim();
+}
+
+function hasPlaceholder(value = "") {
+  return /YOUR_|your_|replace-with|placeholder|local-|example\.com|changeme/i.test(value);
+}
+
+function isStrongSecret(value) {
+  return value.length >= 32 && !hasPlaceholder(value);
+}
+
+export async function createProductionConfigReport({ envValues = process.env, runRuntimeChecks: shouldRunRuntimeChecks = true } = {}) {
+  const checks = [];
+  const warnings = [];
+  const addCheck = (name, ok, detail) => checks.push({ name, ok, detail });
+  const addWarning = (name, detail) => warnings.push({ name, detail });
+  const env = (name) => readEnv(envValues, name);
   const siteUrl = env("SITE_URL");
   const runtimeBaseUrl = env("PRODUCTION_BASE_URL").replace(/\/$/, "");
 
   addCheck("DATABASE_URL is production Postgres", /^postgres(?:ql)?:\/\//.test(env("DATABASE_URL")), "Set DATABASE_URL to managed Postgres.");
   addCheck("DATABASE_SSL is explicit", ["true", "false"].includes(env("DATABASE_SSL")), "Set DATABASE_SSL=true if the provider requires TLS verification.");
-  addCheck("CRON_SECRET is strong", env("CRON_SECRET").length >= 32, "Use at least 32 random characters.");
+  addCheck("CRON_SECRET is strong", isStrongSecret(env("CRON_SECRET")), "Use at least 32 random characters.");
+  addCheck("REPORT_TOKEN_SECRET is strong", isStrongSecret(env("REPORT_TOKEN_SECRET")), "Use at least 32 random characters for detailed-report access tokens.");
+  addCheck(
+    "FIRST_FREE_FINGERPRINT_SECRET is strong",
+    isStrongSecret(env("FIRST_FREE_FINGERPRINT_SECRET")),
+    "Use at least 32 random characters for one-time free report fingerprints."
+  );
+  addCheck(
+    "Report and fingerprint secrets are isolated",
+    Boolean(env("REPORT_TOKEN_SECRET")) && env("REPORT_TOKEN_SECRET") !== env("FIRST_FREE_FINGERPRINT_SECRET"),
+    "Use different secrets for report tokens and free-use fingerprints."
+  );
   addCheck("SITE_URL is HTTPS production origin", isHttpsUrl(siteUrl), "Use the deployed HTTPS origin, without a trailing slash.");
   addCheck("SCAN_PROVIDER requires Maigret", env("SCAN_PROVIDER") === "maigret", "Set SCAN_PROVIDER=maigret for real username scanning.");
   addCheck("PAYMENT_PROVIDER requires Toss", env("PAYMENT_PROVIDER") === "toss", "Set PAYMENT_PROVIDER=toss before live web checkout.");
@@ -56,6 +72,11 @@ async function main() {
   addCheck("Alert timeout is bounded", isBoundedAlertTimeout(env("ALERT_WEBHOOK_TIMEOUT_MS")), "Set ALERT_WEBHOOK_TIMEOUT_MS between 250 and 5000.");
   addCheck("Alert runbook URL is HTTPS", isHttpsUrl(env("ALERT_RUNBOOK_URL")), "Set ALERT_RUNBOOK_URL to an HTTPS incident runbook.");
   addCheck("Mobile app origin matches production", env("MOBILE_APP_ORIGIN") === siteUrl, "Run MOBILE_APP_ORIGIN=$SITE_URL npm run mobile:configure before native release.");
+
+  if (env("ENABLE_DEV_ADMIN") === "true") {
+    addCheck("Public admin password is configured", env("DEV_ADMIN_PASSWORD").length >= 12 && !hasPlaceholder(env("DEV_ADMIN_PASSWORD")), "Use a non-placeholder admin password before enabling public /admin.");
+    addCheck("Public admin signing secret is strong", isStrongSecret(env("DEV_ADMIN_SECRET")), "Use at least 32 random characters for public admin sessions.");
+  }
 
   if (env("MOBILE_PAYMENTS_ENABLED") === "true") {
     addCheck("Apple bundle id configured", env("APPLE_BUNDLE_ID") === "com.iddoppelganger.app", "Use the App Store bundle id.");
@@ -72,8 +93,8 @@ async function main() {
     addWarning("MOBILE_PAYMENTS_ENABLED", "Native paid reports stay disabled until Apple/Google in-app products and receipt verification secrets are live.");
   }
 
-  if (isHttpsUrl(runtimeBaseUrl)) {
-    await runRuntimeChecks(runtimeBaseUrl);
+  if (shouldRunRuntimeChecks && isHttpsUrl(runtimeBaseUrl)) {
+    await runRuntimeChecks(runtimeBaseUrl, env("CRON_SECRET"), addCheck);
   } else {
     addWarning("Runtime checks skipped", "Set PRODUCTION_BASE_URL to the deployed HTTPS origin to verify headers, health, telemetry, and cron.");
   }
@@ -87,11 +108,10 @@ async function main() {
     warnings
   };
 
-  console.log(JSON.stringify(report, null, 2));
-  if (failed.length > 0) process.exit(1);
+  return report;
 }
 
-async function runRuntimeChecks(baseUrl) {
+async function runRuntimeChecks(baseUrl, cronSecret, addCheck) {
   const home = await request(baseUrl, "/");
   addCheck("Production home returns 200", home.status === 200, `${baseUrl}/ returned ${home.status}.`);
   for (const header of requiredSecurityHeaders) {
@@ -111,14 +131,14 @@ async function runRuntimeChecks(baseUrl) {
   });
   addCheck("Telemetry endpoint accepts launch probe", telemetry.status === 202 && telemetry.body?.ok === true, "Expected /api/telemetry to return 202.");
 
-  if (env("CRON_SECRET")) {
+  if (cronSecret) {
     const cron = await requestJson(baseUrl, "/api/cron/prune", {
-      headers: { Authorization: `Bearer ${env("CRON_SECRET")}` }
+      headers: { Authorization: `Bearer ${cronSecret}` }
     });
     addCheck("Cron prune endpoint authorized", cron.status === 200 && cron.body?.ok === true, "Expected /api/cron/prune to authorize CRON_SECRET.");
 
     const monitoringCron = await requestJson(baseUrl, "/api/cron/monitoring", {
-      headers: { Authorization: `Bearer ${env("CRON_SECRET")}` }
+      headers: { Authorization: `Bearer ${cronSecret}` }
     });
     addCheck(
       "Cron monitoring endpoint authorized",
@@ -152,7 +172,19 @@ async function request(baseUrl, path, options = {}) {
   });
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+async function main() {
+  const report = await createProductionConfigReport();
+  console.log(JSON.stringify(report, null, 2));
+  if (!report.ok) process.exit(1);
+}
+
+function isMainModule() {
+  return process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+}
+
+if (isMainModule()) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

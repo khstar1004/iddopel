@@ -8,6 +8,8 @@ x-app-env: &app-env
   DATABASE_URL: "postgres://${POSTGRES_USER:-id_doppelganger}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/compose/.env}@postgres:5432/${POSTGRES_DB:-id_doppelganger}"
   DATABASE_SSL: "${DATABASE_SSL:-false}"
   CRON_SECRET: "${CRON_SECRET:?Set CRON_SECRET in deploy/compose/.env}"
+  REPORT_TOKEN_SECRET: "${REPORT_TOKEN_SECRET:?Set REPORT_TOKEN_SECRET in deploy/compose/.env}"
+  FIRST_FREE_FINGERPRINT_SECRET: "${FIRST_FREE_FINGERPRINT_SECRET:?Set FIRST_FREE_FINGERPRINT_SECRET in deploy/compose/.env}"
   MONITORING_CRON_LIMIT: "${MONITORING_CRON_LIMIT:-3}"
   SITE_URL: "${SITE_URL:?Set SITE_URL in deploy/compose/.env}"
   SCAN_PROVIDER: "${SCAN_PROVIDER:-maigret}"

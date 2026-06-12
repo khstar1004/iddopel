@@ -119,6 +119,8 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `DATABASE_URL`: production Postgres connection string
 - `DATABASE_SSL`: `true` if the provider requires TLS verification
 - `CRON_SECRET`: random secret used by `/api/cron/prune` and `/api/cron/monitoring`
+- `REPORT_TOKEN_SECRET`: random secret used to sign detailed-report access tokens
+- `FIRST_FREE_FINGERPRINT_SECRET`: separate random secret used to bind the one-time free detailed report to a request/browser identity
 - `MONITORING_CRON_LIMIT`: maximum monitoring subscriptions processed by one `/api/cron/monitoring` run
 - `SITE_URL`: production origin used for Toss success/fail URLs
 - `SCAN_PROVIDER`: `maigret` for Vercel, Docker, and Cloudtype real scans. `mock` must be used only for private smoke tests and demos.
@@ -214,7 +216,7 @@ npm run build
 npm run e2e
 ```
 
-Run the production preflight after setting deployment secrets and again after the domain is live:
+Run the production preflight after setting deployment secrets and again after the domain is live. `REPORT_TOKEN_SECRET` and `FIRST_FREE_FINGERPRINT_SECRET` must be different 32+ character random values:
 
 ```bash
 PRODUCTION_BASE_URL="https://your-domain.example" npm run verify:production

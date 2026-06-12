@@ -69,9 +69,10 @@ describe("createProductionReleasePreparation", () => {
       "deploy/compose/PRODUCTION_LAUNCH_RUNBOOK.md"
     );
     expect(preparation.fileUpdates.map((update: { path: string }) => update.path)).toContain("native-web/app-config.js");
-    expect(preparation.fileUpdates.find((update: { path: string }) => update.path === "deploy/compose/.env")?.content).toContain(
-      "DOMAIN=id.verified-domain.kr"
-    );
+    const deployEnv = preparation.fileUpdates.find((update: { path: string }) => update.path === "deploy/compose/.env")?.content ?? "";
+    expect(deployEnv).toContain("DOMAIN=id.verified-domain.kr");
+    expect(deployEnv).toContain("REPORT_TOKEN_SECRET=");
+    expect(deployEnv).toContain("FIRST_FREE_FINGERPRINT_SECRET=");
     expect(preparation.fileUpdates.find((update: { path: string }) => update.path === "store-assets/google-play-listing.json")?.content).toContain(
       "support@verified-domain.kr"
     );
@@ -188,6 +189,8 @@ describe("renderDeployEnv", () => {
       SITE_URL: "https://id.verified-domain.kr",
       "POSTGRES_PASSWORD": "abc_123-DEF.456~ghi",
       "CRON_SECRET": "abc_123-DEF.456~ghi_abc_123-DEF.456~ghi",
+      REPORT_TOKEN_SECRET: "report_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi",
+      FIRST_FREE_FINGERPRINT_SECRET: "fingerprint_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi",
       TOSS_CLIENT_KEY: "test_ck_fake_value",
       "TOSS_SECRET_KEY": "test_sk_123456789",
       TOSS_SECURITY_KEY: "a".repeat(64),
@@ -203,6 +206,8 @@ describe("renderDeployEnv", () => {
 
     expect(env).toContain("POSTGRES_PASSWORD=abc_123-DEF.456~ghi");
     expect(env).toContain("CRON_SECRET=abc_123-DEF.456~ghi_abc_123-DEF.456~ghi");
+    expect(env).toContain("REPORT_TOKEN_SECRET=report_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi");
+    expect(env).toContain("FIRST_FREE_FINGERPRINT_SECRET=fingerprint_abc_123-DEF.456~ghi_abc_123-DEF.456~ghi");
     expect(env).toContain("TOSS_CLIENT_KEY=test_ck_fake_value");
     expect(env).toContain(`TOSS_SECURITY_KEY=${"a".repeat(64)}`);
     expect(env).not.toContain("replace-with");
