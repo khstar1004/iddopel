@@ -33,13 +33,35 @@ interface BetaScanUsageRecord {
   updatedAt: string;
 }
 
-interface BetaScanUsageResult {
-  allowed: boolean;
+export type BetaScanTicketSource = "base" | "referral";
+export type BetaScanReferralGrantReason = "INVALID_REFERRAL" | "SELF_REFERRAL" | "ALREADY_GRANTED";
+
+export interface BetaScanTicketStatus {
   limit: number;
   used: number;
+  baseRemaining: number;
+  bonusRemaining: number;
   remaining: number;
   resetAt: string;
+  referralCode: string | null;
   retryAfterSeconds?: number;
+}
+
+interface BetaScanUsageResult extends BetaScanTicketStatus {
+  allowed: boolean;
+  ticketSource?: BetaScanTicketSource;
+}
+
+export interface BetaScanReferralGrantResult {
+  granted: boolean;
+  reason?: BetaScanReferralGrantReason;
+  bonusRemaining: number;
+}
+
+export interface BetaScanReferralTransferResult {
+  transferred: number;
+  fromBonusRemaining: number;
+  toBonusRemaining: number;
 }
 
 interface BetaScanSettingsStore {
@@ -48,7 +70,24 @@ interface BetaScanSettingsStore {
 }
 
 interface BetaScanUsageStore {
-  consume(keys: string | string[], settings: BetaScanQuotaSettings, now?: Date): Promise<BetaScanUsageResult>;
+  consume(
+    keys: string | string[],
+    settings: BetaScanQuotaSettings,
+    now?: Date,
+    referralCode?: string | null
+  ): Promise<BetaScanUsageResult>;
+  status(
+    keys: string | string[],
+    settings: BetaScanQuotaSettings,
+    now?: Date,
+    referralCode?: string | null
+  ): Promise<BetaScanTicketStatus>;
+  grantReferralTicket(referralCode: string | null, recipientKey: string, now?: Date): Promise<BetaScanReferralGrantResult>;
+  transferReferralTickets(
+    fromReferralCode: string | null,
+    toReferralCode: string | null,
+    now?: Date
+  ): Promise<BetaScanReferralTransferResult>;
 }
 
 interface BetaScanLoadLease {
@@ -141,23 +180,121 @@ export function betaScanQuotaKeys(ownerToken: string | null | undefined, request
   return [...new Set(keys)];
 }
 
+export function betaScanAccountQuotaKeys(ownerToken: string | null | undefined) {
+  const normalizedOwnerToken = ownerToken?.trim().slice(0, 256);
+  return normalizedOwnerToken ? [betaScanQuotaKey("owner", normalizedOwnerToken)] : [];
+}
+
+export function betaScanReferralCode(ownerToken: string | null | undefined) {
+  const normalizedOwnerToken = ownerToken?.trim().slice(0, 256);
+  if (!normalizedOwnerToken) return null;
+
+  return createHash("sha256").update(`beta-scan-referral:${normalizedOwnerToken}`).digest("hex").slice(0, 24);
+}
+
+export function betaScanReferralRecipientKey(ownerToken: string | null | undefined, requestKey: string) {
+  const normalizedOwnerToken = ownerToken?.trim().slice(0, 256) || "anonymous";
+  return createHash("sha256")
+    .update(`beta-scan-referral-recipient:${normalizedOwnerToken}\n${requestKey.trim().slice(0, 512)}`)
+    .digest("hex");
+}
+
 export async function assertBetaScanQuota(
   store: BetaScanUsageStore,
   key: string | string[],
   settings: Partial<BetaScanQuotaSettings>,
-  now = new Date()
+  now = new Date(),
+  referralCode?: string | null
 ): Promise<BetaScanUsageResult> {
-  return store.consume(key, { ...betaScanQuotaSettings(), ...settings }, now);
+  return store.consume(key, { ...betaScanQuotaSettings(), ...settings }, now, referralCode);
+}
+
+export async function getBetaScanTicketStatus(
+  store: BetaScanUsageStore,
+  key: string | string[],
+  settings: Partial<BetaScanQuotaSettings>,
+  referralCode?: string | null,
+  now = new Date()
+): Promise<BetaScanTicketStatus> {
+  return store.status(key, { ...betaScanQuotaSettings(), ...settings }, now, referralCode);
+}
+
+export function grantBetaScanReferralTicket(
+  store: BetaScanUsageStore,
+  referralCode: string | null,
+  recipientKey: string,
+  now = new Date()
+) {
+  return store.grantReferralTicket(referralCode, recipientKey, now);
+}
+
+export function transferBetaScanReferralTickets(
+  store: BetaScanUsageStore,
+  fromReferralCode: string | null,
+  toReferralCode: string | null,
+  now = new Date()
+) {
+  return store.transferReferralTickets(fromReferralCode, toReferralCode, now);
 }
 
 export async function consumeBetaScanQuota(
   request: Request,
   ownerToken: string | null | undefined,
-  settings?: BetaScanQuotaSettings
+  settings?: BetaScanQuotaSettings,
+  options: { accountScoped?: boolean } = {}
 ) {
   const activeSettings = settings ?? await getBetaScanSettingsStore().get();
-  const keys = betaScanQuotaKeys(ownerToken, requestIdentity(request));
-  return getBetaScanUsageStore().consume(keys, activeSettings);
+  const keys = options.accountScoped ? betaScanAccountQuotaKeys(ownerToken) : betaScanQuotaKeys(ownerToken, requestIdentity(request));
+  return getBetaScanUsageStore().consume(keys, activeSettings, new Date(), betaScanReferralCode(ownerToken));
+}
+
+export async function getBetaScanTicketStatusForRequest(
+  request: Request,
+  ownerToken: string | null | undefined,
+  settings?: BetaScanQuotaSettings,
+  options: { accountScoped?: boolean } = {}
+) {
+  const activeSettings = settings ?? await getBetaScanSettingsStore().get();
+  const requestKey = requestIdentity(request);
+  const keys = options.accountScoped ? betaScanAccountQuotaKeys(ownerToken) : betaScanQuotaKeys(ownerToken, requestKey);
+  return getBetaScanUsageStore().status(keys, activeSettings, new Date(), betaScanReferralCode(ownerToken));
+}
+
+export async function grantBetaScanReferralTicketForRequest(
+  request: Request,
+  ownerToken: string | null | undefined,
+  referralCode: string | null | undefined,
+  settings?: BetaScanQuotaSettings,
+  options: { accountScoped?: boolean } = {}
+) {
+  const activeSettings = settings ?? await getBetaScanSettingsStore().get();
+  const ownReferralCode = betaScanReferralCode(ownerToken);
+  const normalizedReferralCode = normalizeReferralCode(referralCode);
+  const requestKey = requestIdentity(request);
+  const keys = options.accountScoped ? betaScanAccountQuotaKeys(ownerToken) : betaScanQuotaKeys(ownerToken, requestKey);
+  const status = () => getBetaScanUsageStore().status(keys, activeSettings, new Date(), ownReferralCode);
+
+  if (!normalizedReferralCode) {
+    return {
+      referral: { granted: false, reason: "INVALID_REFERRAL" as const, bonusRemaining: 0 },
+      tickets: await status()
+    };
+  }
+
+  if (normalizedReferralCode === ownReferralCode) {
+    const tickets = await status();
+    return {
+      referral: { granted: false, reason: "SELF_REFERRAL" as const, bonusRemaining: tickets.bonusRemaining },
+      tickets
+    };
+  }
+
+  const recipientKey = betaScanReferralRecipientKey(ownerToken, requestKey);
+  const referral = await getBetaScanUsageStore().grantReferralTicket(normalizedReferralCode, recipientKey);
+  return {
+    referral,
+    tickets: await status()
+  };
 }
 
 export function acquireBetaScanLoadSlot(settings: BetaScanQuotaSettings) {
@@ -252,56 +389,158 @@ export class FileBetaScanUsageStore implements BetaScanUsageStore {
     this.filePath = filePath;
   }
 
-  consume(keys: string | string[], settings: BetaScanQuotaSettings, now = new Date()): Promise<BetaScanUsageResult> {
+  consume(
+    keys: string | string[],
+    settings: BetaScanQuotaSettings,
+    now = new Date(),
+    referralCode?: string | null
+  ): Promise<BetaScanUsageResult> {
     return this.withQueue(async () => {
       const quotaKeys = [...new Set(Array.isArray(keys) ? keys : [keys])];
       const usage = await this.readAll();
-      const windows: Array<{ key: string; resetAt: Date; activeCount: number }> = quotaKeys.map((key) => {
-        const current = usage[key];
-        const isActive = current && new Date(current.resetAt).getTime() > now.getTime();
-        const resetAt = isActive
-          ? new Date(current.resetAt)
-          : new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
-        const activeCount = isActive ? current.count : 0;
-        return { key, resetAt, activeCount };
-      });
-      const exhausted = windows.find((window) => window.activeCount >= settings.freeScanLimit);
+      const normalizedReferralCode = normalizeReferralCode(referralCode);
+      const windows = quotaWindowsFor(usage, quotaKeys, settings, now);
+      const base = baseTicketStatusFor(windows, settings, normalizedReferralCode, now, usage);
 
-      if (exhausted) {
+      if (base.baseRemaining > 0) {
+        let used = 0;
+        let resetAt = windows[0]?.resetAt ?? resetAtForWindow(settings, now);
+
+        for (const window of windows) {
+          const nextCount = window.activeCount + 1;
+          used = Math.max(used, nextCount);
+          if (window.resetAt.getTime() < resetAt.getTime()) resetAt = window.resetAt;
+          usage[window.key] = {
+            count: nextCount,
+            resetAt: window.resetAt.toISOString(),
+            updatedAt: now.toISOString()
+          };
+        }
+        await this.writeAll(usage);
+
+        const nextStatus = ticketStatusFor(
+          windows.map((window) => ({ ...window, activeCount: window.activeCount + 1 })),
+          settings,
+          normalizedReferralCode,
+          now,
+          usage
+        );
+
         return {
-          allowed: false,
-          limit: settings.freeScanLimit,
-          used: exhausted.activeCount,
-          remaining: 0,
-          resetAt: exhausted.resetAt.toISOString(),
-          retryAfterSeconds: Math.max(1, Math.ceil((exhausted.resetAt.getTime() - now.getTime()) / 1000))
+          ...nextStatus,
+          allowed: true,
+          used,
+          resetAt: resetAt.toISOString(),
+          ticketSource: "base"
         };
       }
 
-      let used = 0;
-      let remaining = settings.freeScanLimit;
-      let resetAt = windows[0]?.resetAt ?? new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
-
-      for (const window of windows) {
-        const nextCount = window.activeCount + 1;
-        used = Math.max(used, nextCount);
-        remaining = Math.min(remaining, Math.max(0, settings.freeScanLimit - nextCount));
-        if (window.resetAt.getTime() < resetAt.getTime()) resetAt = window.resetAt;
-        usage[window.key] = {
-          count: nextCount,
-          resetAt: window.resetAt.toISOString(),
+      if (normalizedReferralCode && base.bonusRemaining > 0) {
+        const bonusKey = referralBonusKey(normalizedReferralCode);
+        usage[bonusKey] = {
+          count: base.bonusRemaining - 1,
+          resetAt: referralTicketResetAt(),
           updatedAt: now.toISOString()
         };
+        await this.writeAll(usage);
+
+        const nextStatus = ticketStatusFor(windows, settings, normalizedReferralCode, now, usage);
+
+        return {
+          ...nextStatus,
+          allowed: true,
+          ticketSource: "referral"
+        };
       }
-      await this.writeAll(usage);
 
       return {
-        allowed: true,
-        limit: settings.freeScanLimit,
-        used,
-        remaining,
-        resetAt: resetAt.toISOString()
+        ...base,
+        allowed: false,
+        retryAfterSeconds: Math.max(1, Math.ceil((new Date(base.resetAt).getTime() - now.getTime()) / 1000))
       };
+    });
+  }
+
+  status(
+    keys: string | string[],
+    settings: BetaScanQuotaSettings,
+    now = new Date(),
+    referralCode?: string | null
+  ): Promise<BetaScanTicketStatus> {
+    return this.withQueue(async () => {
+      const quotaKeys = [...new Set(Array.isArray(keys) ? keys : [keys])];
+      const usage = await this.readAll();
+      const windows = quotaWindowsFor(usage, quotaKeys, settings, now);
+      return ticketStatusFor(windows, settings, normalizeReferralCode(referralCode), now, usage);
+    });
+  }
+
+  grantReferralTicket(referralCode: string | null, recipientKey: string, now = new Date()) {
+    return this.withQueue(async () => {
+      const normalizedReferralCode = normalizeReferralCode(referralCode);
+      if (!normalizedReferralCode || !recipientKey) {
+        return { granted: false, reason: "INVALID_REFERRAL" as const, bonusRemaining: 0 };
+      }
+
+      const usage = await this.readAll();
+      const redemptionKey = referralRedemptionKey(normalizedReferralCode, recipientKey);
+      const bonusKey = referralBonusKey(normalizedReferralCode);
+      const alreadyGranted = activeCountFor(usage[redemptionKey], now) > 0;
+      const bonusRemaining = activeCountFor(usage[bonusKey], now);
+
+      if (alreadyGranted) {
+        return { granted: false, reason: "ALREADY_GRANTED" as const, bonusRemaining };
+      }
+
+      usage[redemptionKey] = {
+        count: 1,
+        resetAt: referralTicketResetAt(),
+        updatedAt: now.toISOString()
+      };
+      usage[bonusKey] = {
+        count: bonusRemaining + 1,
+        resetAt: referralTicketResetAt(),
+        updatedAt: now.toISOString()
+      };
+      await this.writeAll(usage);
+
+      return { granted: true, bonusRemaining: bonusRemaining + 1 };
+    });
+  }
+
+  transferReferralTickets(fromReferralCode: string | null, toReferralCode: string | null, now = new Date()) {
+    return this.withQueue(async () => {
+      const from = normalizeReferralCode(fromReferralCode);
+      const to = normalizeReferralCode(toReferralCode);
+      if (!from || !to || from === to) {
+        const usage = await this.readAll();
+        const current = to ? activeCountFor(usage[referralBonusKey(to)], now) : 0;
+        return { transferred: 0, fromBonusRemaining: 0, toBonusRemaining: current };
+      }
+
+      const usage = await this.readAll();
+      const fromKey = referralBonusKey(from);
+      const toKey = referralBonusKey(to);
+      const fromRemaining = activeCountFor(usage[fromKey], now);
+      const toRemaining = activeCountFor(usage[toKey], now);
+
+      if (fromRemaining <= 0) {
+        return { transferred: 0, fromBonusRemaining: 0, toBonusRemaining: toRemaining };
+      }
+
+      usage[fromKey] = {
+        count: 0,
+        resetAt: referralTicketResetAt(),
+        updatedAt: now.toISOString()
+      };
+      usage[toKey] = {
+        count: toRemaining + fromRemaining,
+        resetAt: referralTicketResetAt(),
+        updatedAt: now.toISOString()
+      };
+      await this.writeAll(usage);
+
+      return { transferred: fromRemaining, fromBonusRemaining: 0, toBonusRemaining: toRemaining + fromRemaining };
     });
   }
 
@@ -514,9 +753,123 @@ class PostgresBetaScanUsageStore implements BetaScanUsageStore {
     this.ready = ensurePostgresBetaScanTables(this.pool);
   }
 
-  async consume(keys: string | string[], settings: BetaScanQuotaSettings, now = new Date()): Promise<BetaScanUsageResult> {
+  async consume(
+    keys: string | string[],
+    settings: BetaScanQuotaSettings,
+    now = new Date(),
+    referralCode?: string | null
+  ): Promise<BetaScanUsageResult> {
     await this.ready;
     const quotaKeys = [...new Set(Array.isArray(keys) ? keys : [keys])];
+    const normalizedReferralCode = normalizeReferralCode(referralCode);
+    const bonusKey = normalizedReferralCode ? referralBonusKey(normalizedReferralCode) : null;
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+      const trackedKeys = bonusKey ? [...quotaKeys, bonusKey] : quotaKeys;
+      const existing = await client.query(
+        `select quota_key, count, reset_at
+         from beta_scan_usage
+         where quota_key = any($1::text[])
+         for update`,
+        [trackedKeys]
+      );
+      const usage = usageRecordsFromRows(existing.rows);
+      const windows = quotaWindowsFor(usage, quotaKeys, settings, now);
+      const base = ticketStatusFor(windows, settings, normalizedReferralCode, now, usage);
+
+      if (base.baseRemaining > 0) {
+        let used = 0;
+        let resetAt = windows[0]?.resetAt ?? resetAtForWindow(settings, now);
+
+        for (const window of windows) {
+          const nextCount = window.activeCount + 1;
+          used = Math.max(used, nextCount);
+          if (window.resetAt.getTime() < resetAt.getTime()) resetAt = window.resetAt;
+          await upsertUsageRecord(client, window.key, nextCount, window.resetAt.toISOString(), now);
+          usage[window.key] = {
+            count: nextCount,
+            resetAt: window.resetAt.toISOString(),
+            updatedAt: now.toISOString()
+          };
+        }
+
+        await client.query("commit");
+        const nextStatus = ticketStatusFor(
+          windows.map((window) => ({ ...window, activeCount: window.activeCount + 1 })),
+          settings,
+          normalizedReferralCode,
+          now,
+          usage
+        );
+        return {
+          ...nextStatus,
+          allowed: true,
+          used,
+          resetAt: resetAt.toISOString(),
+          ticketSource: "base"
+        };
+      }
+
+      if (normalizedReferralCode && base.bonusRemaining > 0) {
+        await upsertUsageRecord(client, referralBonusKey(normalizedReferralCode), base.bonusRemaining - 1, referralTicketResetAt(), now);
+        usage[referralBonusKey(normalizedReferralCode)] = {
+          count: base.bonusRemaining - 1,
+          resetAt: referralTicketResetAt(),
+          updatedAt: now.toISOString()
+        };
+        await client.query("commit");
+        return {
+          ...ticketStatusFor(windows, settings, normalizedReferralCode, now, usage),
+          allowed: true,
+          ticketSource: "referral"
+        };
+      }
+
+      await client.query("commit");
+      return {
+        ...base,
+        allowed: false,
+        retryAfterSeconds: Math.max(1, Math.ceil((new Date(base.resetAt).getTime() - now.getTime()) / 1000))
+      };
+    } catch (error) {
+      await client.query("rollback").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async status(
+    keys: string | string[],
+    settings: BetaScanQuotaSettings,
+    now = new Date(),
+    referralCode?: string | null
+  ): Promise<BetaScanTicketStatus> {
+    await this.ready;
+    const quotaKeys = [...new Set(Array.isArray(keys) ? keys : [keys])];
+    const normalizedReferralCode = normalizeReferralCode(referralCode);
+    const trackedKeys = normalizedReferralCode ? [...quotaKeys, referralBonusKey(normalizedReferralCode)] : quotaKeys;
+    const result = await this.pool.query(
+      `select quota_key, count, reset_at, updated_at
+       from beta_scan_usage
+       where quota_key = any($1::text[])`,
+      [trackedKeys]
+    );
+    const usage = usageRecordsFromRows(result.rows);
+    return ticketStatusFor(quotaWindowsFor(usage, quotaKeys, settings, now), settings, normalizedReferralCode, now, usage);
+  }
+
+  async grantReferralTicket(referralCode: string | null, recipientKey: string, now = new Date()) {
+    await this.ready;
+    const normalizedReferralCode = normalizeReferralCode(referralCode);
+    if (!normalizedReferralCode || !recipientKey) {
+      return { granted: false, reason: "INVALID_REFERRAL" as const, bonusRemaining: 0 };
+    }
+
+    const bonusKey = referralBonusKey(normalizedReferralCode);
+    const redemptionKey = referralRedemptionKey(normalizedReferralCode, recipientKey);
     const client = await this.pool.connect();
 
     try {
@@ -526,61 +879,71 @@ class PostgresBetaScanUsageStore implements BetaScanUsageStore {
          from beta_scan_usage
          where quota_key = any($1::text[])
          for update`,
-        [quotaKeys]
+        [[bonusKey, redemptionKey]]
       );
-      const usageByKey = new Map(existing.rows.map((row) => [String(row.quota_key), row]));
-      const windows: Array<{ key: string; resetAt: Date; activeCount: number }> = quotaKeys.map((key) => {
-        const current = usageByKey.get(key);
-        const resetAtValue = current?.reset_at ? new Date(String(current.reset_at)) : null;
-        const isActive = resetAtValue ? resetAtValue.getTime() > now.getTime() : false;
-        const resetAt: Date = isActive && resetAtValue
-          ? resetAtValue
-          : new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
-        const activeCount = isActive ? Number(current?.count ?? 0) : 0;
-        return { key, resetAt, activeCount };
-      });
-      const exhausted = windows.find((window) => window.activeCount >= settings.freeScanLimit);
+      const usage = usageRecordsFromRows(existing.rows);
+      const bonusRemaining = activeCountFor(usage[bonusKey], now);
 
-      if (exhausted) {
-        await client.query("rollback");
-        return {
-          allowed: false,
-          limit: settings.freeScanLimit,
-          used: exhausted.activeCount,
-          remaining: 0,
-          resetAt: exhausted.resetAt.toISOString(),
-          retryAfterSeconds: Math.max(1, Math.ceil((exhausted.resetAt.getTime() - now.getTime()) / 1000))
-        };
+      if (activeCountFor(usage[redemptionKey], now) > 0) {
+        await client.query("commit");
+        return { granted: false, reason: "ALREADY_GRANTED" as const, bonusRemaining };
       }
 
-      let used = 0;
-      let remaining = settings.freeScanLimit;
-      let resetAt = windows[0]?.resetAt ?? new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
-
-      for (const window of windows) {
-        const nextCount = window.activeCount + 1;
-        used = Math.max(used, nextCount);
-        remaining = Math.min(remaining, Math.max(0, settings.freeScanLimit - nextCount));
-        if (window.resetAt.getTime() < resetAt.getTime()) resetAt = window.resetAt;
-        await client.query(
-          `insert into beta_scan_usage (quota_key, count, reset_at, updated_at)
-           values ($1, $2, $3, $4)
-           on conflict (quota_key) do update set
-             count = excluded.count,
-             reset_at = excluded.reset_at,
-             updated_at = excluded.updated_at`,
-          [window.key, nextCount, window.resetAt.toISOString(), now.toISOString()]
-        );
-      }
-
+      await upsertUsageRecord(client, redemptionKey, 1, referralTicketResetAt(), now);
+      await upsertUsageRecord(client, bonusKey, bonusRemaining + 1, referralTicketResetAt(), now);
       await client.query("commit");
-      return {
-        allowed: true,
-        limit: settings.freeScanLimit,
-        used,
-        remaining,
-        resetAt: resetAt.toISOString()
-      };
+      return { granted: true, bonusRemaining: bonusRemaining + 1 };
+    } catch (error) {
+      await client.query("rollback").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  async transferReferralTickets(fromReferralCode: string | null, toReferralCode: string | null, now = new Date()) {
+    await this.ready;
+    const from = normalizeReferralCode(fromReferralCode);
+    const to = normalizeReferralCode(toReferralCode);
+    if (!from || !to || from === to) {
+      const toRemaining = to
+        ? activeCountFor(
+            usageRecordsFromRows((await this.pool.query(
+              `select quota_key, count, reset_at, updated_at from beta_scan_usage where quota_key = $1`,
+              [referralBonusKey(to)]
+            )).rows)[referralBonusKey(to)],
+            now
+          )
+        : 0;
+      return { transferred: 0, fromBonusRemaining: 0, toBonusRemaining: toRemaining };
+    }
+
+    const fromKey = referralBonusKey(from);
+    const toKey = referralBonusKey(to);
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+      const existing = await client.query(
+        `select quota_key, count, reset_at, updated_at
+         from beta_scan_usage
+         where quota_key = any($1::text[])
+         for update`,
+        [[fromKey, toKey]]
+      );
+      const usage = usageRecordsFromRows(existing.rows);
+      const fromRemaining = activeCountFor(usage[fromKey], now);
+      const toRemaining = activeCountFor(usage[toKey], now);
+
+      if (fromRemaining <= 0) {
+        await client.query("commit");
+        return { transferred: 0, fromBonusRemaining: 0, toBonusRemaining: toRemaining };
+      }
+
+      await upsertUsageRecord(client, fromKey, 0, referralTicketResetAt(), now);
+      await upsertUsageRecord(client, toKey, toRemaining + fromRemaining, referralTicketResetAt(), now);
+      await client.query("commit");
+      return { transferred: fromRemaining, fromBonusRemaining: 0, toBonusRemaining: toRemaining + fromRemaining };
     } catch (error) {
       await client.query("rollback").catch(() => undefined);
       throw error;
@@ -714,6 +1077,134 @@ async function ensurePostgresBetaScanTables(pool: Pool) {
 
     create index if not exists beta_scan_leases_expires_at_idx on beta_scan_leases (expires_at);
   `);
+}
+
+interface QuotaWindow {
+  key: string;
+  resetAt: Date;
+  activeCount: number;
+}
+
+function quotaWindowsFor(
+  usage: Record<string, BetaScanUsageRecord>,
+  quotaKeys: string[],
+  settings: BetaScanQuotaSettings,
+  now: Date
+): QuotaWindow[] {
+  return quotaKeys.map((key) => {
+    const current = usage[key];
+    const isActive = Boolean(current && new Date(current.resetAt).getTime() > now.getTime());
+    const resetAt = isActive ? new Date(current.resetAt) : resetAtForWindow(settings, now);
+    const activeCount = isActive ? current.count : 0;
+    return { key, resetAt, activeCount };
+  });
+}
+
+function ticketStatusFor(
+  windows: QuotaWindow[],
+  settings: BetaScanQuotaSettings,
+  referralCode: string | null,
+  now: Date,
+  usage: Record<string, BetaScanUsageRecord>
+): BetaScanTicketStatus {
+  return baseTicketStatusFor(windows, settings, referralCode, now, usage);
+}
+
+function baseTicketStatusFor(
+  windows: QuotaWindow[],
+  settings: BetaScanQuotaSettings,
+  referralCode: string | null,
+  now: Date,
+  usage: Record<string, BetaScanUsageRecord>
+): BetaScanTicketStatus {
+  const resetAt = earliestResetAt(windows, settings, now);
+  const baseRemaining = settings.freeScanLimit <= 0
+    ? 0
+    : windows.reduce(
+        (remaining, window) => Math.min(remaining, Math.max(0, settings.freeScanLimit - window.activeCount)),
+        settings.freeScanLimit
+      );
+  const used = windows.reduce((max, window) => Math.max(max, window.activeCount), 0);
+  const bonusRemaining = referralCode ? activeCountFor(usage[referralBonusKey(referralCode)], now) : 0;
+  const remaining = baseRemaining + bonusRemaining;
+
+  return {
+    limit: settings.freeScanLimit,
+    used,
+    baseRemaining,
+    bonusRemaining,
+    remaining,
+    resetAt: resetAt.toISOString(),
+    referralCode,
+    retryAfterSeconds: remaining > 0 ? undefined : Math.max(1, Math.ceil((resetAt.getTime() - now.getTime()) / 1000))
+  };
+}
+
+function earliestResetAt(windows: QuotaWindow[], settings: BetaScanQuotaSettings, now: Date) {
+  return windows.reduce((earliest, window) => {
+    return window.resetAt.getTime() < earliest.getTime() ? window.resetAt : earliest;
+  }, resetAtForWindow(settings, now));
+}
+
+function resetAtForWindow(settings: BetaScanQuotaSettings, now: Date) {
+  return new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
+}
+
+function activeCountFor(record: BetaScanUsageRecord | undefined, now: Date) {
+  if (!record) return 0;
+  if (new Date(record.resetAt).getTime() <= now.getTime()) return 0;
+  return Math.max(0, Number(record.count) || 0);
+}
+
+function normalizeReferralCode(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  return /^[a-f0-9]{24}$/.test(normalized) ? normalized : null;
+}
+
+function referralBonusKey(referralCode: string) {
+  return `beta-ticket-bonus:${referralCode}`;
+}
+
+function referralRedemptionKey(referralCode: string, recipientKey: string) {
+  return `beta-ticket-redemption:${referralCode}:${recipientKey.slice(0, 128)}`;
+}
+
+function referralTicketResetAt() {
+  return "2126-01-01T00:00:00.000Z";
+}
+
+function usageRecordsFromRows(rows: Array<Record<string, unknown>>): Record<string, BetaScanUsageRecord> {
+  const usage: Record<string, BetaScanUsageRecord> = {};
+
+  for (const row of rows) {
+    const key = String(row.quota_key ?? "");
+    if (!key) continue;
+    usage[key] = {
+      count: Number(row.count ?? 0),
+      resetAt: row.reset_at ? new Date(String(row.reset_at)).toISOString() : new Date(0).toISOString(),
+      updatedAt: row.updated_at ? new Date(String(row.updated_at)).toISOString() : new Date(0).toISOString()
+    };
+  }
+
+  return usage;
+}
+
+function upsertUsageRecord(
+  client: { query: (queryText: string, values?: unknown[]) => Promise<unknown> },
+  key: string,
+  count: number,
+  resetAt: string,
+  now: Date
+) {
+  return client.query(
+    `insert into beta_scan_usage (quota_key, count, reset_at, updated_at)
+     values ($1, $2, $3, $4)
+     on conflict (quota_key) do update set
+       count = excluded.count,
+       reset_at = excluded.reset_at,
+       updated_at = excluded.updated_at`,
+    [key, count, resetAt, now.toISOString()]
+  );
 }
 
 function requestIdentity(request: Request) {

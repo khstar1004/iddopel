@@ -7,9 +7,12 @@ import {
   FileBetaScanSettingsStore,
   FileBetaScanUsageStore,
   assertBetaScanQuota,
+  betaScanReferralCode,
   betaScanQuotaKey,
   betaScanQuotaKeys,
-  betaScanQuotaSettings
+  betaScanQuotaSettings,
+  grantBetaScanReferralTicket,
+  getBetaScanTicketStatus
 } from "./beta-scan-quota";
 
 describe("beta scan quota", () => {
@@ -121,6 +124,50 @@ describe("beta scan quota", () => {
     expect(keys).toHaveLength(2);
     expect(keys[0]).toBe(betaScanQuotaKey("request", "203.0.113.9\nMozilla/5.0"));
     expect(keys[1]).toBe(betaScanQuotaKey("owner", "owner-token"));
+  });
+
+  it("grants one referral ticket once per referred browser and spends it after base tickets", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-referral-"));
+    const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
+    const now = new Date("2026-06-12T00:00:00.000Z");
+    const settings = { ...betaScanQuotaSettings(), freeScanLimit: 1, windowHours: 24 };
+    const ownerToken = "owner-with-referral-link";
+    const referralCode = betaScanReferralCode(ownerToken);
+    const ownerKeys = betaScanQuotaKeys(ownerToken, "203.0.113.17\nMozilla/5.0");
+
+    await expect(
+      grantBetaScanReferralTicket(usageStore, referralCode, "recipient-one", now)
+    ).resolves.toMatchObject({ granted: true, bonusRemaining: 1 });
+    await expect(
+      grantBetaScanReferralTicket(usageStore, referralCode, "recipient-one", now)
+    ).resolves.toMatchObject({ granted: false, reason: "ALREADY_GRANTED", bonusRemaining: 1 });
+
+    await expect(getBetaScanTicketStatus(usageStore, ownerKeys, settings, referralCode, now)).resolves.toMatchObject({
+      baseRemaining: 1,
+      bonusRemaining: 1,
+      remaining: 2,
+      referralCode
+    });
+    await expect(assertBetaScanQuota(usageStore, ownerKeys, settings, now, referralCode)).resolves.toMatchObject({
+      allowed: true,
+      ticketSource: "base",
+      baseRemaining: 0,
+      bonusRemaining: 1,
+      remaining: 1
+    });
+    await expect(assertBetaScanQuota(usageStore, ownerKeys, settings, now, referralCode)).resolves.toMatchObject({
+      allowed: true,
+      ticketSource: "referral",
+      baseRemaining: 0,
+      bonusRemaining: 0,
+      remaining: 0
+    });
+    await expect(assertBetaScanQuota(usageStore, ownerKeys, settings, now, referralCode)).resolves.toMatchObject({
+      allowed: false,
+      remaining: 0
+    });
+
+    await rm(dir, { recursive: true, force: true });
   });
 
   it("limits concurrent beta scan load with expiring leases", async () => {

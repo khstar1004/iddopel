@@ -1,6 +1,6 @@
 "use client";
 
-import { CreditCard, ExternalLink, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CreditCard, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,7 +19,7 @@ interface PublicOrder {
   amount: number;
   currency: "KRW";
   orderName: string;
-  provider: "MOCK" | "TOSS" | "POLAR";
+  provider: "MOCK" | "TOSS" | "POLAR" | "APP_STORE" | "GOOGLE_PLAY";
   status: "READY" | "PAID" | "FAILED" | "CANCELED";
   checkoutUrl: string | null;
   createdAt: string;
@@ -92,6 +92,10 @@ export function CheckoutClient() {
           cta: "결제하고 전체 리포트 보기",
           loading: "승인하고 있어요"
         };
+  const readiness = getCheckoutReadiness(order);
+  const hostedCheckout = isHostedCheckoutProvider(order.provider);
+  const mockCheckout = order.provider === "MOCK";
+  const canOpenHostedCheckout = hostedCheckout && Boolean(order.checkoutUrl);
 
   return (
     <CheckoutShell title={copy.title} description={copy.description}>
@@ -104,23 +108,118 @@ export function CheckoutClient() {
           <span style={{ color: "#6b7684", fontSize: 13 }}>결제 금액</span>
           <strong style={{ display: "block", marginTop: 4, fontSize: 28 }}>{order.amount.toLocaleString("ko-KR")}원</strong>
         </div>
-        {order.provider === "TOSS" || order.provider === "POLAR" ? (
-          <a className="toss-button" href={order.checkoutUrl ?? "#"} style={{ textDecoration: "none" }}>
-            <ExternalLink size={18} aria-hidden />
-            {copy.cta}
-          </a>
-        ) : (
+        <div className="checkout-readiness-panel" data-status={readiness.status}>
+          {readiness.status === "ready" ? <ShieldCheck size={18} aria-hidden /> : <AlertTriangle size={18} aria-hidden />}
+          <div>
+            <strong>{readiness.title}</strong>
+            <p>{readiness.description}</p>
+          </div>
+        </div>
+        <div className="checkout-policy-grid" aria-label="무료와 유료 제공 기준">
+          <div>
+            <span>무료</span>
+            <strong>상위 5개 링크</strong>
+            <p>무료 화면에서 보이는 링크는 결제 없이 직접 열 수 있어요.</p>
+          </div>
+          <div>
+            <span>정밀 리포트</span>
+            <strong>전체 URL + 조치 가이드</strong>
+            <p>잠긴 후보, 위험도, HTML/PDF 저장용 자료가 열려요.</p>
+          </div>
+          <div>
+            <span>월간 추적</span>
+            <strong>대시보드 기반</strong>
+            <p>현재는 메일 발송이 아니라 월 1회 재점검 결과를 화면에서 확인해요.</p>
+          </div>
+        </div>
+        {hostedCheckout ? (
+          <div className="checkout-action-stack">
+            {canOpenHostedCheckout ? (
+              <a className="toss-button" href={order.checkoutUrl ?? "#"} style={{ textDecoration: "none" }}>
+                <ExternalLink size={18} aria-hidden />
+                {copy.cta}
+              </a>
+            ) : (
+              <button className="toss-button" type="button" disabled>
+                <AlertTriangle size={18} aria-hidden />
+                결제창 준비 안 됨
+              </button>
+            )}
+            <p>결제창에서 테스트 모드나 결제 불가 문구가 보이면 실제 결제는 진행되지 않아요.</p>
+          </div>
+        ) : mockCheckout ? (
           <button className="toss-button" type="button" onClick={payWithMock} disabled={isPaying}>
             {isPaying ? <Loader2 size={18} aria-hidden /> : <CreditCard size={18} aria-hidden />}
             {isPaying ? copy.loading : "테스트 결제 승인"}
+          </button>
+        ) : (
+          <button className="toss-button" type="button" disabled>
+            <AlertTriangle size={18} aria-hidden />
+            앱 결제에서 처리
           </button>
         )}
         <p style={{ color: "#6b7684", fontSize: 13, lineHeight: 1.55, margin: 0 }}>
           실제 결제 환경에서는 결제 완료 후 선택한 상품 권한이 자동으로 적용돼요.
         </p>
+        <Link className="checkout-secondary-link" href="/">
+          <ArrowLeft size={15} aria-hidden />
+          점검 화면으로 돌아가기
+        </Link>
       </section>
     </CheckoutShell>
   );
+}
+
+function isHostedCheckoutProvider(provider: PublicOrder["provider"]) {
+  return provider === "TOSS" || provider === "POLAR";
+}
+
+function getCheckoutReadiness(order: PublicOrder) {
+  if (order.status === "PAID") {
+    return {
+      status: "ready",
+      title: "이미 결제 완료된 주문",
+      description: "권한이 적용된 주문이에요. 결제 결과 화면에서 리포트로 이동할 수 있어요."
+    };
+  }
+
+  if (isHostedCheckoutProvider(order.provider) && !order.checkoutUrl) {
+    return {
+      status: "blocked",
+      title: "결제창 주소가 아직 없어요",
+      description: "운영 결제 키나 상품 ID가 준비되지 않으면 사용자에게 결제 버튼을 열지 않습니다."
+    };
+  }
+
+  if (order.provider === "MOCK") {
+    return {
+      status: "test",
+      title: "테스트 결제 모드",
+      description: "로컬/E2E 확인용 주문이에요. 실제 카드 결제처럼 사용자에게 노출하면 안 됩니다."
+    };
+  }
+
+  if (order.provider === "APP_STORE" || order.provider === "GOOGLE_PLAY") {
+    return {
+      status: "blocked",
+      title: "웹 결제 대상 주문이 아니에요",
+      description: "앱 스토어 결제는 네이티브 앱의 인앱 구매 승인과 영수증 검증에서 처리해야 해요."
+    };
+  }
+
+  return {
+    status: "ready",
+    title: `${providerLabel(order.provider)} 결제 준비됨`,
+    description: "외부 결제창에서 금액과 상품명을 다시 확인한 뒤 결제를 진행해요."
+  };
+}
+
+function providerLabel(provider: PublicOrder["provider"]) {
+  if (provider === "TOSS") return "Toss";
+  if (provider === "POLAR") return "Polar";
+  if (provider === "APP_STORE") return "App Store";
+  if (provider === "GOOGLE_PLAY") return "Google Play";
+  return "Mock";
 }
 
 function CheckoutShell({

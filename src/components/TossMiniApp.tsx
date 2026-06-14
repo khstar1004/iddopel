@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, CreditCard, LockKeyhole } from "lucide-react";
+import { Check, CreditCard, ExternalLink, LockKeyhole } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { categoryLabels, countryLabels, riskLabels } from "@/lib/labels";
 import type { LockedScanResultPreview, ScanResult, ScanSummary } from "@/lib/types";
@@ -124,6 +124,10 @@ export function TossMiniApp() {
 
   async function startCheckout() {
     if (!summary) return;
+    if (summary.foundCount <= 0) {
+      setError("이번 점검은 공개 후보가 없어 결제를 열지 않아요. 월간 추적으로 새 흔적만 확인하세요.");
+      return;
+    }
 
     setIsOrdering(true);
     setError(null);
@@ -140,6 +144,10 @@ export function TossMiniApp() {
         throw new Error(body?.error?.message ?? "결제를 준비하지 못했어요.");
       }
 
+      if (typeof body.checkoutUrl !== "string" || !body.checkoutUrl) {
+        throw new Error("결제창 주소가 아직 준비되지 않았어요. 운영 결제 설정을 확인해 주세요.");
+      }
+
       window.location.href = body.checkoutUrl;
     } catch (orderError) {
       setError(orderError instanceof Error ? orderError.message : "결제를 준비하지 못했어요.");
@@ -149,10 +157,11 @@ export function TossMiniApp() {
   }
 
   const visibleResults = summary
-    ? summary.previewResults.slice(0, 3)
+    ? summary.previewResults.slice(0, 5)
     : [];
   const hiddenCount = summary && !showFullReport ? Math.max(0, summary.foundCount - visibleResults.length) : 0;
   const lockedPreviewResults = summary?.lockedResults ?? [];
+  const canCheckout = Boolean(summary && summary.foundCount > 0 && !showFullReport);
 
   return (
     <main className="toss-shell">
@@ -246,9 +255,16 @@ export function TossMiniApp() {
             </div>
 
             <div className="toss-result-metrics" aria-label="결과 규모">
-              <Mini label="공개 흔적" value={`${visibleResults.length}개`} />
+              <Mini label="무료 공개" value={`${visibleResults.length}개`} />
               <Mini label="잠김" value={`${hiddenCount}개`} />
             </div>
+
+            {visibleResults.length > 0 ? (
+              <div className="toss-free-preview-note">
+                <Check size={16} aria-hidden />
+                <span>무료로 보이는 {visibleResults.length}개 링크는 지금 바로 열 수 있어요.</span>
+              </div>
+            ) : null}
 
             <div className="toss-result-list">
               {visibleResults.length > 0 ? (
@@ -288,9 +304,16 @@ export function TossMiniApp() {
               </div>
             ) : null}
 
-            <button className="toss-button" type="button" onClick={startCheckout} disabled={isOrdering || showFullReport}>
+            {summary.foundCount <= 0 ? (
+              <div className="toss-no-checkout-note">
+                <Check size={16} aria-hidden />
+                <span>공개 후보가 없어 결제창은 열지 않아요.</span>
+              </div>
+            ) : null}
+
+            <button className="toss-button" type="button" onClick={startCheckout} disabled={isOrdering || !canCheckout}>
               <CreditCard size={18} aria-hidden />
-              {showFullReport ? "전체 리포트 열림" : isOrdering ? "결제를 준비하고 있어요" : "전체 리포트 보기"}
+              {showFullReport ? "전체 리포트 열림" : isOrdering ? "결제를 준비하고 있어요" : canCheckout ? "전체 리포트 보기" : "결제할 결과 없음"}
             </button>
 
             <div className="toss-score-summary" aria-label="점수 요약">
@@ -358,6 +381,9 @@ function isLockedPreview(value: unknown): value is LockedScanResultPreview {
 function TossResultCard({ isFullAccess, result }: { isFullAccess: boolean; result: ScanResult }) {
   const host = hostnameFromUrl(result.url);
   const brandKey = platformBrandKey(result);
+  const hasEvidenceSummary = Boolean(result.evidenceTitle || result.evidenceDescription || result.evidenceSnippet);
+  const evidenceSnippet =
+    result.evidenceSnippet && result.evidenceSnippet !== result.evidenceDescription ? result.evidenceSnippet : undefined;
 
   return (
     <article className="toss-result-card" data-brand={brandKey}>
@@ -375,7 +401,30 @@ function TossResultCard({ isFullAccess, result }: { isFullAccess: boolean; resul
           {categoryLabels[result.category]} · {countryLabels[result.country] ?? result.country}
           {host ? ` · ${host}` : ""}
         </p>
-        <small>{isFullAccess ? result.url : "상세 URL 잠김"}</small>
+        {hasEvidenceSummary ? (
+          <div className="result-evidence-summary" data-locked="false">
+            <span className="result-evidence-kicker">프로필 요약</span>
+            {result.evidenceTitle ? <strong>{result.evidenceTitle}</strong> : null}
+            {result.evidenceDescription ? <span>{result.evidenceDescription}</span> : null}
+            {evidenceSnippet ? <p>{evidenceSnippet}</p> : null}
+          </div>
+        ) : !isFullAccess && result.evidenceLocked ? (
+          <div className="result-evidence-summary" data-locked="true">
+            <span className="result-evidence-kicker">
+              <LockKeyhole size={13} aria-hidden />
+              페이지 요약 잠김
+            </span>
+            <p>나머지 후보의 공개 페이지 요약은 전체 리포트에서 확인할 수 있어요.</p>
+          </div>
+        ) : null}
+        {result.url ? (
+          <a className="toss-result-link" href={result.url} target="_blank" rel="noreferrer">
+            <ExternalLink size={13} aria-hidden />
+            {isFullAccess ? result.url : "무료 링크 열기"}
+          </a>
+        ) : (
+          <small>상세 URL 잠김</small>
+        )}
       </div>
     </article>
   );

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleApiError, jsonError, readJson } from "@/lib/api";
-import { createOrder, parseProductId, publicOrder, resolvePaymentProvider } from "@/lib/commerce";
+import { createOrder, hasBillableResults, parseProductId, publicOrder, resolvePaymentProvider } from "@/lib/commerce";
 import { getCommerceRepository } from "@/lib/commerce-repository";
 import { attachCheckoutUrl } from "@/lib/payment-provider";
 import { getStoredScan } from "@/lib/scan-store";
@@ -25,8 +25,14 @@ export async function POST(request: Request) {
       return withTossCors(request, jsonError("NOT_FOUND", "점검 기록을 찾을 수 없어요.", 404));
     }
 
+    const productId = parseProductId(body.productId);
+
+    if (!hasBillableResults(scan, productId)) {
+      return withTossCors(request, jsonError("NO_BILLABLE_RESULTS", "이번 점검은 공개 후보가 없어 정밀 리포트 결제를 열지 않아요.", 409));
+    }
+
     const provider = resolvePaymentProvider();
-    const order = createOrder(scan, provider, parseProductId(body.productId));
+    const order = createOrder(scan, provider, productId);
     const orderWithCheckout = await attachCheckoutUrl(order, requestOrigin(request));
     await getCommerceRepository().create(orderWithCheckout);
 

@@ -17,9 +17,10 @@ interface PageMetadata {
   title?: string;
   description?: string;
   imageUrl?: string;
+  snippet?: string;
 }
 
-const defaultMetadataLimit = 3;
+const defaultMetadataLimit = 5;
 const defaultMetadataTimeoutMs = 1200;
 const defaultMetadataMaxBytes = 64 * 1024;
 const metadataUserAgent = "id-doppelganger-metadata/1.0";
@@ -58,6 +59,8 @@ export async function enrichScanResultsWithMetadata(results: ScanResult[], optio
       evidenceTitle: metadata.title ?? result.evidenceTitle,
       evidenceDescription: metadata.description ?? result.evidenceDescription,
       evidenceImageUrl: metadata.imageUrl ?? result.evidenceImageUrl,
+      evidenceSnippet: metadata.snippet ?? result.evidenceSnippet,
+      evidenceFetchedAt: new Date().toISOString(),
       profileImageUrl: result.profileImageUrl ?? metadata.imageUrl
     };
   });
@@ -116,9 +119,10 @@ export function metadataFromHtml(html: string, baseUrl: string): PageMetadata | 
     metaContent(html, "property", "og:image") ?? metaContent(html, "name", "twitter:image"),
     baseUrl
   );
+  const snippet = cleanSnippet(visibleTextFromHtml(html));
 
-  if (!title && !description && !imageUrl) return null;
-  return { title, description, imageUrl };
+  if (!title && !description && !imageUrl && !snippet) return null;
+  return { title, description, imageUrl, snippet };
 }
 
 async function safeMetadataUrl(rawUrl: string, lookupImpl: LookupLike) {
@@ -255,6 +259,24 @@ function cleanText(value: string | undefined) {
     .replace(/\s+/g, " ")
     .trim();
   return cleaned ? cleaned.slice(0, 180) : undefined;
+}
+
+function visibleTextFromHtml(html: string) {
+  const body = html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? html.replace(/<head\b[^>]*>[\s\S]*?<\/head>/gi, " ");
+  return body
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, " ");
+}
+
+function cleanSnippet(value: string | undefined) {
+  const cleaned = decodeHtmlEntities(String(value ?? ""))
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned ? cleaned.slice(0, 260) : undefined;
 }
 
 function safeMetadataImageUrl(value: string | undefined, baseUrl: string) {

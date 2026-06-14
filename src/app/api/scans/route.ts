@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { handleApiError, jsonError, readJson } from "@/lib/api";
-import { acquireBetaScanLoadSlot, consumeBetaScanQuota, getBetaScanSettingsStore } from "@/lib/beta-scan-quota";
+import {
+  acquireBetaScanLoadSlot,
+  consumeBetaScanQuota,
+  getBetaScanSettingsStore,
+  type BetaScanQuotaSettings
+} from "@/lib/beta-scan-quota";
 import { isDevAdminRequest } from "@/lib/dev-admin";
 import { publicScanResponse } from "@/lib/scan-response";
 import { createStoredScan } from "@/lib/scan-store";
+import { resolveTicketWalletSession } from "@/lib/ticket-wallet";
 import { createTossPreflightResponse, rejectDisallowedTossCors, withTossCors } from "@/lib/toss-cors";
 import { parseCreateScanInput } from "@/lib/validation";
 
@@ -53,19 +59,33 @@ export async function POST(request: Request) {
     try {
       const quota = isAdminRequest
         ? null
-        : await consumeBetaScanQuota(request, request.headers.get("x-scan-owner-token"), settings);
+        : await consumeBetaScanQuotaForRequest(request, settings);
 
-      const freePreviewLocked = Boolean(quota && !quota.allowed);
+      if (quota && !quota.allowed) {
+        const response = jsonError(
+          "BETA_FREE_SCAN_LIMITED",
+          "무료 검색 티켓을 모두 사용했어요. 추천 링크를 공유하면 친구 방문마다 티켓 1장이 추가돼요.",
+          429,
+          {
+            limit: quota.limit,
+            remaining: quota.remaining,
+            baseRemaining: quota.baseRemaining,
+            bonusRemaining: quota.bonusRemaining,
+            resetAt: quota.resetAt,
+            retryAfterSeconds: quota.retryAfterSeconds,
+            referralCode: quota.referralCode
+          }
+        );
+        if (quota.retryAfterSeconds) response.headers.set("Retry-After", String(quota.retryAfterSeconds));
+        setQuotaHeaders(response, quota);
+        return withTossCors(request, response);
+      }
+
       const job = await createStoredScan(input, {
-        origin: new URL(request.url).origin,
-        freePreviewLocked,
-        freePreviewLockReason: freePreviewLocked ? "BETA_FREE_SCAN_LIMITED" : undefined
+        origin: new URL(request.url).origin
       });
       const response = NextResponse.json(publicScanResponse(job), { status: 201 });
       if (quota) setQuotaHeaders(response, quota);
-      if (freePreviewLocked) {
-        response.headers.set("x-beta-free-preview-locked", "true");
-      }
       return withTossCors(request, response);
     } finally {
       await loadLease?.release?.();
@@ -75,11 +95,33 @@ export async function POST(request: Request) {
   }
 }
 
+async function consumeBetaScanQuotaForRequest(request: Request, settings: BetaScanQuotaSettings) {
+  const wallet = await resolveTicketWalletSession(request);
+  const ownerToken = wallet?.ownerToken ?? request.headers.get("x-scan-owner-token");
+  return consumeBetaScanQuota(request, ownerToken, settings, { accountScoped: Boolean(wallet) });
+}
+
 function setQuotaHeaders(
   response: NextResponse,
-  quota: { limit: number; remaining: number; resetAt: string }
+  quota: {
+    limit: number;
+    remaining: number;
+    resetAt: string;
+    baseRemaining?: number;
+    bonusRemaining?: number;
+    referralCode?: string | null;
+  }
 ) {
   response.headers.set("x-beta-free-scan-limit", String(quota.limit));
   response.headers.set("x-beta-free-scans-remaining", String(quota.remaining));
   response.headers.set("x-beta-free-scan-reset-at", quota.resetAt);
+  if (quota.baseRemaining !== undefined) {
+    response.headers.set("x-beta-free-ticket-base-remaining", String(quota.baseRemaining));
+  }
+  if (quota.bonusRemaining !== undefined) {
+    response.headers.set("x-beta-free-ticket-bonus-remaining", String(quota.bonusRemaining));
+  }
+  if (quota.referralCode) {
+    response.headers.set("x-beta-free-ticket-referral-code", quota.referralCode);
+  }
 }

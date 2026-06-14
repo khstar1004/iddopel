@@ -106,17 +106,17 @@ export function scanErrorPresentation(
       ? {
           title: "무료 검색 한도에 도달했어요",
           message: resetText
-            ? `베타 무료 검색을 모두 사용했어요. ${resetText} 이후 다시 검색할 수 있어요.`
-            : "베타 무료 검색을 모두 사용했어요. 관리자 페이지에서 무료 검색 quota를 조정할 수 있어요.",
-          action: "관리자 설정에서 무료 검색 수치를 늘리거나, 잠시 후 다시 시도해 주세요.",
+            ? `무료 검색 티켓을 모두 사용했어요. 기본 티켓은 ${resetText} 이후 다시 채워져요.`
+            : "무료 검색 티켓을 모두 사용했어요.",
+          action: "검색 버튼 옆 추천 링크를 공유하면 친구 방문마다 티켓 1장이 추가돼요.",
           tone: "quota",
         }
       : {
           title: "Free search limit reached",
           message: resetText
-            ? `Free beta searches are used up. You can search again after ${resetText}.`
-            : "Free beta searches are used up. Adjust the free quota from the admin page.",
-          action: "Increase the free-search quota in admin settings or try again later.",
+            ? `All free search tickets are used. Base tickets reset after ${resetText}.`
+            : "All free search tickets are used.",
+          action: "Share the referral link beside the search button to earn one ticket per friend visit.",
           tone: "quota",
         };
   }

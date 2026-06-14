@@ -22,6 +22,34 @@ describe("metadataFromHtml", () => {
       imageUrl: "https://example.com/avatar.png"
     });
   });
+
+  it("extracts a short public page text snippet without executable content", () => {
+    const metadata = metadataFromHtml(
+      `<!doctype html>
+      <html>
+        <head>
+          <title>evidencegate profile</title>
+          <style>.hidden { color: red; }</style>
+          <script>alert("ignore")</script>
+        </head>
+        <body>
+          <main>
+            <h1>@evidencegate</h1>
+            <p>Open source developer building public profile tools.</p>
+            <p>Pinned repositories and profile links are visible.</p>
+          </main>
+        </body>
+      </html>`,
+      "https://example.com/evidencegate"
+    );
+
+    expect(metadata).toMatchObject({
+      title: "evidencegate profile",
+      snippet: "@evidencegate Open source developer building public profile tools. Pinned repositories and profile links are visible."
+    });
+    expect(metadata?.snippet).not.toContain("alert");
+    expect(metadata?.snippet).not.toContain("hidden");
+  });
 });
 
 describe("fetchResultMetadata", () => {
@@ -59,7 +87,8 @@ describe("fetchResultMetadata", () => {
     ).resolves.toEqual({
       title: "GitHub - im9route",
       description: "Developer profile",
-      imageUrl: undefined
+      imageUrl: undefined,
+      snippet: undefined
     });
   });
 });

@@ -12,13 +12,14 @@ import {
   ListChecks,
   LockKeyhole,
   MapPinned,
+  RefreshCw,
   ShieldAlert,
   Target,
   UserRound
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { categoryLabels, countryLabels, riskLabels } from "@/lib/labels";
 import type { PlatformCategory, RiskLevel, ScanPurpose, ScanResult } from "@/lib/types";
 import { BrandIcon } from "./BrandIcon";
@@ -99,26 +100,45 @@ export function ReportPageClient() {
       ? `adminToken=${encodeURIComponent(adminToken)}`
       : "";
 
-  useEffect(() => {
-    fetch(`/api/scans/${params.scanId}/results?access=full${accessQuery ? `&${accessQuery}` : ""}`)
-      .then(async (response) => {
-        const body = await response.json();
-        if (!response.ok) throw new Error(body?.error?.message ?? "정밀 리포트를 불러오지 못했어요.");
-        setReport(body as FullReportResponse);
-      })
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "정밀 리포트를 불러오지 못했어요."));
+  const loadReport = useCallback(async () => {
+    setError(null);
+    setReport(null);
+
+    try {
+      const response = await fetch(`/api/scans/${params.scanId}/results?access=full${accessQuery ? `&${accessQuery}` : ""}`);
+      const body = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(body?.error?.message ?? "정밀 리포트를 불러오지 못했어요.");
+      setReport(body as FullReportResponse);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "정밀 리포트를 불러오지 못했어요.");
+    }
   }, [accessQuery, params.scanId]);
+
+  useEffect(() => {
+    void loadReport();
+  }, [loadReport]);
 
   if (error) {
     return (
       <ReportShell>
-        <section className="panel" style={{ maxWidth: 720, margin: "40px auto" }}>
-          <LockKeyhole size={32} aria-hidden />
-          <h1>정밀 리포트 접근이 필요해요</h1>
-          <p style={{ color: "#6b7684" }}>{error}</p>
-          <Link className="primary-button" href="/">
-            다시 점검하기
-          </Link>
+        <section className="panel report-state-panel report-state-panel-error" role="alert">
+          <div className="report-state-icon" aria-hidden>
+            <LockKeyhole size={28} />
+          </div>
+          <div>
+            <h1>정밀 리포트를 열지 못했어요</h1>
+            <p>{error}</p>
+            <span>결제 확인이나 토큰 검증이 지연됐을 수 있어요. 같은 링크로 다시 확인해 보세요.</span>
+          </div>
+          <div className="report-state-actions">
+            <button className="primary-button" type="button" onClick={() => void loadReport()}>
+              <RefreshCw size={16} aria-hidden />
+              다시 확인
+            </button>
+            <Link className="ghost-button" href="/">
+              새 아이디 검색
+            </Link>
+          </div>
         </section>
       </ReportShell>
     );
@@ -127,9 +147,19 @@ export function ReportPageClient() {
   if (!report) {
     return (
       <ReportShell>
-        <section className="panel" style={{ maxWidth: 720, margin: "40px auto" }}>
-          <h1>정밀 리포트를 불러오고 있어요</h1>
-          <p style={{ color: "#6b7684" }}>결제 권한과 전체 결과를 확인하고 있어요.</p>
+        <section className="panel report-state-panel" aria-live="polite" aria-busy="true">
+          <div className="report-state-icon" aria-hidden>
+            <FileText size={28} />
+          </div>
+          <div>
+            <h1>정밀 리포트를 준비하고 있어요</h1>
+            <p>결제 권한과 전체 결과를 확인하고 있어요.</p>
+          </div>
+          <ol className="report-loading-steps">
+            <li>권한 확인</li>
+            <li>전체 결과 불러오기</li>
+            <li>다운로드 링크 준비</li>
+          </ol>
         </section>
       </ReportShell>
     );
@@ -502,6 +532,9 @@ function DistributionPanel({ icon, rows, title }: { icon: React.ReactNode; rows:
 function RichReportResultCard({ result }: { result: ScanResult }) {
   const host = hostnameFromUrl(result.url);
   const visibleTags = (result.tags ?? []).slice(0, 4);
+  const hasEvidenceSummary = Boolean(result.evidenceTitle || result.evidenceDescription || result.evidenceSnippet);
+  const evidenceSnippet =
+    result.evidenceSnippet && result.evidenceSnippet !== result.evidenceDescription ? result.evidenceSnippet : undefined;
 
   return (
     <article className="rich-result-card">
@@ -531,10 +564,12 @@ function RichReportResultCard({ result }: { result: ScanResult }) {
             ))}
           </div>
         ) : null}
-        {result.evidenceTitle || result.evidenceDescription ? (
-          <div className="result-evidence-summary">
+        {hasEvidenceSummary ? (
+          <div className="result-evidence-summary" data-locked="false">
+            <span className="result-evidence-kicker">프로필 요약</span>
             {result.evidenceTitle ? <strong>{result.evidenceTitle}</strong> : null}
             {result.evidenceDescription ? <span>{result.evidenceDescription}</span> : null}
+            {evidenceSnippet ? <p>{evidenceSnippet}</p> : null}
           </div>
         ) : null}
         <a className="result-link" href={result.url} target="_blank" rel="noopener noreferrer">

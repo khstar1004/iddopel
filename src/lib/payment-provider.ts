@@ -67,10 +67,10 @@ export async function attachCheckoutUrl(order: ReportOrder, origin: string): Pro
     })
   });
 
-  const body = (await response.json()) as TossPaymentResponse & { message?: string };
+  const body = (await response.json().catch(() => ({}))) as TossPaymentResponse & { message?: string };
 
   if (!response.ok || !body.checkout?.url) {
-    throw new Error(body.message ?? "토스페이먼츠 결제창을 만들지 못했어요.");
+    throw new PaymentProviderError("PAYMENT_REQUEST_REJECTED", body.message ?? "토스페이먼츠 결제창을 만들지 못했어요.", response.ok ? 502 : response.status);
   }
 
   return {
@@ -218,9 +218,9 @@ export async function confirmTossPayment(order: ReportOrder, paymentKey: string,
 }
 
 function requireTossSecretKey() {
-  const secretKey = process.env.TOSS_SECRET_KEY;
-  if (!secretKey) {
-    throw new Error("TOSS_SECRET_KEY가 설정되어 있지 않아요.");
+  const secretKey = process.env.TOSS_SECRET_KEY?.trim();
+  if (!isUsableCredential(secretKey)) {
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "TOSS_SECRET_KEY가 실제 결제 키로 설정되어 있지 않아요.", 503);
   }
 
   return secretKey;
@@ -242,8 +242,8 @@ function tossBasicAuth(secretKey: string) {
 
 function requirePolarAccessToken() {
   const accessToken = process.env.POLAR_ACCESS_TOKEN?.trim();
-  if (!accessToken) {
-    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "POLAR_ACCESS_TOKEN이 설정되어 있지 않아요.", 503);
+  if (!isUsableCredential(accessToken)) {
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "POLAR_ACCESS_TOKEN이 실제 결제 토큰으로 설정되어 있지 않아요.", 503);
   }
 
   return accessToken;
@@ -251,10 +251,10 @@ function requirePolarAccessToken() {
 
 function requirePolarProductId(productId: ReportOrder["productId"]) {
   const productIdValue = polarProductIdFor(productId);
-  if (!productIdValue) {
+  if (!isUsableCredential(productIdValue)) {
     throw new PaymentProviderError(
       "PAYMENT_CONFIG_MISSING",
-      `${polarProductEnvKey(productId)}가 설정되어 있지 않아요.`,
+      `${polarProductEnvKey(productId)}가 실제 상품 ID로 설정되어 있지 않아요.`,
       503
     );
   }
@@ -269,6 +269,21 @@ function polarProductIdFor(productId: ReportOrder["productId"]) {
 
 function polarProductEnvKey(productId: ReportOrder["productId"]) {
   return productId === "MONTHLY_MONITORING" ? "POLAR_MONTHLY_MONITORING_PRODUCT_ID" : "POLAR_PRODUCT_ID";
+}
+
+function isUsableCredential(value: string | null | undefined): value is string {
+  if (!value) return false;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return false;
+
+  return ![
+    "your_",
+    "replace-with",
+    "placeholder",
+    "change_me",
+    "dummy",
+    "example"
+  ].some((marker) => normalized.includes(marker));
 }
 
 function polarApiBaseUrl() {

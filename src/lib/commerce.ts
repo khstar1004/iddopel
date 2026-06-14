@@ -18,6 +18,10 @@ export function parseProductId(value: unknown): ProductId {
   return value === "MONTHLY_MONITORING" ? "MONTHLY_MONITORING" : "DETAILED_REPORT";
 }
 
+export function hasBillableResults(scan: Pick<ScanJob, "foundCount">, productId: ProductId) {
+  return productId === "MONTHLY_MONITORING" || scan.foundCount > 0;
+}
+
 export function createOrder(scan: ScanJob, provider: ReportOrder["provider"], productId: ProductId = "DETAILED_REPORT"): ReportOrder {
   const product = products[productId];
   const now = new Date().toISOString();

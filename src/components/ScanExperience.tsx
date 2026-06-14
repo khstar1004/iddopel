@@ -17,6 +17,7 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
+  Ticket,
   Trash2,
   UserRound,
   X
@@ -81,6 +82,39 @@ interface DetailAccessState extends ResultsResponse {
   sourceReportHtml?: string;
 }
 
+interface ScanTicketStatus {
+  limit: number;
+  used: number;
+  baseRemaining: number;
+  bonusRemaining: number;
+  remaining: number;
+  resetAt: string;
+  referralCode: string | null;
+}
+
+interface ScanTicketResponse {
+  tickets?: ScanTicketStatus;
+  wallet?: TicketWalletStatus | null;
+  referral?: {
+    granted: boolean;
+    reason?: "INVALID_REFERRAL" | "SELF_REFERRAL" | "ALREADY_GRANTED";
+  };
+}
+
+interface TicketWalletStatus {
+  authenticated: true;
+  accountId: string;
+  emailMasked: string;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+interface TicketWalletResponse extends ScanTicketResponse {
+  recoveryCode?: string;
+  created?: boolean;
+  transferredReferralTickets?: number;
+}
+
 const monitoringOwnerTokenKey = "id-doppelganger-monitoring-owner-token";
 const freeDetailOwnerTokenKey = "id-doppelganger-free-detail-owner-token";
 const freeDetailUsedScanIdKey = "id-doppelganger-free-detail-used-scan-id";
@@ -119,13 +153,56 @@ const scanExperienceCopy = {
       ready: "검색할 수 있어요.",
       blocker: {
         empty: "3자 이상 공개 아이디를 입력해 주세요.",
-        acknowledge: "정당한 목적 확인에 체크하면 검색할 수 있어요."
+        acknowledge: "확인에 체크하면 검색할 수 있어요."
       },
       charCount: (count: number) => `${count}/30자`,
       quotaRemaining: (remaining: number, limit: number, resetLabel: string | null) =>
         resetLabel
-          ? `베타 무료 검색 ${remaining}/${limit}회 남음 · 초기화 ${resetLabel}`
-          : `베타 무료 검색 ${remaining}/${limit}회 남음`,
+          ? `무료 티켓 ${remaining}장 남음 · 기본 티켓 초기화 ${resetLabel}`
+          : `무료 티켓 ${remaining}/${limit}장 남음`,
+      ticketsAria: "무료 검색 티켓",
+      ticketLoading: "티켓 확인 중",
+      ticketEmpty: "티켓 없음",
+      ticketCount: (count: number) => `${count}장`,
+      ticketBreakdown: (base: number, bonus: number) => bonus > 0 ? `기본 ${base} · 추천 ${bonus}` : `기본 ${base}`,
+      ticketEmptyHint: "무료 티켓이 없어요. 추천 링크를 공유해 티켓을 충전해 주세요.",
+      ticketLoadFailed: "티켓 상태를 확인하지 못했어요. 검색 시 서버에서 다시 확인합니다.",
+      referralTitle: "무료 티켓 충전",
+      referralDescription: "링크로 친구가 들어오면 무료 검색 티켓 1장이 추가돼요.",
+      referralLinkLabel: "추천 링크",
+      referralCopy: "링크 복사",
+      referralCopying: "복사 중",
+      referralCopied: "추천 링크를 복사했어요.",
+      referralFailed: "링크를 복사하지 못했어요.",
+      referralGranted: "추천 방문이 인정됐어요. 링크 주인에게 티켓 1장이 추가됐어요.",
+      referralAlreadyGranted: "이미 이 추천 방문은 티켓으로 인정됐어요.",
+      referralSelf: "내 링크는 내 티켓으로 적립되지 않아요.",
+      referralInvalid: "추천 링크가 유효하지 않아요.",
+      walletTitle: "티켓 지갑",
+      walletSignedOutTitle: "추천 티켓을 잃지 않게 보관",
+      walletSignedOutDescription: "이메일과 복구코드로 티켓을 다른 브라우저에서도 이어서 쓸 수 있어요.",
+      walletDepletedDescription: "추천 링크를 돌리기 전 지갑에 보관하면 새로 모은 티켓도 계정에 쌓여요.",
+      walletEmailLabel: "티켓 지갑 이메일",
+      walletEmailPlaceholder: "me@example.com",
+      walletRecoveryLabel: "복구코드",
+      walletRecoveryPlaceholder: "기존 지갑이면 복구코드 입력",
+      walletSave: "티켓 지갑 만들기",
+      walletLogin: "지갑 열기",
+      walletSaving: "저장 중",
+      walletSignedIn: (email: string) => `${email}에 티켓 보관 중`,
+      walletLogout: "로그아웃",
+      walletRecoveryTitle: "복구코드",
+      walletRecoveryDescription: "다른 기기에서 지갑을 열 때 필요해요. 다시 보여주지 않아요.",
+      walletRecoveryCopy: "복구코드 복사",
+      walletCreated: "티켓 지갑을 만들었어요. 추천 보너스도 이 지갑에 쌓입니다.",
+      walletLoggedIn: "티켓 지갑을 열었어요.",
+      walletRecoveryRequired: "이미 저장된 지갑이에요. 복구코드를 입력해 주세요.",
+      walletRecoveryInvalid: "복구코드가 맞지 않아요.",
+      walletCopied: "복구코드를 복사했어요.",
+      walletCopyFailed: "복구코드를 복사하지 못했어요.",
+      walletOpen: "티켓 지갑 열기",
+      walletClose: "티켓 지갑 닫기",
+      walletOpenHint: "티켓을 누르면 보관함을 열 수 있어요.",
       retry: "다시 시도",
       changeInput: "아이디 수정",
       submit: "내 아이디 흔적 찾기",
@@ -137,7 +214,6 @@ const scanExperienceCopy = {
       delete: "기록 삭제",
       emptyTitle: "아직 검색한 아이디가 없어요",
       emptyDescription: "검색하면 열린 링크와 잠긴 결과를 한 화면에서 정리해요.",
-      emptySteps: ["아이디 입력", "공개 흔적 확인", "필요한 것만 저장"],
       sourceBadge: "공개 흔적",
       previewTitle: (summary: ScanSummary) =>
         summary.foundCount > 0 ? `${summary.username}가 남아 있는 곳` : `${summary.username} 공개 흔적 없음`,
@@ -235,6 +311,9 @@ const scanExperienceCopy = {
       metadataAria: (platform: string) => `${platform} 메타데이터`,
       maskedAria: (platform: string) => `${platform} 잠긴 상세 URL 미리보기`,
       lockedUrlFallback: "상세 URL 잠김",
+      evidenceLabel: "프로필 요약",
+      evidenceLockedTitle: "페이지 요약 잠김",
+      evidenceLockedDescription: "나머지 후보의 공개 페이지 요약은 정밀 리포트에서 확인할 수 있어요.",
       lockCopy: "열린 링크는 바로 확인할 수 있어요. 나머지는 정밀 리포트에서 열려요."
     },
     pricing: {
@@ -375,13 +454,56 @@ const scanExperienceCopy = {
       ready: "Ready to search.",
       blocker: {
         empty: "Enter a public username with at least 3 characters.",
-        acknowledge: "Confirm legitimate use to start the search."
+        acknowledge: "Confirm the check to start."
       },
       charCount: (count: number) => `${count}/30 chars`,
       quotaRemaining: (remaining: number, limit: number, resetLabel: string | null) =>
         resetLabel
-          ? `${remaining}/${limit} free beta searches left · resets ${resetLabel}`
-          : `${remaining}/${limit} free beta searches left`,
+          ? `${remaining} free tickets left · base tickets reset ${resetLabel}`
+          : `${remaining}/${limit} free tickets left`,
+      ticketsAria: "Free search tickets",
+      ticketLoading: "Checking tickets",
+      ticketEmpty: "No tickets",
+      ticketCount: (count: number) => `${count}`,
+      ticketBreakdown: (base: number, bonus: number) => bonus > 0 ? `Base ${base} · Referral ${bonus}` : `Base ${base}`,
+      ticketEmptyHint: "No free tickets left. Share your referral link to refill one ticket at a time.",
+      ticketLoadFailed: "Could not check ticket status. The server will verify it when you search.",
+      referralTitle: "Refill free tickets",
+      referralDescription: "When a friend opens this link, one free search ticket is added.",
+      referralLinkLabel: "Referral link",
+      referralCopy: "Copy link",
+      referralCopying: "Copying",
+      referralCopied: "Referral link copied.",
+      referralFailed: "Could not copy the link.",
+      referralGranted: "Referral visit counted. The link owner received one ticket.",
+      referralAlreadyGranted: "This referral visit was already counted.",
+      referralSelf: "Your own link cannot refill your own tickets.",
+      referralInvalid: "This referral link is not valid.",
+      walletTitle: "Ticket wallet",
+      walletSignedOutTitle: "Keep earned tickets safe",
+      walletSignedOutDescription: "Use email and a recovery code to keep tickets across browsers.",
+      walletDepletedDescription: "Save the wallet before sharing so earned tickets land in your account.",
+      walletEmailLabel: "Ticket wallet email",
+      walletEmailPlaceholder: "me@example.com",
+      walletRecoveryLabel: "Recovery code",
+      walletRecoveryPlaceholder: "Enter it for an existing wallet",
+      walletSave: "Create ticket wallet",
+      walletLogin: "Open wallet",
+      walletSaving: "Saving",
+      walletSignedIn: (email: string) => `Tickets saved to ${email}`,
+      walletLogout: "Log out",
+      walletRecoveryTitle: "Recovery code",
+      walletRecoveryDescription: "Use it to open this wallet on another device. It is shown once.",
+      walletRecoveryCopy: "Copy recovery code",
+      walletCreated: "Ticket wallet created. Referral bonuses now land here.",
+      walletLoggedIn: "Ticket wallet opened.",
+      walletRecoveryRequired: "This wallet already exists. Enter the recovery code.",
+      walletRecoveryInvalid: "The recovery code is incorrect.",
+      walletCopied: "Recovery code copied.",
+      walletCopyFailed: "Could not copy the recovery code.",
+      walletOpen: "Open ticket wallet",
+      walletClose: "Close ticket wallet",
+      walletOpenHint: "Tap the ticket to open the wallet.",
       retry: "Try again",
       changeInput: "Edit username",
       submit: "Find my username traces",
@@ -393,7 +515,6 @@ const scanExperienceCopy = {
       delete: "Delete record",
       emptyTitle: "No username searched yet",
       emptyDescription: "Search a username to see public trace results in one place.",
-      emptySteps: ["Enter username", "Check public traces", "Save only what matters"],
       sourceBadge: "Public trace",
       previewTitle: (summary: ScanSummary) =>
         summary.foundCount > 0 ? `Where ${summary.username} shows up` : `No public traces for ${summary.username}`,
@@ -491,6 +612,9 @@ const scanExperienceCopy = {
       metadataAria: (platform: string) => `${platform} metadata`,
       maskedAria: (platform: string) => `${platform} locked URL preview`,
       lockedUrlFallback: "Detailed URL locked",
+      evidenceLabel: "Profile preview",
+      evidenceLockedTitle: "Page preview locked",
+      evidenceLockedDescription: "The remaining public page summaries open in the detailed report.",
       lockCopy: "The free links are clickable now. Remaining exact URLs and the full analysis open in the detailed report."
     },
     pricing: {
@@ -659,6 +783,75 @@ function createQuotaNotice(response: Response, copy: ScanExperienceCopy, locale:
   return copy.form.quotaRemaining(remaining, limit, resetAt ? formatDateTime(resetAt, locale) : null);
 }
 
+function ticketStatusFromHeaders(response: Response): ScanTicketStatus | null {
+  const remaining = parseHeaderNumber(response.headers.get("x-beta-free-scans-remaining"));
+  const limit = parseHeaderNumber(response.headers.get("x-beta-free-scan-limit"));
+  const resetAt = response.headers.get("x-beta-free-scan-reset-at");
+
+  if (remaining === undefined || limit === undefined || !resetAt) return null;
+
+  const baseRemaining = parseHeaderNumber(response.headers.get("x-beta-free-ticket-base-remaining")) ?? Math.min(remaining, limit);
+  const bonusRemaining =
+    parseHeaderNumber(response.headers.get("x-beta-free-ticket-bonus-remaining")) ?? Math.max(0, remaining - baseRemaining);
+
+  return {
+    limit,
+    used: Math.max(0, limit - baseRemaining),
+    baseRemaining,
+    bonusRemaining,
+    remaining,
+    resetAt,
+    referralCode: response.headers.get("x-beta-free-ticket-referral-code")
+  };
+}
+
+function normalizeTicketStatus(value: unknown): ScanTicketStatus | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const limit = typeof record.limit === "number" ? record.limit : null;
+  const used = typeof record.used === "number" ? record.used : null;
+  const baseRemaining = typeof record.baseRemaining === "number" ? record.baseRemaining : null;
+  const bonusRemaining = typeof record.bonusRemaining === "number" ? record.bonusRemaining : null;
+  const remaining = typeof record.remaining === "number" ? record.remaining : null;
+  const resetAt = typeof record.resetAt === "string" ? record.resetAt : null;
+
+  if (
+    limit === null ||
+    used === null ||
+    baseRemaining === null ||
+    bonusRemaining === null ||
+    remaining === null ||
+    !resetAt
+  ) {
+    return null;
+  }
+
+  return {
+    limit,
+    used,
+    baseRemaining,
+    bonusRemaining,
+    remaining,
+    resetAt,
+    referralCode: typeof record.referralCode === "string" ? record.referralCode : null
+  };
+}
+
+function referralMessageFor(response: ScanTicketResponse, copy: ScanExperienceCopy) {
+  if (!response.referral) return null;
+  if (response.referral.granted) return copy.form.referralGranted;
+
+  if (response.referral.reason === "ALREADY_GRANTED") return copy.form.referralAlreadyGranted;
+  if (response.referral.reason === "SELF_REFERRAL") return copy.form.referralSelf;
+  return copy.form.referralInvalid;
+}
+
+function walletMessageForError(code: string | undefined, fallback: string | undefined, copy: ScanExperienceCopy) {
+  if (code === "TICKET_WALLET_RECOVERY_REQUIRED") return copy.form.walletRecoveryRequired;
+  if (code === "TICKET_WALLET_RECOVERY_INVALID") return copy.form.walletRecoveryInvalid;
+  return fallback ?? copy.form.ticketLoadFailed;
+}
+
 function readApiError(body: unknown) {
   if (!body || typeof body !== "object") return {};
 
@@ -705,6 +898,17 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   const [history, setHistory] = useState<StoredScan[]>([]);
   const [scanError, setScanError] = useState<ScanErrorState | null>(null);
   const [freeScanNotice, setFreeScanNotice] = useState<string | null>(null);
+  const [ticketStatus, setTicketStatus] = useState<ScanTicketStatus | null>(null);
+  const [ticketMessage, setTicketMessage] = useState<string | null>(null);
+  const [isLoadingTickets, setIsLoadingTickets] = useState(false);
+  const [isCopyingReferral, setIsCopyingReferral] = useState(false);
+  const [ticketWallet, setTicketWallet] = useState<TicketWalletStatus | null>(null);
+  const [walletEmail, setWalletEmail] = useState("");
+  const [walletRecoveryInput, setWalletRecoveryInput] = useState("");
+  const [walletRecoveryCode, setWalletRecoveryCode] = useState<string | null>(null);
+  const [walletMessage, setWalletMessage] = useState<string | null>(null);
+  const [isSavingWallet, setIsSavingWallet] = useState(false);
+  const [isTicketWalletOpen, setIsTicketWalletOpen] = useState(false);
   const [monitoringInput, setMonitoringInput] = useState("");
   const [monitoring, setMonitoring] = useState<PublicMonitoringSubscription | null>(null);
   const [monitoringMessage, setMonitoringMessage] = useState<string | null>(null);
@@ -742,6 +946,38 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     if (saved) {
       setHistory(JSON.parse(saved) as StoredScan[]);
     }
+
+    const scanOwnerToken = getOrCreateFreeScanOwnerToken();
+    const referralCode = new URLSearchParams(window.location.search).get("ref");
+    setIsLoadingTickets(true);
+    fetch("/api/scan-tickets", {
+      method: referralCode ? "POST" : "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-scan-owner-token": scanOwnerToken
+      },
+      body: referralCode ? JSON.stringify({ referralCode }) : undefined
+    })
+      .then(async (response) => {
+        const body = await response.json().catch(() => null) as ScanTicketResponse | null;
+        if (!response.ok || !body) return null;
+        return body;
+      })
+      .then((body) => {
+        const tickets = normalizeTicketStatus(body?.tickets);
+        if (tickets) setTicketStatus(tickets);
+        if (body?.wallet) setTicketWallet(body.wallet);
+        if (body?.referral) {
+          setTicketMessage(referralMessageFor(body, scanExperienceCopy[nextLocale]));
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.delete("ref");
+          window.history.replaceState(null, "", `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+        }
+      })
+      .catch(() => {
+        setTicketMessage(scanExperienceCopy[nextLocale].form.ticketLoadFailed);
+      })
+      .finally(() => setIsLoadingTickets(false));
 
     const ownerToken = window.localStorage.getItem(monitoringOwnerTokenKey);
     if (ownerToken) {
@@ -805,6 +1041,17 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     return () => window.clearTimeout(timer);
   }, [summary?.scanId]);
 
+  useEffect(() => {
+    if (!isTicketWalletOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setIsTicketWalletOpen(false);
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isTicketWalletOpen]);
+
   const usernameValidationMessage = useMemo(() => getUsernameValidationMessage(username, locale), [locale, username]);
   const normalizedUsernamePreview = useMemo(() => {
     if (!username.trim() || usernameValidationMessage) return null;
@@ -820,8 +1067,14 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     if (!username.trim()) return copy.form.blocker.empty;
     if (usernameValidationMessage) return usernameValidationMessage;
     if (!acknowledged) return copy.form.blocker.acknowledge;
-    return freeScanNotice ?? copy.form.ready;
-  }, [acknowledged, copy, freeScanNotice, isScanning, username, usernameValidationMessage]);
+    if (!devAdminToken && ticketStatus?.remaining === 0) return copy.form.ticketEmptyHint;
+    return freeScanNotice;
+  }, [acknowledged, copy, devAdminToken, freeScanNotice, isScanning, ticketStatus?.remaining, username, usernameValidationMessage]);
+  const referralUrl = useMemo(() => {
+    if (!ticketStatus?.referralCode || typeof window === "undefined") return "";
+    const path = locale === "en" ? "/en" : "/";
+    return `${window.location.origin}${path}?ref=${encodeURIComponent(ticketStatus.referralCode)}`;
+  }, [locale, ticketStatus?.referralCode]);
   const monitoringDraft = useMemo(
     () => parseMonitoringDraft(monitoringInput, summary?.username ?? username, 3),
     [monitoringInput, summary?.username, username]
@@ -831,7 +1084,8 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     monitoringDraft.usernames.length > 0 &&
     monitoringDraft.invalid.length === 0 &&
     monitoringDraft.extraCount === 0;
-  const canSubmit = username.trim().length >= 3 && !usernameValidationMessage && acknowledged && !isScanning;
+  const hasSearchTicket = Boolean(devAdminToken) || ticketStatus === null || ticketStatus.remaining > 0;
+  const canSubmit = username.trim().length >= 3 && !usernameValidationMessage && acknowledged && !isScanning && hasSearchTicket;
 
   function changeLocale(nextLocale: Locale) {
     setLocale(nextLocale);
@@ -904,6 +1158,8 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
       });
 
       const body = await response.json();
+      const nextTicketStatus = ticketStatusFromHeaders(response);
+      if (nextTicketStatus) setTicketStatus(nextTicketStatus);
 
       if (!response.ok) {
         setScanError(createScanErrorPresentation(body, response, locale));
@@ -926,6 +1182,93 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
       ));
     } finally {
       setIsScanning(false);
+    }
+  }
+
+  async function copyReferralLink() {
+    if (!referralUrl) return;
+
+    setIsCopyingReferral(true);
+    try {
+      await navigator.clipboard.writeText(referralUrl);
+      setTicketMessage(copy.form.referralCopied);
+    } catch {
+      setTicketMessage(copy.form.referralFailed);
+    } finally {
+      setIsCopyingReferral(false);
+    }
+  }
+
+  async function submitTicketWallet() {
+    setWalletMessage(null);
+    setWalletRecoveryCode(null);
+    setIsSavingWallet(true);
+
+    try {
+      const scanOwnerToken = getOrCreateFreeScanOwnerToken();
+      const response = await fetch("/api/ticket-wallet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-scan-owner-token": scanOwnerToken
+        },
+        body: JSON.stringify({
+          email: walletEmail,
+          recoveryCode: walletRecoveryInput.trim() || undefined
+        })
+      });
+      const body = await response.json().catch(() => null) as TicketWalletResponse | null;
+
+      if (!response.ok) {
+        const error = readApiError(body);
+        setWalletMessage(walletMessageForError(error.code, error.message, copy));
+        return;
+      }
+
+      const tickets = normalizeTicketStatus(body?.tickets);
+      if (tickets) setTicketStatus(tickets);
+      if (body?.wallet) setTicketWallet(body.wallet);
+      if (typeof body?.recoveryCode === "string") setWalletRecoveryCode(body.recoveryCode);
+      setWalletRecoveryInput("");
+      setWalletMessage(body?.created ? copy.form.walletCreated : copy.form.walletLoggedIn);
+    } catch (error) {
+      setWalletMessage(error instanceof Error ? error.message : copy.form.ticketLoadFailed);
+    } finally {
+      setIsSavingWallet(false);
+    }
+  }
+
+  async function logoutTicketWallet() {
+    setWalletMessage(null);
+    const response = await fetch("/api/ticket-wallet", { method: "DELETE" });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const error = readApiError(body);
+      setWalletMessage(error.message ?? copy.form.ticketLoadFailed);
+      return;
+    }
+
+    setTicketWallet(null);
+    setWalletRecoveryCode(null);
+    setWalletRecoveryInput("");
+    const scanOwnerToken = getOrCreateFreeScanOwnerToken();
+    const ticketResponse = await fetch("/api/scan-tickets", {
+      headers: { "x-scan-owner-token": scanOwnerToken }
+    }).catch(() => null);
+    if (ticketResponse?.ok) {
+      const body = await ticketResponse.json().catch(() => null) as ScanTicketResponse | null;
+      const tickets = normalizeTicketStatus(body?.tickets);
+      if (tickets) setTicketStatus(tickets);
+    }
+  }
+
+  async function copyWalletRecoveryCode() {
+    if (!walletRecoveryCode) return;
+    try {
+      await navigator.clipboard.writeText(walletRecoveryCode);
+      setWalletMessage(copy.form.walletCopied);
+    } catch {
+      setWalletMessage(copy.form.walletCopyFailed);
     }
   }
 
@@ -1190,12 +1533,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
         </div>
 
         <form className="scan-panel" onSubmit={submitScan} aria-label={copy.form.scanLabel}>
-          <div className="radar" aria-hidden>
-            <div className="radar-core">
-              {isScanning ? `${progress}%` : username.trim() || "username"}
-            </div>
-          </div>
-
           <div className="field-stack">
             <label htmlFor="username">{copy.form.label}</label>
             <div className="input-shell">
@@ -1236,27 +1573,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
             ) : null}
           </div>
 
-          {history.length > 0 ? (
-            <div className="quick-history" aria-label={copy.history.quickTitle}>
-              <span className="quick-history-label">
-                {copy.history.quickTitle}
-              </span>
-              <div className="quick-history-list">
-                {history.slice(0, 3).map((item) => (
-                  <button
-                    aria-label={`${copy.history.quickTitle}: ${item.username}`}
-                    className="quick-history-button"
-                    key={`quick-${item.scanId}`}
-                    type="button"
-                    onClick={() => restoreScanFromHistory(item)}
-                  >
-                    <strong>{item.username}</strong>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           <label className="check-row">
             <input
               type="checkbox"
@@ -1272,13 +1588,6 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
                 <ScanEyeLoader />
                 <div>
                   <p>{copy.scanSteps[stepIndex]}</p>
-                  <ol className="scan-step-list">
-                    {copy.scanSteps.map((step, index) => (
-                      <li data-state={index < stepIndex ? "done" : index === stepIndex ? "active" : "pending"} key={step}>
-                        {step}
-                      </li>
-                    ))}
-                  </ol>
                 </div>
               </div>
               <strong>{progress}%</strong>
@@ -1315,10 +1624,26 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
             </p>
           ) : null}
 
-          <button className="primary-button" disabled={!canSubmit} type="submit">
-            {isScanning ? <ScanEyeLoader compact /> : <Search size={18} aria-hidden />}
-            {isScanning ? copy.form.submitting : copy.form.submit}
-          </button>
+          <div className="scan-submit-row">
+            <button className="primary-button" disabled={!canSubmit} type="submit">
+              {isScanning ? <ScanEyeLoader compact /> : <Search size={18} aria-hidden />}
+              {isScanning ? copy.form.submitting : copy.form.submit}
+            </button>
+            <TicketBadge copy={copy} isLoading={isLoadingTickets} status={ticketStatus} onOpenWallet={() => setIsTicketWalletOpen(true)} />
+          </div>
+
+          {!devAdminToken && ticketStatus?.remaining === 0 && referralUrl ? (
+            <ReferralTicketPanel
+              copy={copy}
+              isCopying={isCopyingReferral}
+              message={ticketMessage}
+              onCopy={copyReferralLink}
+              onOpenWallet={() => setIsTicketWalletOpen(true)}
+              referralUrl={referralUrl}
+            />
+          ) : ticketMessage ? (
+            <p className="ticket-message" role="status">{ticketMessage}</p>
+          ) : null}
 
           {devAdminEnabled ? (
             <DevAdminPanel
@@ -1334,6 +1659,25 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
             />
           ) : null}
         </form>
+
+        {isTicketWalletOpen ? (
+          <TicketWalletDialog
+            copy={copy}
+            email={walletEmail}
+            isSaving={isSavingWallet}
+            message={walletMessage}
+            onClose={() => setIsTicketWalletOpen(false)}
+            onCopyRecovery={copyWalletRecoveryCode}
+            onEmailChange={setWalletEmail}
+            onLogout={logoutTicketWallet}
+            onRecoveryChange={setWalletRecoveryInput}
+            onSubmit={submitTicketWallet}
+            recoveryCode={walletRecoveryCode}
+            recoveryInput={walletRecoveryInput}
+            status={ticketStatus}
+            wallet={ticketWallet}
+          />
+        ) : null}
 
         <p className="web-safety-note">
           {copy.form.safetyNote}
@@ -1886,6 +2230,256 @@ function ResultDashboard({
   );
 }
 
+function TicketBadge({
+  copy,
+  isLoading,
+  onOpenWallet,
+  status
+}: {
+  copy: ScanExperienceCopy;
+  isLoading: boolean;
+  onOpenWallet: () => void;
+  status: ScanTicketStatus | null;
+}) {
+  const isEmpty = Boolean(status && status.remaining <= 0);
+  const label = isLoading
+    ? copy.form.ticketLoading
+    : status
+      ? copy.form.ticketCount(status.remaining)
+      : copy.form.ticketLoading;
+  const breakdown = status ? copy.form.ticketBreakdown(status.baseRemaining, status.bonusRemaining) : copy.form.ticketsAria;
+
+  return (
+    <button
+      className="ticket-badge"
+      data-empty={isEmpty ? "true" : "false"}
+      aria-label={`${copy.form.ticketsAria}. ${copy.form.walletOpen}`}
+      type="button"
+      title={copy.form.walletOpenHint}
+      onClick={onOpenWallet}
+    >
+      <Ticket size={18} aria-hidden />
+      <span>{isEmpty ? copy.form.ticketEmpty : label}</span>
+      <strong>{breakdown}</strong>
+    </button>
+  );
+}
+
+function ReferralTicketPanel({
+  copy,
+  isCopying,
+  message,
+  onCopy,
+  onOpenWallet,
+  referralUrl
+}: {
+  copy: ScanExperienceCopy;
+  isCopying: boolean;
+  message: string | null;
+  onCopy: () => void;
+  onOpenWallet: () => void;
+  referralUrl: string;
+}) {
+  return (
+    <div className="referral-ticket-panel">
+      <div className="referral-ticket-copy">
+        <strong>{copy.form.referralTitle}</strong>
+        <p>{copy.form.referralDescription}</p>
+      </div>
+      <div className="referral-link-row">
+        <input
+          aria-label={copy.form.referralLinkLabel}
+          readOnly
+          value={referralUrl}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+        <button className="secondary-button" type="button" onClick={onCopy} disabled={isCopying}>
+          <Copy size={15} aria-hidden />
+          {isCopying ? copy.form.referralCopying : copy.form.referralCopy}
+        </button>
+        <button className="ghost-button" type="button" onClick={onOpenWallet}>
+          <Ticket size={15} aria-hidden />
+          {copy.form.walletOpen}
+        </button>
+      </div>
+      {message ? <p className="ticket-message" role="status">{message}</p> : null}
+    </div>
+  );
+}
+
+function TicketWalletDialog({
+  copy,
+  email,
+  isSaving,
+  message,
+  onClose,
+  onCopyRecovery,
+  onEmailChange,
+  onLogout,
+  onRecoveryChange,
+  onSubmit,
+  recoveryCode,
+  recoveryInput,
+  status,
+  wallet
+}: {
+  copy: ScanExperienceCopy;
+  email: string;
+  isSaving: boolean;
+  message: string | null;
+  onClose: () => void;
+  onCopyRecovery: () => void;
+  onEmailChange: (value: string) => void;
+  onLogout: () => void;
+  onRecoveryChange: (value: string) => void;
+  onSubmit: () => void;
+  recoveryCode: string | null;
+  recoveryInput: string;
+  status: ScanTicketStatus | null;
+  wallet: TicketWalletStatus | null;
+}) {
+  return (
+    <div className="ticket-wallet-overlay" role="presentation" onMouseDown={onClose}>
+      <div
+        className="ticket-wallet-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={copy.form.walletTitle}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="ticket-wallet-dialog-header">
+          <strong>{copy.form.walletTitle}</strong>
+          <button className="close-dialog-button" type="button" aria-label={copy.form.walletClose} onClick={onClose}>
+            <X size={17} aria-hidden />
+          </button>
+        </div>
+        <TicketWalletPanel
+          copy={copy}
+          email={email}
+          isSaving={isSaving}
+          message={message}
+          onCopyRecovery={onCopyRecovery}
+          onEmailChange={onEmailChange}
+          onLogout={onLogout}
+          onRecoveryChange={onRecoveryChange}
+          onSubmit={onSubmit}
+          recoveryCode={recoveryCode}
+          recoveryInput={recoveryInput}
+          status={status}
+          wallet={wallet}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TicketWalletPanel({
+  copy,
+  email,
+  isSaving,
+  message,
+  onCopyRecovery,
+  onEmailChange,
+  onLogout,
+  onRecoveryChange,
+  onSubmit,
+  recoveryCode,
+  recoveryInput,
+  status,
+  wallet
+}: {
+  copy: ScanExperienceCopy;
+  email: string;
+  isSaving: boolean;
+  message: string | null;
+  onCopyRecovery: () => void;
+  onEmailChange: (value: string) => void;
+  onLogout: () => void;
+  onRecoveryChange: (value: string) => void;
+  onSubmit: () => void;
+  recoveryCode: string | null;
+  recoveryInput: string;
+  status: ScanTicketStatus | null;
+  wallet: TicketWalletStatus | null;
+}) {
+  const depleted = Boolean(status && status.remaining <= 0);
+
+  if (wallet) {
+    return (
+      <section className="ticket-wallet-panel" data-authenticated="true" aria-label={copy.form.walletTitle}>
+        <div className="ticket-wallet-heading">
+          <div>
+            <strong>{copy.form.walletTitle}</strong>
+            <p>{copy.form.walletSignedIn(wallet.emailMasked)}</p>
+          </div>
+          <button className="ghost-button" type="button" onClick={onLogout}>
+            {copy.form.walletLogout}
+          </button>
+        </div>
+
+        {recoveryCode ? (
+          <div className="wallet-recovery-box">
+            <span>{copy.form.walletRecoveryTitle}</span>
+            <strong>{recoveryCode}</strong>
+            <p>{copy.form.walletRecoveryDescription}</p>
+            <button className="secondary-button" type="button" onClick={onCopyRecovery}>
+              <Copy size={15} aria-hidden />
+              {copy.form.walletRecoveryCopy}
+            </button>
+          </div>
+        ) : null}
+
+        {message ? <p className="ticket-message" role="status">{message}</p> : null}
+      </section>
+    );
+  }
+
+  return (
+    <section className="ticket-wallet-panel" data-authenticated="false" aria-label={copy.form.walletTitle}>
+      <div className="ticket-wallet-heading">
+        <div>
+          <strong>{copy.form.walletSignedOutTitle}</strong>
+          <p>{depleted ? copy.form.walletDepletedDescription : copy.form.walletSignedOutDescription}</p>
+        </div>
+      </div>
+      <div
+        className="ticket-wallet-form"
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          onSubmit();
+        }}
+      >
+        <label>
+          <span>{copy.form.walletEmailLabel}</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => onEmailChange(event.target.value)}
+            placeholder={copy.form.walletEmailPlaceholder}
+            autoComplete="email"
+            required
+          />
+        </label>
+        <label>
+          <span>{copy.form.walletRecoveryLabel}</span>
+          <input
+            value={recoveryInput}
+            onChange={(event) => onRecoveryChange(event.target.value)}
+            placeholder={copy.form.walletRecoveryPlaceholder}
+            autoComplete="off"
+          />
+        </label>
+        <button className="secondary-button" type="button" disabled={isSaving} onClick={onSubmit}>
+          <Ticket size={15} aria-hidden />
+          {isSaving ? copy.form.walletSaving : recoveryInput.trim() ? copy.form.walletLogin : copy.form.walletSave}
+        </button>
+      </div>
+      {message ? <p className="ticket-message" role="status">{message}</p> : null}
+    </section>
+  );
+}
+
 function LanguageSwitch({
   copy,
   locale,
@@ -1926,14 +2520,6 @@ function EmptyResultPreview({ copy }: { copy: ScanExperienceCopy }) {
         </div>
         <h2>{copy.results.emptyTitle}</h2>
         <p>{copy.results.emptyDescription}</p>
-        <ol className="empty-result-flow">
-          {copy.results.emptySteps.map((step, index) => (
-            <li key={step}>
-              <span>{index + 1}</span>
-              {step}
-            </li>
-          ))}
-        </ol>
       </section>
     </div>
   );
@@ -2265,6 +2851,9 @@ function RichResultCard({
   const host = hostnameFromUrl(result.url);
   const visibleTags = (result.tags ?? []).slice(0, 4);
   const brandKey = platformBrandKey(result);
+  const hasEvidenceSummary = Boolean(result.evidenceTitle || result.evidenceDescription || result.evidenceSnippet);
+  const evidenceSnippet =
+    result.evidenceSnippet && result.evidenceSnippet !== result.evidenceDescription ? result.evidenceSnippet : undefined;
 
   return (
     <article className="rich-result-card" data-brand={brandKey} aria-label={copy.preview.candidateAria(result.platform)}>
@@ -2296,10 +2885,20 @@ function RichResultCard({
             ))}
           </div>
         ) : null}
-        {result.evidenceTitle || result.evidenceDescription ? (
-          <div className="result-evidence-summary">
+        {hasEvidenceSummary ? (
+          <div className="result-evidence-summary" data-locked="false">
+            <span className="result-evidence-kicker">{copy.preview.evidenceLabel}</span>
             {result.evidenceTitle ? <strong>{result.evidenceTitle}</strong> : null}
             {result.evidenceDescription ? <span>{result.evidenceDescription}</span> : null}
+            {evidenceSnippet ? <p>{evidenceSnippet}</p> : null}
+          </div>
+        ) : !isFullAccess && result.evidenceLocked ? (
+          <div className="result-evidence-summary" data-locked="true">
+            <span className="result-evidence-kicker">
+              <LockKeyhole size={13} aria-hidden />
+              {copy.preview.evidenceLockedTitle}
+            </span>
+            <p>{copy.preview.evidenceLockedDescription}</p>
           </div>
         ) : null}
 

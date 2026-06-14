@@ -71,7 +71,7 @@ describe("scanErrorPresentation", () => {
         },
         "en",
       ).message,
-    ).toContain("Free beta searches are used up");
+    ).toContain("All free search tickets are used");
   });
 });
 

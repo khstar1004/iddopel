@@ -12,6 +12,7 @@ import type {
 } from "./types";
 
 export const FREE_PREVIEW_LIMIT = 5;
+export const FREE_EVIDENCE_PREVIEW_LIMIT = 1;
 export const LOCKED_PREVIEW_LIMIT = 5;
 
 const platformDefinitionsById = new Map(platformDefinitions.map((platform) => [platform.id, platform]));
@@ -144,7 +145,7 @@ export function freePreviewResultsFor(results: ScanResult[]) {
 }
 
 export function publicPreviewResultsFor(results: ScanResult[]) {
-  return freePreviewResultsFor(results).map(publicScanResultForPreview);
+  return freePreviewResultsFor(results).map((result, index) => publicScanResultForPreview(result, index));
 }
 
 export function lockedResultsCountFor(results: ScanResult[], options: { includeFreePreview?: boolean } = {}) {
@@ -220,9 +221,27 @@ function canShowInFreePreview(result: ScanResult) {
   return Boolean(definition?.freePreview);
 }
 
-function publicScanResultForPreview(result: ScanResult): ScanResult {
+function publicScanResultForPreview(result: ScanResult, index: number): ScanResult {
+  if (index < FREE_EVIDENCE_PREVIEW_LIMIT) {
+    return { ...result };
+  }
+
+  const hasLockedEvidence = Boolean(
+    result.evidenceTitle || result.evidenceDescription || result.evidenceImageUrl || result.evidenceSnippet
+  );
+  const {
+    evidenceDescription: _evidenceDescription,
+    evidenceFetchedAt: _evidenceFetchedAt,
+    evidenceImageUrl: _evidenceImageUrl,
+    evidenceSnippet: _evidenceSnippet,
+    evidenceTitle: _evidenceTitle,
+    profileImageUrl: _profileImageUrl,
+    ...publicResult
+  } = result;
+
   return {
-    ...result
+    ...publicResult,
+    evidenceLocked: hasLockedEvidence || undefined
   };
 }
 

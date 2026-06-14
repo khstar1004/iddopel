@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { POST as POST_TICKET_WALLET } from "../app/api/ticket-wallet/route";
 import { POST } from "../app/api/scans/route";
 import {
   FileBetaScanLoadStore,
@@ -10,6 +11,7 @@ import {
   resetBetaScanQuotaStoresForTests
 } from "./beta-scan-quota";
 import { resetScanRepositoryForTests, type ScanRepository } from "./repository";
+import { FileTicketWalletStore, resetTicketWalletStoreForTests } from "./ticket-wallet";
 import type { ScanJob } from "./types";
 
 describe("scan route beta free quota", () => {
@@ -23,33 +25,33 @@ describe("scan route beta free quota", () => {
     restoreEnv("BETA_FREE_SCAN_WINDOW_HOURS", originalBetaWindow);
     resetScanRepositoryForTests(null);
     resetBetaScanQuotaStoresForTests(null, null);
+    resetTicketWalletStoreForTests(null);
   });
 
-  it("allows beta searches after the free preview quota is used and locks the preview", async () => {
+  it("blocks beta searches after the free ticket quota is used", async () => {
     process.env.SCAN_PROVIDER = "mock";
     process.env.BETA_FREE_SCAN_LIMIT = "1";
     process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
     const dir = await mkdtemp(path.join(os.tmpdir(), "scan-route-quota-"));
-    resetScanRepositoryForTests(new MemoryScanRepository());
+    const repository = new MemoryScanRepository();
+    resetScanRepositoryForTests(repository);
     resetBetaScanQuotaStoresForTests(
       new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
       new FileBetaScanUsageStore(path.join(dir, "usage.json")),
       new FileBetaScanLoadStore(path.join(dir, "load.json"))
     );
 
-    const first = await POST(scanRequest("firstquota", { ownerToken: "owner-token-one" }));
-    const second = await POST(scanRequest("secondquota", { ownerToken: "owner-token-two" }));
+    const first = await POST(scanRequest("firstquota", { ownerToken: "same-owner-token" }));
+    const second = await POST(scanRequest("secondquota", { ownerToken: "same-owner-token" }));
     const secondBody = await second.json();
 
     expect(first.status).toBe(201);
     expect(first.headers.get("x-beta-free-scans-remaining")).toBe("0");
-    expect(second.status).toBe(201);
+    expect(second.status).toBe(429);
     expect(second.headers.get("x-beta-free-scans-remaining")).toBe("0");
-    expect(second.headers.get("x-beta-free-preview-locked")).toBe("true");
-    expect(secondBody.freePreviewLocked).toBe(true);
-    expect(secondBody.freePreviewLockReason).toBe("BETA_FREE_SCAN_LIMITED");
-    expect(secondBody.previewResults).toEqual([]);
-    expect(secondBody.lockedResults.length).toBeGreaterThan(0);
+    expect(second.headers.get("x-beta-free-ticket-referral-code")).toBeTruthy();
+    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(repository.size).toBe(1);
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -70,9 +72,8 @@ describe("scan route beta free quota", () => {
     const secondBody = await second.json();
 
     expect(first.status).toBe(201);
-    expect(second.status).toBe(201);
-    expect(secondBody.freePreviewLocked).toBe(true);
-    expect(secondBody.previewResults).toEqual([]);
+    expect(second.status).toBe(429);
+    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -93,6 +94,32 @@ describe("scan route beta free quota", () => {
 
     expect(response.status).toBe(503);
     expect(body.error?.code).toBe("BETA_SCAN_DISABLED");
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("uses the logged-in ticket wallet instead of the anonymous browser token", async () => {
+    process.env.SCAN_PROVIDER = "mock";
+    process.env.BETA_FREE_SCAN_LIMIT = "1";
+    process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "scan-route-wallet-quota-"));
+    resetScanRepositoryForTests(new MemoryScanRepository());
+    resetBetaScanQuotaStoresForTests(
+      new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
+      new FileBetaScanUsageStore(path.join(dir, "usage.json")),
+      new FileBetaScanLoadStore(path.join(dir, "load.json"))
+    );
+    resetTicketWalletStoreForTests(new FileTicketWalletStore(path.join(dir, "wallets.json")));
+
+    const wallet = await POST_TICKET_WALLET(walletRequest({ ownerToken: "anon-before-login", email: "wallet@example.com" }));
+    const cookie = wallet.headers.get("set-cookie") ?? "";
+    const first = await POST(scanRequest("walletquotaone", { ownerToken: "browser-a", cookie }));
+    const second = await POST(scanRequest("walletquotatwo", { ownerToken: "browser-b", cookie, ip: "203.0.113.62" }));
+    const secondBody = await second.json();
+
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(429);
+    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -121,21 +148,39 @@ describe("scan route beta free quota", () => {
   });
 });
 
-function scanRequest(username: string, options: { ip?: string; ownerToken?: string } = {}) {
+function scanRequest(username: string, options: { ip?: string; ownerToken?: string; cookie?: string } = {}) {
   return new Request("https://id.example.com/api/scans", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "user-agent": "QuotaTest/1.0",
       "x-forwarded-for": options.ip ?? "203.0.113.20",
-      "x-scan-owner-token": options.ownerToken ?? "owner-token"
+      "x-scan-owner-token": options.ownerToken ?? "owner-token",
+      ...(options.cookie ? { cookie: options.cookie } : {})
     },
     body: JSON.stringify({ username, purpose: "SELF_CHECK", mode: "quick" })
   });
 }
 
+function walletRequest(options: { ownerToken: string; email: string }) {
+  return new Request("https://id.example.com/api/ticket-wallet", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "user-agent": "QuotaTest/1.0",
+      "x-forwarded-for": "203.0.113.61",
+      "x-scan-owner-token": options.ownerToken
+    },
+    body: JSON.stringify({ email: options.email })
+  });
+}
+
 class MemoryScanRepository implements ScanRepository {
   private scans = new Map<string, ScanJob>();
+
+  get size() {
+    return this.scans.size;
+  }
 
   async create(job: ScanJob) {
     this.scans.set(job.scanId, job);

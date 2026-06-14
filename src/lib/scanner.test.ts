@@ -349,4 +349,66 @@ describe("createScanJobFromResults", () => {
     expect(summary.previewResults[0].url).toBe("https://github.com/legacyscan");
     expect(summary.previewResults[0].cleanupHint).toContain("Check profile");
   });
+
+  it("shows public evidence for one free candidate and keeps the rest for full access", () => {
+    const job = createScanJobFromResults(
+      {
+        username: "evidencegate",
+        purpose: "SELF_CHECK",
+        mode: "QUICK"
+      },
+      [
+        {
+          id: "github-evidence",
+          platform: "GitHub",
+          url: "https://github.com/evidencegate",
+          category: "DEVELOPER",
+          country: "GLOBAL",
+          status: "FOUND",
+          riskLevel: "MEDIUM",
+          cleanupHint: "Check profile.",
+          evidenceTitle: "evidencegate - GitHub",
+          evidenceDescription: "Developer profile",
+          evidenceSnippet: "Public repositories and profile links are visible."
+        },
+        {
+          id: "instagram-evidence",
+          platform: "Instagram",
+          url: "https://www.instagram.com/evidencegate",
+          category: "SNS",
+          country: "GLOBAL",
+          status: "FOUND",
+          riskLevel: "HIGH",
+          cleanupHint: "Check profile.",
+          evidenceTitle: "evidencegate on Instagram",
+          evidenceDescription: "Public creator account",
+          evidenceSnippet: "Bio and connected profile links are visible."
+        }
+      ],
+      {
+        checkedCount: 100,
+        now: new Date("2026-06-11T00:00:00.000Z")
+      }
+    );
+
+    const summary = publicSummary(job);
+
+    expect(job.results[0].evidenceSnippet).toBe("Public repositories and profile links are visible.");
+    expect(job.results[1].evidenceSnippet).toBe("Bio and connected profile links are visible.");
+    expect(summary.previewResults).toHaveLength(2);
+    expect(summary.previewResults[0]).toMatchObject({
+      platform: "GitHub",
+      evidenceTitle: "evidencegate - GitHub",
+      evidenceDescription: "Developer profile",
+      evidenceSnippet: "Public repositories and profile links are visible."
+    });
+    expect(summary.previewResults[1]).toMatchObject({
+      platform: "Instagram",
+      url: "https://www.instagram.com/evidencegate",
+      evidenceLocked: true
+    });
+    expect(summary.previewResults[1]).not.toHaveProperty("evidenceTitle");
+    expect(summary.previewResults[1]).not.toHaveProperty("evidenceDescription");
+    expect(summary.previewResults[1]).not.toHaveProperty("evidenceSnippet");
+  });
 });

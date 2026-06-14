@@ -43,6 +43,9 @@ export interface ScanResult {
   evidenceTitle?: string;
   evidenceDescription?: string;
   evidenceImageUrl?: string;
+  evidenceSnippet?: string;
+  evidenceFetchedAt?: string;
+  evidenceLocked?: boolean;
   category: PlatformCategory;
   country: PlatformDefinition["country"];
   status: "FOUND" | "UNAVAILABLE" | "UNKNOWN";

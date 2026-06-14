@@ -117,7 +117,7 @@ describe("attachCheckoutUrl", () => {
     await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).rejects.toMatchObject({
       code: "PAYMENT_CONFIG_MISSING",
       status: 503,
-      message: "POLAR_ACCESS_TOKEN이 설정되어 있지 않아요."
+      message: "POLAR_ACCESS_TOKEN이 실제 결제 토큰으로 설정되어 있지 않아요."
     });
   });
 
