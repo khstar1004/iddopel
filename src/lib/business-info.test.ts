@@ -1,0 +1,27 @@
+import { describe, expect, it } from "vitest";
+import { getBusinessInfo } from "./business-info";
+
+describe("businessInfo", () => {
+  it("publishes the business registration fields required for PG review", () => {
+    const info = getBusinessInfo({
+      BUSINESS_LEGAL_NAME: "테스트상호",
+      BUSINESS_REPRESENTATIVE: "테스트대표",
+      BUSINESS_REGISTRATION_NUMBER: "123-45-67890",
+      BUSINESS_ADDRESS: "서울특별시 테스트구 테스트로 1",
+      BUSINESS_PHONE: "02-0000-0000",
+      BUSINESS_SUPPORT_EMAIL: "support@example.com"
+    });
+
+    expect(info.legalName).toBe("테스트상호");
+    expect(info.representative).toBe("테스트대표");
+    expect(info.businessRegistrationNumber).toBe("123-45-67890");
+    expect(info.address).toContain("서울특별시");
+    expect(info.phone).toBe("02-0000-0000");
+    expect(info.supportEmail).toBe("support@example.com");
+  });
+
+  it("does not publish non-required personal registration details", () => {
+    const businessInfo = getBusinessInfo();
+    expect(Object.values(businessInfo).join(" ")).not.toContain("2004");
+  });
+});

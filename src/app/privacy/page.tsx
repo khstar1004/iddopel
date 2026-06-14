@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { PolicyPage } from "@/components/PolicyPage";
+import { businessInfo } from "@/lib/business-info";
 
 export const metadata: Metadata = {
   title: "개인정보처리방침 | ID 도플갱어"
@@ -47,6 +48,13 @@ export default function PrivacyPage() {
         <h2>6. 안전 조치</h2>
         <p>
           이메일·전화번호·주민번호 형태 검색 차단, 입력값 검증, 보안 헤더, 검색 제한, 최소 저장 원칙을 적용합니다.
+        </p>
+      </section>
+      <section>
+        <h2>7. 개인정보 문의</h2>
+        <p>
+          개인정보 처리와 검색 기록 삭제 문의는 고객센터 이메일{" "}
+          <a href={`mailto:${businessInfo.supportEmail}`}>{businessInfo.supportEmail}</a>로 접수합니다.
         </p>
       </section>
     </PolicyPage>

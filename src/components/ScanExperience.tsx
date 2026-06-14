@@ -1989,11 +1989,14 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
 
       <footer className="footer">
         <div className="container">
-          <span>© 2026 {copy.brandName}</span>
+          <div className="footer-identity">
+            <span>© 2026 {copy.brandName}</span>
+          </div>
           <div className="footer-links">
             <a href="/privacy">{copy.footer.privacy}</a>
             <a href="/terms">{copy.footer.terms}</a>
             <a href="/responsible-use">{copy.footer.responsibleUse}</a>
+            <a href="/business-info">{locale === "ko" ? "사업자 정보" : "Business info"}</a>
           </div>
         </div>
       </footer>
