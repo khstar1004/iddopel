@@ -2760,8 +2760,6 @@ function ResultPreview({
                   copy={copy}
                   index={detailAccess.results.length + index}
                   key={result.id}
-                  labels={labels}
-                  result={result}
                 />
               ))
             : Array.from({ length: Math.min(5, hiddenCount) }).map((_, index) => (
@@ -2769,7 +2767,6 @@ function ResultPreview({
                   copy={copy}
                   index={detailAccess.results.length + index}
                   key={`locked-${index}`}
-                  labels={labels}
                 />
               ))}
         </div>
@@ -2870,33 +2867,24 @@ function ReportUnlockPanel({ copy }: { copy: ScanExperienceCopy }) {
 
 function LockedResultMosaic({
   copy,
-  index,
-  labels,
-  result
+  index
 }: {
   copy: ScanExperienceCopy;
   index: number;
-  labels: LocalizedLabelSets;
-  result?: LockedScanResultPreview;
 }) {
-  const title = result?.platform ?? copy.preview.lockedResult(index + 1);
-  const maskedUrl = result?.maskedUrl ?? copy.preview.lockedUrlFallback;
+  const title = copy.preview.lockedResult(index + 1);
 
   return (
     <div className="locked-result-mosaic">
       <div className="toss-locked-icon" aria-hidden>
-        {result?.platform.slice(0, 1).toUpperCase() ?? ""}
+        <LockKeyhole size={18} aria-hidden />
       </div>
       <div className="mosaic-content">
         <strong>{title}</strong>
-        <span>
-          {result
-            ? `${labels.category[result.category] ?? result.category} · ${labels.country[result.country] ?? result.country}`
-            : copy.preview.lockedDescription}
-        </span>
+        <span>{copy.preview.lockedDescription}</span>
         <div className="masked-url-teaser" aria-label={copy.preview.maskedAria(title)}>
           <LockKeyhole size={13} aria-hidden />
-          <span>{maskedUrl}</span>
+          <span>{copy.preview.lockedUrlFallback}</span>
         </div>
       </div>
       <LockKeyhole size={17} aria-hidden />
