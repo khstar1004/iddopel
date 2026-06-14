@@ -80,13 +80,13 @@ export async function registerPaidMonitoringFromPayment(payment: PaymentAccessRe
   }
 
   if (typeof body?.ownerToken === "string") {
-    window.localStorage.setItem(monitoringOwnerTokenKey, body.ownerToken);
+    writeLocalStorage(monitoringOwnerTokenKey, body.ownerToken);
   }
-  window.localStorage.removeItem(pendingMonitoringKey);
+  removeLocalStorage(pendingMonitoringKey);
 }
 
 function readPendingMonitoringRegistration(orderId: string): PendingMonitoringRegistration | null {
-  const raw = window.localStorage.getItem(pendingMonitoringKey);
+  const raw = readLocalStorage(pendingMonitoringKey);
   if (!raw) return null;
 
   try {
@@ -112,7 +112,7 @@ function readPendingMonitoringRegistration(orderId: string): PendingMonitoringRe
 }
 
 function readPaidReportAccessList(): StoredPaidReportAccess[] {
-  const raw = window.localStorage.getItem(paidReportAccessKey);
+  const raw = readLocalStorage(paidReportAccessKey);
   if (!raw) return [];
 
   try {
@@ -134,15 +134,43 @@ function readPaidReportAccessList(): StoredPaidReportAccess[] {
 }
 
 function writePaidReportAccessList(items: StoredPaidReportAccess[]) {
-  window.localStorage.setItem(paidReportAccessKey, JSON.stringify(items));
+  writeLocalStorage(paidReportAccessKey, JSON.stringify(items));
 }
 
 function scanIdFromReportUrl(reportUrl: string) {
   try {
-    const url = new URL(reportUrl, window.location.origin);
+    const origin = typeof window === "undefined" ? "https://id.example.com" : window.location.origin;
+    const url = new URL(reportUrl, origin);
     const match = url.pathname.match(/^\/reports\/([^/]+)$/);
     return match ? decodeURIComponent(match[1]) : null;
   } catch {
     return null;
+  }
+}
+
+function readLocalStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorage(key: string, value: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable after payment redirects in embedded browsers.
+  }
+}
+
+function removeLocalStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(key);
+  } catch {
+    // Storage can be unavailable after payment redirects in embedded browsers.
   }
 }

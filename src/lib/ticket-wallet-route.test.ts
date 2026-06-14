@@ -12,11 +12,13 @@ import {
   resetBetaScanQuotaStoresForTests
 } from "./beta-scan-quota";
 import { resetTicketWalletStoreForTests, FileTicketWalletStore } from "./ticket-wallet";
+import { resetRateLimitsForTests } from "./rate-limit";
 
 describe("ticket wallet route", () => {
   afterEach(() => {
     resetBetaScanQuotaStoresForTests(null, null);
     resetTicketWalletStoreForTests(null);
+    resetRateLimitsForTests();
   });
 
   it("creates a wallet, sets an httpOnly session cookie, and migrates anonymous referral tickets", async () => {
@@ -119,6 +121,20 @@ describe("ticket wallet route", () => {
     expect(response.headers.get("set-cookie")).toContain("Secure");
 
     await rm(dir, { recursive: true, force: true });
+  });
+
+  it("returns Retry-After when wallet requests are rate limited", async () => {
+    for (let index = 0; index < 8; index += 1) {
+      await POST(walletRequest({ email: "not-an-email" }));
+    }
+
+    const response = await POST(walletRequest({ email: "not-an-email" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toMatch(/^\d+$/);
+    expect(body.error?.code).toBe("RATE_LIMITED");
+    expect(body.error?.details.retryAfterSeconds).toBeGreaterThan(0);
   });
 });
 

@@ -134,7 +134,7 @@ export function AdminConsole() {
   );
 
   useEffect(() => {
-    const storedToken = window.localStorage.getItem(devAdminTokenKey) || "";
+    const storedToken = readLocalStorage(devAdminTokenKey) || "";
     fetch("/api/dev/admin-session", {
       headers: storedToken ? { "x-dev-admin-token": storedToken } : undefined
     })
@@ -165,7 +165,7 @@ export function AdminConsole() {
         setStatusText(body.error?.message || "로그인하지 못했어요.");
         return;
       }
-      window.localStorage.setItem(devAdminTokenKey, body.token);
+      writeLocalStorage(devAdminTokenKey, body.token);
       setAdminToken(body.token);
       setPassword("");
       await loadSettings(body.token);
@@ -522,6 +522,24 @@ function ticketTargetLabel(kind: AdminTicketTargetKind) {
   if (kind === "email") return "이메일";
   if (kind === "recoveryCode") return "복구코드";
   return "추천코드";
+}
+
+function readLocalStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorage(key: string, value: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  } catch {
+    // The active token is still kept in component state for the current tab.
+  }
 }
 
 function formatAuditValue(value: string | number | boolean | null) {

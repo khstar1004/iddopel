@@ -859,6 +859,59 @@ function walletMessageForError(code: string | undefined, fallback: string | unde
   return fallback ?? copy.form.ticketLoadFailed;
 }
 
+function readStoredHistory(): StoredScan[] {
+  const saved = readClientStorage("id-doppelganger-history");
+  if (!saved) return [];
+
+  try {
+    const parsed = JSON.parse(saved) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isStoredScanCandidate).slice(0, 5);
+  } catch {
+    removeClientStorage("id-doppelganger-history");
+    return [];
+  }
+}
+
+function isStoredScanCandidate(value: unknown): value is StoredScan {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.scanId === "string" &&
+    typeof record.username === "string" &&
+    typeof record.savedAt === "string" &&
+    typeof record.foundCount === "number" &&
+    Array.isArray(record.previewResults)
+  );
+}
+
+function readClientStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeClientStorage(key: string, value: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable in embedded app shells or private browsing.
+  }
+}
+
+function removeClientStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(key);
+  } catch {
+    // Storage can be unavailable in embedded app shells or private browsing.
+  }
+}
+
 function readApiError(body: unknown) {
   if (!body || typeof body !== "object") return {};
 
@@ -938,7 +991,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   useEffect(() => {
     const queryLocale = new URLSearchParams(window.location.search).get("lang");
     const routeLocale = window.location.pathname === "/en" || window.location.pathname.startsWith("/en/") ? "en" : null;
-    const savedLocale = window.localStorage.getItem(localeStorageKey);
+    const savedLocale = readClientStorage(localeStorageKey);
     const nextLocale = isLocale(queryLocale)
       ? queryLocale
       : isLocale(routeLocale)
@@ -949,10 +1002,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
 
     setLocale(nextLocale);
 
-    const saved = window.localStorage.getItem("id-doppelganger-history");
-    if (saved) {
-      setHistory(JSON.parse(saved) as StoredScan[]);
-    }
+    setHistory(readStoredHistory());
 
     const scanOwnerToken = getOrCreateFreeScanOwnerToken();
     const referralCode = new URLSearchParams(window.location.search).get("ref");
@@ -986,14 +1036,14 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
       })
       .finally(() => setIsLoadingTickets(false));
 
-    const ownerToken = window.localStorage.getItem(monitoringOwnerTokenKey);
+    const ownerToken = readClientStorage(monitoringOwnerTokenKey);
     if (ownerToken) {
       fetch("/api/monitoring", {
         headers: { "x-monitoring-owner-token": ownerToken }
       })
         .then(async (response) => {
           if (response.status === 404) {
-            window.localStorage.removeItem(monitoringOwnerTokenKey);
+            removeClientStorage(monitoringOwnerTokenKey);
             return null;
           }
           return response.ok ? response.json() : null;
@@ -1004,7 +1054,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
         .catch(() => undefined);
     }
 
-    const savedDevAdminToken = window.localStorage.getItem(devAdminTokenKey);
+    const savedDevAdminToken = readClientStorage(devAdminTokenKey);
     if (savedDevAdminToken) {
       fetch("/api/dev/admin-session", {
         headers: devAdminHeaders(savedDevAdminToken)
@@ -1014,7 +1064,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
           if (body?.authenticated) {
             setDevAdminToken(savedDevAdminToken);
           } else {
-            window.localStorage.removeItem(devAdminTokenKey);
+            removeClientStorage(devAdminTokenKey);
           }
         })
         .catch(() => undefined);
@@ -1024,7 +1074,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
 
   useEffect(() => {
     document.documentElement.lang = locale === "en" ? "en" : "ko";
-    window.localStorage.setItem(localeStorageKey, locale);
+    writeClientStorage(localeStorageKey, locale);
   }, [locale]);
 
   useEffect(() => {
@@ -1120,7 +1170,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   }
 
   async function unlockDevAdminPanel() {
-    const savedDevAdminToken = window.localStorage.getItem(devAdminTokenKey);
+    const savedDevAdminToken = readClientStorage(devAdminTokenKey);
 
     try {
       const response = await fetch("/api/dev/admin-session", {
@@ -1196,10 +1246,16 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
 
     setIsCopyingReferral(true);
     try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(referralUrl);
       setTicketMessage(copy.form.referralCopied);
     } catch {
-      setTicketMessage(copy.form.referralFailed);
+      try {
+        copyTextFallback(referralUrl);
+        setTicketMessage(copy.form.referralCopied);
+      } catch {
+        setTicketMessage(copy.form.referralFailed);
+      }
     } finally {
       setIsCopyingReferral(false);
     }
@@ -1271,10 +1327,16 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   async function copyWalletRecoveryCode() {
     if (!walletRecoveryCode) return;
     try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(walletRecoveryCode);
       setWalletMessage(copy.form.walletCopied);
     } catch {
-      setWalletMessage(copy.form.walletCopyFailed);
+      try {
+        copyTextFallback(walletRecoveryCode);
+        setWalletMessage(copy.form.walletCopied);
+      } catch {
+        setWalletMessage(copy.form.walletCopyFailed);
+      }
     }
   }
 
@@ -1320,20 +1382,20 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     const item: StoredScan = { ...summaryForStorage, savedAt: new Date().toISOString() };
     const next = [item, ...history.filter((entry) => entry.scanId !== item.scanId)].slice(0, 5);
     setHistory(next);
-    window.localStorage.setItem("id-doppelganger-history", JSON.stringify(next));
+    writeClientStorage("id-doppelganger-history", JSON.stringify(next));
   }
 
   async function deleteScan(scanId: string) {
     await fetch(`/api/scans/${scanId}`, { method: "DELETE" }).catch(() => undefined);
     const next = history.filter((entry) => entry.scanId !== scanId);
     setHistory(next);
-    window.localStorage.setItem("id-doppelganger-history", JSON.stringify(next));
+    writeClientStorage("id-doppelganger-history", JSON.stringify(next));
     if (summary?.scanId === scanId) setSummary(null);
   }
 
   function clearHistory() {
     setHistory([]);
-    window.localStorage.removeItem("id-doppelganger-history");
+    removeClientStorage("id-doppelganger-history");
   }
 
   function restoreScanFromHistory(item: StoredScan) {
@@ -1364,7 +1426,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
 
     setIsSavingMonitoring(true);
 
-    const ownerToken = window.localStorage.getItem(monitoringOwnerTokenKey) ?? undefined;
+    const ownerToken = readClientStorage(monitoringOwnerTokenKey) ?? undefined;
     const payload: MonitoringRegistrationRequest = {
       ownerToken,
       usernames: monitoringDraft.usernames,
@@ -1388,7 +1450,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
         throw new Error(body?.error?.message ?? "월간 추적을 등록하지 못했어요.");
       }
 
-      window.localStorage.setItem(monitoringOwnerTokenKey, body.ownerToken);
+      writeClientStorage(monitoringOwnerTokenKey, body.ownerToken);
       setMonitoring(body.monitoring as PublicMonitoringSubscription);
       setMonitoringInput((body.monitoring as PublicMonitoringSubscription).usernames.join(", "));
       setMonitoringMessage("월간 재점검이 등록됐어요.");
@@ -1420,7 +1482,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
       throw new Error("월간 추적 결제 링크를 만들지 못했어요.");
     }
 
-    window.localStorage.setItem(
+    writeClientStorage(
       pendingMonitoringKey,
       JSON.stringify({
         orderId: body.orderId,
@@ -1454,7 +1516,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
   async function deleteMonitoring() {
     if (!monitoring) return;
 
-    const ownerToken = window.localStorage.getItem(monitoringOwnerTokenKey);
+    const ownerToken = readClientStorage(monitoringOwnerTokenKey);
     if (!ownerToken) return;
 
     setMonitoringMessage(null);
@@ -1464,7 +1526,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     });
 
     if (response.ok) {
-      window.localStorage.removeItem(monitoringOwnerTokenKey);
+      removeClientStorage(monitoringOwnerTokenKey);
       setMonitoring(null);
       setMonitoringMessage("월간 추적을 해지했어요.");
     } else {
@@ -1488,14 +1550,14 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
       return;
     }
 
-    window.localStorage.setItem(devAdminTokenKey, body.token);
+    writeClientStorage(devAdminTokenKey, body.token);
     setDevAdminToken(body.token);
     setDevAdminPassword("");
     setDevAdminMessage("개발자 테스트 모드가 켜졌어요. 제한 없이 전체 결과를 볼 수 있어요.");
   }
 
   function logoutDevAdmin() {
-    window.localStorage.removeItem(devAdminTokenKey);
+    removeClientStorage(devAdminTokenKey);
     setDevAdminToken(null);
     setDevAdminPassword("");
     setDevAdminMessage("개발자 테스트 모드를 껐어요.");
@@ -2258,12 +2320,13 @@ function TicketBadge({
       ? copy.form.ticketCount(status.remaining)
       : copy.form.ticketLoading;
   const breakdown = status ? copy.form.ticketBreakdown(status.baseRemaining, status.bonusRemaining) : copy.form.ticketsAria;
+  const ariaStatus = status ? `${label}. ${breakdown}` : label;
 
   return (
     <button
       className="ticket-badge"
       data-empty={isEmpty ? "true" : "false"}
-      aria-label={`${copy.form.ticketsAria}. ${copy.form.walletOpen}`}
+      aria-label={`${copy.form.ticketsAria}. ${ariaStatus}. ${copy.form.walletOpen}`}
       type="button"
       title={copy.form.walletOpenHint}
       onClick={onOpenWallet}
@@ -2356,6 +2419,19 @@ function TicketWalletDialog({
   status: ScanTicketStatus | null;
   wallet: TicketWalletStatus | null;
 }) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus({ preventScroll: true });
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
   if (typeof document === "undefined") return null;
 
   return createPortal(
@@ -2369,7 +2445,13 @@ function TicketWalletDialog({
       >
         <div className="ticket-wallet-dialog-header">
           <strong>{copy.form.walletTitle}</strong>
-          <button className="close-dialog-button" type="button" aria-label={copy.form.walletClose} onClick={onClose}>
+          <button
+            className="close-dialog-button"
+            type="button"
+            aria-label={copy.form.walletClose}
+            onClick={onClose}
+            ref={closeButtonRef}
+          >
             <X size={17} aria-hidden />
           </button>
         </div>
@@ -2514,10 +2596,9 @@ function TicketWalletPanel({
           <p>{depleted ? copy.form.walletDepletedDescription : copy.form.walletSignedOutDescription}</p>
         </div>
       </div>
-      <div
+      <form
         className="ticket-wallet-form"
-        onKeyDown={(event) => {
-          if (event.key !== "Enter") return;
+        onSubmit={(event) => {
           event.preventDefault();
           onSubmit();
         }}
@@ -2542,11 +2623,11 @@ function TicketWalletPanel({
             autoComplete="off"
           />
         </label>
-        <button className="secondary-button" type="button" disabled={isSaving} onClick={onSubmit}>
+        <button className="secondary-button" type="submit" disabled={isSaving}>
           <Ticket size={15} aria-hidden />
           {isSaving ? copy.form.walletSaving : recoveryInput.trim() ? copy.form.walletLogin : copy.form.walletSave}
         </button>
-      </div>
+      </form>
       {message ? <p className="ticket-message" role="status">{message}</p> : null}
     </section>
   );
@@ -3057,6 +3138,8 @@ function OriginalHtmlReportPanel({ copy, detailAccess }: { copy: ScanExperienceC
         src={reportUrl ?? undefined}
         srcDoc={detailAccess.sourceReportHtml}
         loading="lazy"
+        referrerPolicy="no-referrer"
+        sandbox=""
       />
     </section>
   );
@@ -3304,8 +3387,8 @@ async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExp
     };
   }
 
-  const ownerToken = window.localStorage.getItem(freeDetailOwnerTokenKey);
-  const usedScanId = window.localStorage.getItem(freeDetailUsedScanIdKey);
+  const ownerToken = readClientStorage(freeDetailOwnerTokenKey);
+  const usedScanId = readClientStorage(freeDetailUsedScanIdKey);
 
   if (ownerToken && usedScanId && usedScanId !== scanId) {
     return loadPreviewResults(
@@ -3323,8 +3406,8 @@ async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExp
   const freeBody = await freeResponse.json().catch(() => null);
 
   if (freeResponse.ok && freeBody?.reportToken) {
-    window.localStorage.setItem(freeDetailOwnerTokenKey, freeBody.ownerToken);
-    window.localStorage.setItem(freeDetailUsedScanIdKey, scanId);
+    writeClientStorage(freeDetailOwnerTokenKey, freeBody.ownerToken);
+    writeClientStorage(freeDetailUsedScanIdKey, scanId);
     const fullResponse = await fetch(`/api/scans/${scanId}/results?access=full&token=${encodeURIComponent(freeBody.reportToken)}`);
     const fullBody = await fullResponse.json();
 
@@ -3341,7 +3424,7 @@ async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExp
   }
 
   if (freeBody?.error?.code === "FIRST_FREE_USED") {
-    window.localStorage.setItem(freeDetailUsedScanIdKey, scanId);
+    writeClientStorage(freeDetailUsedScanIdKey, scanId);
   }
 
   if (freeBody?.error?.code === "WEB_PAYWALL_ENABLED") {

@@ -40,14 +40,14 @@ export function TossMiniApp() {
   const canSubmit = acknowledged && username.trim().length >= 3 && !usernameValidationMessage && !isLoading;
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(historyStorageKey);
+    const saved = readLocalStorage(historyStorageKey);
     if (!saved) return;
 
     try {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed)) setHistory(parsed as StoredScan[]);
     } catch {
-      window.localStorage.removeItem(historyStorageKey);
+      removeLocalStorage(historyStorageKey);
     }
   }, []);
 
@@ -102,7 +102,7 @@ export function TossMiniApp() {
 
     setHistory((current) => {
       const next = [item, ...current.filter((entry) => entry.scanId !== item.scanId)].slice(0, 5);
-      window.localStorage.setItem(historyStorageKey, JSON.stringify(next));
+      writeLocalStorage(historyStorageKey, JSON.stringify(next));
       return next;
     });
   }
@@ -460,5 +460,32 @@ function getUsernameValidationMessage(value: string) {
     return null;
   } catch (error) {
     return error instanceof Error ? error.message : "아이디를 다시 확인해 주세요.";
+  }
+}
+
+function readLocalStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorage(key: string, value: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Toss webview storage can be unavailable; history is non-critical.
+  }
+}
+
+function removeLocalStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.removeItem(key);
+  } catch {
+    // Toss webview storage can be unavailable; history is non-critical.
   }
 }

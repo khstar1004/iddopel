@@ -286,7 +286,14 @@ export function ReportPageClient() {
                 </div>
               </div>
               <div className="source-report-peek">
-                <iframe className="source-report-frame" title="HTML 리포트 미리보기" src={embeddedReportUrl} loading="lazy" />
+                <iframe
+                  className="source-report-frame"
+                  title="HTML 리포트 미리보기"
+                  src={embeddedReportUrl}
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  sandbox=""
+                />
                 <div className="source-report-mosaic" aria-hidden>
                   {Array.from({ length: 16 }).map((_, index) => (
                     <span key={index} />

@@ -21,3 +21,15 @@ export function rateLimitKey(request: Request, fallback: string) {
   const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   return forwarded || request.headers.get("x-real-ip") || fallback;
 }
+
+export function retryAfterSecondsFromRateLimitError(error: unknown) {
+  const message = error instanceof Error ? error.message : "";
+  if (!message.startsWith("RATE_LIMIT:")) return null;
+
+  const seconds = Number(message.split(":")[1] ?? 60);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : 60;
+}
+
+export function resetRateLimitsForTests() {
+  buckets.clear();
+}

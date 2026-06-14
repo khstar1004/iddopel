@@ -9,6 +9,7 @@ import {
   isDevAdminRequest,
   verifyDevAdminCredentials
 } from "@/lib/dev-admin";
+import { assertRateLimit, rateLimitKey, retryAfterSecondsFromRateLimitError } from "@/lib/rate-limit";
 
 export async function GET(request: Request) {
   const status = devAdminRuntimeStatus(request);
@@ -27,6 +28,9 @@ export async function POST(request: Request) {
     return jsonError("DEV_ADMIN_SETUP_REQUIRED", "관리자 비밀번호 환경변수를 먼저 설정해 주세요.", 409);
   }
 
+  const rateLimitResponse = assertAdminLoginRateLimit(request);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const body = (await readJson(request)) as Record<string, unknown>;
   const username = typeof body.username === "string" ? body.username : "";
   const password = typeof body.password === "string" ? body.password : "";
@@ -41,4 +45,23 @@ export async function POST(request: Request) {
     username,
     token
   });
+}
+
+function assertAdminLoginRateLimit(request: Request) {
+  try {
+    assertRateLimit(`dev-admin-login:${rateLimitKey(request, "anonymous")}`, 8, 10 * 60 * 1000);
+    return null;
+  } catch (error) {
+    const retryAfterSeconds = retryAfterSecondsFromRateLimitError(error);
+    if (!retryAfterSeconds) throw error;
+
+    const response = jsonError(
+      "RATE_LIMITED",
+      "로그인 시도가 많아요. 잠시 후 다시 시도해 주세요.",
+      429,
+      { retryAfterSeconds }
+    );
+    response.headers.set("Retry-After", String(retryAfterSeconds));
+    return response;
+  }
 }

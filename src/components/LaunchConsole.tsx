@@ -153,7 +153,7 @@ export function LaunchConsole() {
   );
 
   useEffect(() => {
-    const storedToken = window.localStorage.getItem(devAdminTokenKey) || "";
+    const storedToken = readLocalStorage(devAdminTokenKey) || "";
     if (storedToken) {
       setAdminToken(storedToken);
       void refreshPlan(storedToken, ship, localGate);
@@ -175,7 +175,7 @@ export function LaunchConsole() {
         setStatusText(body.error?.message || "로그인하지 못했어요.");
         return;
       }
-      window.localStorage.setItem(devAdminTokenKey, body.token);
+      writeLocalStorage(devAdminTokenKey, body.token);
       setAdminToken(body.token);
       setPassword("");
       await refreshPlan(body.token, ship, localGate);
@@ -514,4 +514,22 @@ export function LaunchConsole() {
       </div>
     </main>
   );
+}
+
+function readLocalStorage(key: string) {
+  try {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalStorage(key: string, value: string) {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  } catch {
+    // The active token is still kept in component state for the current tab.
+  }
 }

@@ -10,7 +10,7 @@ import {
   TicketWalletError
 } from "@/lib/ticket-wallet";
 import { getBetaScanSettingsStore, getBetaScanTicketStatusForRequest } from "@/lib/beta-scan-quota";
-import { assertRateLimit, rateLimitKey } from "@/lib/rate-limit";
+import { assertRateLimit, rateLimitKey, retryAfterSecondsFromRateLimitError } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -74,9 +74,8 @@ function assertWalletRateLimit(request: Request) {
   try {
     assertRateLimit(`ticket-wallet:${rateLimitKey(request, "anonymous")}`, 8, 10 * 60 * 1000);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (message.startsWith("RATE_LIMIT:")) {
-      const retryAfterSeconds = Number(message.split(":")[1] ?? 60);
+    const retryAfterSeconds = retryAfterSecondsFromRateLimitError(error);
+    if (retryAfterSeconds) {
       throw new TicketWalletError(
         "RATE_LIMITED",
         "요청이 많아요. 잠시 후 다시 시도해 주세요.",
@@ -90,7 +89,12 @@ function assertWalletRateLimit(request: Request) {
 
 function walletErrorResponse(error: unknown) {
   if (error instanceof TicketWalletError) {
-    return noStore(jsonError(error.code, error.message, error.status, error.details));
+    const response = jsonError(error.code, error.message, error.status, error.details);
+    const details = error.details as { retryAfterSeconds?: unknown } | undefined;
+    if (error.status === 429 && typeof details?.retryAfterSeconds === "number") {
+      response.headers.set("Retry-After", String(details.retryAfterSeconds));
+    }
+    return noStore(response);
   }
   return noStore(handleApiError(error));
 }

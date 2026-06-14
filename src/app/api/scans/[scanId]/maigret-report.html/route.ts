@@ -46,7 +46,7 @@ export async function GET(request: Request, context: RouteContext) {
     );
   }
 
-  const filename = scan.maigretReport.htmlFilename ?? `id-doppelganger-${scan.username}.html`;
+  const filename = safeContentDispositionFilename(scan.maigretReport.htmlFilename ?? `id-doppelganger-${scan.username}.html`);
 
   return withTossCors(
     request,
@@ -54,9 +54,19 @@ export async function GET(request: Request, context: RouteContext) {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Content-Disposition": `inline; filename="${filename}"`,
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy":
           "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self';"
       }
     })
   );
+}
+
+function safeContentDispositionFilename(value: string) {
+  const safe = value
+    .trim()
+    .replace(/[\r\n"]/g, "_")
+    .slice(0, 120);
+  return safe || "id-doppelganger-report.html";
 }
