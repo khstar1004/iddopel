@@ -1665,14 +1665,18 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
           <TicketWalletDialog
             copy={copy}
             email={walletEmail}
+            isCopyingReferral={isCopyingReferral}
             isSaving={isSavingWallet}
             message={walletMessage}
             onClose={() => setIsTicketWalletOpen(false)}
             onCopyRecovery={copyWalletRecoveryCode}
+            onCopyReferral={copyReferralLink}
             onEmailChange={setWalletEmail}
             onLogout={logoutTicketWallet}
             onRecoveryChange={setWalletRecoveryInput}
             onSubmit={submitTicketWallet}
+            referralMessage={ticketMessage}
+            referralUrl={referralUrl}
             recoveryCode={walletRecoveryCode}
             recoveryInput={walletRecoveryInput}
             status={ticketStatus}
@@ -2311,14 +2315,18 @@ function ReferralTicketPanel({
 function TicketWalletDialog({
   copy,
   email,
+  isCopyingReferral,
   isSaving,
   message,
   onClose,
   onCopyRecovery,
+  onCopyReferral,
   onEmailChange,
   onLogout,
   onRecoveryChange,
   onSubmit,
+  referralMessage,
+  referralUrl,
   recoveryCode,
   recoveryInput,
   status,
@@ -2326,14 +2334,18 @@ function TicketWalletDialog({
 }: {
   copy: ScanExperienceCopy;
   email: string;
+  isCopyingReferral: boolean;
   isSaving: boolean;
   message: string | null;
   onClose: () => void;
   onCopyRecovery: () => void;
+  onCopyReferral: () => void;
   onEmailChange: (value: string) => void;
   onLogout: () => void;
   onRecoveryChange: (value: string) => void;
   onSubmit: () => void;
+  referralMessage: string | null;
+  referralUrl: string;
   recoveryCode: string | null;
   recoveryInput: string;
   status: ScanTicketStatus | null;
@@ -2356,6 +2368,16 @@ function TicketWalletDialog({
             <X size={17} aria-hidden />
           </button>
         </div>
+        {referralUrl ? (
+          <TicketRechargePanel
+            copy={copy}
+            isCopying={isCopyingReferral}
+            message={referralMessage}
+            onCopy={onCopyReferral}
+            referralUrl={referralUrl}
+            status={status}
+          />
+        ) : null}
         <TicketWalletPanel
           copy={copy}
           email={email}
@@ -2374,6 +2396,47 @@ function TicketWalletDialog({
       </div>
     </div>,
     document.body
+  );
+}
+
+function TicketRechargePanel({
+  copy,
+  isCopying,
+  message,
+  onCopy,
+  referralUrl,
+  status
+}: {
+  copy: ScanExperienceCopy;
+  isCopying: boolean;
+  message: string | null;
+  onCopy: () => void;
+  referralUrl: string;
+  status: ScanTicketStatus | null;
+}) {
+  return (
+    <section className="ticket-recharge-panel" aria-label={copy.form.referralTitle}>
+      <div className="ticket-recharge-heading">
+        <div>
+          <strong>{copy.form.referralTitle}</strong>
+          <p>{copy.form.referralDescription}</p>
+        </div>
+        {status ? <span>{copy.form.ticketBreakdown(status.baseRemaining, status.bonusRemaining)}</span> : null}
+      </div>
+      <div className="ticket-recharge-link-row">
+        <input
+          aria-label={copy.form.referralLinkLabel}
+          readOnly
+          value={referralUrl}
+          onFocus={(event) => event.currentTarget.select()}
+        />
+        <button className="secondary-button" type="button" onClick={onCopy} disabled={isCopying}>
+          <Copy size={15} aria-hidden />
+          {isCopying ? copy.form.referralCopying : copy.form.referralCopy}
+        </button>
+      </div>
+      {message ? <p className="ticket-message" role="status">{message}</p> : null}
+    </section>
   );
 }
 

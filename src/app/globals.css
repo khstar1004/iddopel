@@ -885,6 +885,100 @@ form.toss-card .submit-hint[data-ready="true"] {
   box-shadow: 0 0 0 3px rgba(139, 149, 161, 0.16);
 }
 
+.ticket-wallet-dialog .secondary-button {
+  border-color: #14b8a6;
+  color: #06443c;
+  background: #ecfffb;
+}
+
+.ticket-wallet-dialog .secondary-button:hover,
+.ticket-wallet-dialog .secondary-button:focus-visible {
+  border-color: #0f766e;
+  outline: none;
+  background: #d9fff8;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+}
+
+.ticket-wallet-dialog .secondary-button:disabled {
+  cursor: not-allowed;
+  border-color: #dbe2ea;
+  color: #5f6b7a;
+  background: #f3f6f8;
+  opacity: 1;
+}
+
+.ticket-recharge-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #ffe0a8;
+  border-radius: 8px;
+  padding: 12px;
+  color: #2a2108;
+  background: #fffaf0;
+}
+
+.ticket-recharge-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ticket-recharge-heading div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ticket-recharge-heading strong,
+.ticket-recharge-heading p {
+  margin: 0;
+}
+
+.ticket-recharge-heading strong {
+  color: #2a2108;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.ticket-recharge-heading p {
+  color: #6f4e00;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ticket-recharge-heading span {
+  flex: 0 0 auto;
+  border: 1px solid #f0b429;
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: #6f4e00;
+  background: #fff7d6;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.ticket-recharge-link-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.ticket-recharge-link-row input {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #ecd08a;
+  border-radius: 8px;
+  padding: 0 11px;
+  color: #191f28;
+  background: #ffffff;
+}
+
+.ticket-recharge-panel .ticket-message {
+  color: #6f4e00;
+}
+
 .ticket-wallet-panel {
   display: grid;
   gap: 10px;
@@ -5719,6 +5813,22 @@ form.toss-card .toss-button {
   .ticket-wallet-dialog {
     max-height: calc(100dvh - 24px);
     padding: 14px;
+  }
+
+  .ticket-recharge-heading {
+    display: grid;
+  }
+
+  .ticket-recharge-heading span {
+    width: fit-content;
+  }
+
+  .ticket-recharge-link-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-recharge-link-row .secondary-button {
+    width: 100%;
   }
 
   .ticket-wallet-panel {
