@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { FormEvent, type MouseEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { BusinessInfo } from "./BusinessInfo";
 import {
   categoryLabelsByLocale,
   countryLabelsByLocale,
@@ -1991,6 +1992,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
         <div className="container">
           <div className="footer-identity">
             <span>© 2026 {copy.brandName}</span>
+            {locale === "ko" ? <BusinessInfo compact /> : null}
           </div>
           <div className="footer-links">
             <a href="/privacy">{copy.footer.privacy}</a>

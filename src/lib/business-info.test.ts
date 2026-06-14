@@ -24,4 +24,8 @@ describe("businessInfo", () => {
     const businessInfo = getBusinessInfo();
     expect(Object.values(businessInfo).join(" ")).not.toContain("2004");
   });
+
+  it("uses the configured public phone number by default for PG review", () => {
+    expect(getBusinessInfo({}).phone).toBe("031-891-1379");
+  });
 });
