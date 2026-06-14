@@ -145,7 +145,11 @@ try {
       }
     );
   } else {
-    assertCheck("first-free repeat is explicit", freeReport.body?.error?.code === "FIRST_FREE_USED", freeReport.body);
+    assertCheck(
+      "first-free route is explicitly closed",
+      ["FIRST_FREE_USED", "WEB_PAYWALL_ENABLED"].includes(freeReport.body?.error?.code),
+      freeReport.body
+    );
   }
 
   report.ok = true;
