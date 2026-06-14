@@ -267,7 +267,7 @@ const externalBlockerPatterns = [
   /DATABASE_URL=.*db:migrate|production database/i,
   /CRON_SECRET|scheduled .*cron|cron\/monitoring|cron\/prune/i,
   /Deploy Docker image|SCAN_PROVIDER=maigret|Maigret/i,
-  /PAYMENT_PROVIDER=(toss|polar)|TOSS_CLIENT_KEY|TOSS_SECRET_KEY|TOSS_SECURITY_KEY|POLAR_ACCESS_TOKEN|POLAR_PRODUCT_ID|POLAR_MONTHLY_MONITORING_PRODUCT_ID|POLAR_WEBHOOK_SECRET|Toss Payments|Polar|Toss/i,
+  /PAYMENT_PROVIDER=(toss|polar|portone)|TOSS_CLIENT_KEY|TOSS_SECRET_KEY|TOSS_SECURITY_KEY|POLAR_ACCESS_TOKEN|POLAR_PRODUCT_ID|POLAR_MONTHLY_MONITORING_PRODUCT_ID|POLAR_WEBHOOK_SECRET|NEXT_PUBLIC_PORTONE_STORE_ID|NEXT_PUBLIC_PORTONE_CHANNEL_KEY|PORTONE_API_SECRET|Toss Payments|Polar|PortOne|Toss/i,
   /selected-provider test checkout|test checkout|checkout to `\/reports/i,
   /TOSS_RELEASE_CHECK|Toss console|토스/i,
   /SMOKE_BASE_URL|PRODUCTION_BASE_URL|VERCEL_PRODUCTION_BASE_URL|verify:production|vercel:production|Security headers checked/i,

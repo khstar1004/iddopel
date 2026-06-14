@@ -54,6 +54,7 @@
   "dependencies": {
     "@apple/app-store-server-library": "^3.1.0",
     "@polar-sh/nextjs": "^0.9.6",
+    "@portone/browser-sdk": "^0.1.8",
     "clsx": "latest",
     "framer-motion": "latest",
     "googleapis": "^173.0.0",

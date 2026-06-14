@@ -27,6 +27,13 @@ const polarPaymentEnv = {
   POLAR_SERVER: "production"
 };
 
+const portOnePaymentEnv = {
+  PAYMENT_PROVIDER: "portone",
+  NEXT_PUBLIC_PORTONE_STORE_ID: "store-0a47c3c4-3b2c-4037-a77b-4fd1ee0b575f",
+  NEXT_PUBLIC_PORTONE_CHANNEL_KEY: "channel-key-live-12345",
+  PORTONE_API_SECRET: "not-a-real-portone-api-secret"
+};
+
 const storeCredentialEnv = {
   [["APPLE", "KEY", "ID"].join("_")]: "ABC123DEFG",
   [["APPLE", "ISSUER", "ID"].join("_")]: "00000000-0000-0000-0000-000000000000",
@@ -207,6 +214,27 @@ describe("buildLaunchButtonPlan", () => {
     expect(env).toMatchObject({
       PAYMENT_PROVIDER: "polar",
       POLAR_SERVER: "production"
+    });
+    expect(plan.ready).toBe(true);
+    expect(plan.missing).not.toEqual(expect.arrayContaining(["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY", "TOSS_SECURITY_KEY"]));
+  });
+
+  it("builds a ship plan with PortOne checkout credentials", () => {
+    const env = buildLaunchEnvironment({
+      fileEnv: {
+        ...completeFileEnv,
+        ...portOnePaymentEnv,
+        TOSS_CLIENT_KEY: "",
+        TOSS_SECRET_KEY: "",
+        TOSS_SECURITY_KEY: ""
+      },
+      env: {}
+    });
+    const plan = buildLaunchButtonPlan({ env, ship: true });
+
+    expect(env).toMatchObject({
+      PAYMENT_PROVIDER: "portone",
+      NEXT_PUBLIC_PORTONE_STORE_ID: portOnePaymentEnv.NEXT_PUBLIC_PORTONE_STORE_ID
     });
     expect(plan.ready).toBe(true);
     expect(plan.missing).not.toEqual(expect.arrayContaining(["TOSS_CLIENT_KEY", "TOSS_SECRET_KEY", "TOSS_SECURITY_KEY"]));

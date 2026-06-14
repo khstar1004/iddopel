@@ -58,6 +58,13 @@ const polarEnv = {
   POLAR_SERVER: "production"
 };
 
+const portOneEnv = {
+  PAYMENT_PROVIDER: "portone",
+  NEXT_PUBLIC_PORTONE_STORE_ID: "store-0a47c3c4-3b2c-4037-a77b-4fd1ee0b575f",
+  NEXT_PUBLIC_PORTONE_CHANNEL_KEY: "channel-key-live-12345",
+  PORTONE_API_SECRET: "not-a-real-portone-api-secret"
+};
+
 describe("normalizeProductionOrigin", () => {
   it("normalizes bare production domains to HTTPS origins", () => {
     expect(normalizeProductionOrigin("id.example.com/path?ignored=1")).toEqual({
@@ -180,6 +187,50 @@ describe("createProductionReleasePreparation", () => {
     expect(deployEnv).toContain(`POLAR_MONTHLY_MONITORING_PRODUCT_ID=${polarEnv.POLAR_MONTHLY_MONITORING_PRODUCT_ID}`);
     expect(deployEnv).toContain(`POLAR_WEBHOOK_SECRET=${polarEnv.POLAR_WEBHOOK_SECRET}`);
     expect(deployEnv).toContain("POLAR_SERVER=production");
+    expect(deployEnv).toContain("TOSS_CLIENT_KEY=");
+  });
+
+  it("requires PortOne checkout values instead of Toss payment keys when PortOne is selected", () => {
+    const preparation = createProductionReleasePreparation({
+      env: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "portone",
+        TOSS_CLIENT_KEY: "",
+        TOSS_SECRET_KEY: "",
+        TOSS_SECURITY_KEY: ""
+      },
+      existingFiles
+    });
+
+    expect(preparation.ready).toBe(false);
+    expect(preparation.missing).toEqual(
+      expect.arrayContaining(["NEXT_PUBLIC_PORTONE_STORE_ID", "NEXT_PUBLIC_PORTONE_CHANNEL_KEY", "PORTONE_API_SECRET"])
+    );
+    expect(preparation.missing).not.toContain("TOSS_CLIENT_KEY");
+    expect(preparation.missing).not.toContain("TOSS_SECRET_KEY");
+    expect(preparation.missing).not.toContain("TOSS_SECURITY_KEY");
+  });
+
+  it("renders PortOne checkout env for production Compose", () => {
+    const preparation = createProductionReleasePreparation({
+      env: {
+        ...completeEnv,
+        ...portOneEnv,
+        TOSS_CLIENT_KEY: "",
+        TOSS_SECRET_KEY: "",
+        TOSS_SECURITY_KEY: ""
+      },
+      existingFiles,
+      now: new Date("2026-06-11T00:00:00.000Z"),
+      randomBytes: () => Buffer.from("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ12")
+    });
+    const deployEnv = preparation.fileUpdates.find((update: { path: string }) => update.path === "deploy/compose/.env")?.content ?? "";
+
+    expect(preparation.ready).toBe(true);
+    expect(deployEnv).toContain("PAYMENT_PROVIDER=portone");
+    expect(deployEnv).toContain(`NEXT_PUBLIC_PORTONE_STORE_ID=${portOneEnv.NEXT_PUBLIC_PORTONE_STORE_ID}`);
+    expect(deployEnv).toContain(`NEXT_PUBLIC_PORTONE_CHANNEL_KEY=${portOneEnv.NEXT_PUBLIC_PORTONE_CHANNEL_KEY}`);
+    expect(deployEnv).toContain(`PORTONE_API_SECRET=${portOneEnv.PORTONE_API_SECRET}`);
     expect(deployEnv).toContain("TOSS_CLIENT_KEY=");
   });
 

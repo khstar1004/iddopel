@@ -45,6 +45,14 @@ function isLiveTossSecretKey(value) {
   return /^live_sk_/.test(value) && !hasPlaceholder(value);
 }
 
+function portOneStoreId(env) {
+  return env("NEXT_PUBLIC_PORTONE_STORE_ID") || env("PORTONE_STORE_ID");
+}
+
+function portOneChannelKey(env) {
+  return env("NEXT_PUBLIC_PORTONE_CHANNEL_KEY") || env("PORTONE_CHANNEL_KEY");
+}
+
 export async function createProductionConfigReport({ envValues = process.env, runRuntimeChecks: shouldRunRuntimeChecks = true } = {}) {
   const checks = [];
   const warnings = [];
@@ -76,7 +84,7 @@ export async function createProductionConfigReport({ envValues = process.env, ru
   );
   addCheck("SITE_URL is HTTPS production origin", isHttpsUrl(siteUrl), "Use the deployed HTTPS origin, without a trailing slash.");
   addCheck("SCAN_PROVIDER requires Maigret", env("SCAN_PROVIDER") === "maigret", "Set SCAN_PROVIDER=maigret for real username scanning.");
-  addCheck("PAYMENT_PROVIDER is a live checkout provider", ["toss", "polar"].includes(paymentProvider), "Set PAYMENT_PROVIDER=toss or PAYMENT_PROVIDER=polar before live web checkout.");
+  addCheck("PAYMENT_PROVIDER is a live checkout provider", ["toss", "polar", "portone"].includes(paymentProvider), "Set PAYMENT_PROVIDER=toss, PAYMENT_PROVIDER=polar, or PAYMENT_PROVIDER=portone before live web checkout.");
   addCheck("Mock payments disabled", env("ENABLE_MOCK_PAYMENTS") !== "true", "Set ENABLE_MOCK_PAYMENTS=false in production.");
   addCheck("Web detailed report paywall enabled", env("WEB_DETAILED_REPORT_PAYWALL_ENABLED") === "true", "Set WEB_DETAILED_REPORT_PAYWALL_ENABLED=true so detailed reports require checkout.");
   addCheck("Monthly monitoring paywall enabled", env("MONITORING_PAYWALL_ENABLED") === "true", "Set MONITORING_PAYWALL_ENABLED=true so monthly monitoring requires checkout.");
@@ -95,6 +103,11 @@ export async function createProductionConfigReport({ envValues = process.env, ru
     );
     addCheck("Polar webhook secret is strong", isStrongSecret(env("POLAR_WEBHOOK_SECRET")), "Set POLAR_WEBHOOK_SECRET to a random 32+ character webhook secret.");
     addCheck("Polar server is production", env("POLAR_SERVER") !== "sandbox", "Use POLAR_SERVER=production or leave it unset for production checkout.");
+  }
+  if (paymentProvider === "portone") {
+    addCheck("PortOne store id is configured", /^store-[0-9a-f-]{36}$/i.test(portOneStoreId(env)), "Set NEXT_PUBLIC_PORTONE_STORE_ID to the PortOne V2 store id.");
+    addCheck("PortOne channel key is configured", portOneChannelKey(env).length >= 12 && !hasPlaceholder(portOneChannelKey(env)), "Set NEXT_PUBLIC_PORTONE_CHANNEL_KEY to the PortOne payment channel key.");
+    addCheck("PortOne API secret is configured", env("PORTONE_API_SECRET").length >= 12 && !hasPlaceholder(env("PORTONE_API_SECRET")), "Set PORTONE_API_SECRET in the deployment secret manager.");
   }
   addCheck("Telemetry enabled", env("TELEMETRY_DISABLED") !== "true", "Keep TELEMETRY_DISABLED unset or false for launch monitoring.");
   addCheck("Alert webhook is HTTPS", isHttpsUrl(env("ALERT_WEBHOOK_URL")), "Set ALERT_WEBHOOK_URL to the launch alert channel webhook.");

@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowLeft, CreditCard, ExternalLink, Loader2, ShieldChec
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import * as PortOne from "@portone/browser-sdk/v2";
 import { BrandIcon } from "./BrandIcon";
 import {
   isMonthlyMonitoringPayment,
@@ -19,7 +20,7 @@ interface PublicOrder {
   amount: number;
   currency: "KRW";
   orderName: string;
-  provider: "MOCK" | "TOSS" | "POLAR" | "APP_STORE" | "GOOGLE_PLAY";
+  provider: "MOCK" | "TOSS" | "POLAR" | "PORTONE" | "APP_STORE" | "GOOGLE_PLAY";
   status: "READY" | "PAID" | "FAILED" | "CANCELED";
   checkoutUrl: string | null;
   createdAt: string;
@@ -70,6 +71,57 @@ export function CheckoutClient() {
     }
   }
 
+  async function payWithPortOne() {
+    if (!order) return;
+    setIsPaying(true);
+    setError(null);
+
+    try {
+      const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+      const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+      if (!storeId || !channelKey) {
+        throw new Error("PortOne Store ID 또는 Channel Key가 설정되어 있지 않아요.");
+      }
+
+      const response = await PortOne.requestPayment({
+        storeId,
+        channelKey,
+        paymentId: order.orderId,
+        orderName: order.orderName,
+        totalAmount: order.amount,
+        currency: "CURRENCY_KRW",
+        payMethod: "CARD",
+        redirectUrl: `${window.location.origin}/payment/success?provider=portone&orderId=${encodeURIComponent(order.orderId)}`,
+        forceRedirect: false
+      });
+
+      if (response?.code) {
+        throw new Error(response.message ?? "결제가 완료되지 않았어요.");
+      }
+
+      const paymentId = response?.paymentId ?? order.orderId;
+      const confirmResponse = await fetch("/api/payments/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "portone", orderId: order.orderId, paymentId })
+      });
+      const body = (await confirmResponse.json()) as PaymentAccessResponse & { error?: { message?: string } };
+      if (!confirmResponse.ok) throw new Error(body?.error?.message ?? "결제 완료 정보를 확인하지 못했어요.");
+      if (isMonthlyMonitoringPayment(body)) {
+        await registerPaidMonitoringFromPayment(body);
+        window.location.href = "/#monitoring-status-title";
+        return;
+      }
+      if (!body.reportUrl) throw new Error("결제 리포트 주소가 응답에 없어요.");
+      storePaidReportAccess(body);
+      window.location.href = body.reportUrl;
+    } catch (paymentError) {
+      setError(paymentError instanceof Error ? paymentError.message : "PortOne 결제를 완료하지 못했어요.");
+    } finally {
+      setIsPaying(false);
+    }
+  }
+
   if (error) {
     return <CheckoutShell title="결제를 준비하지 못했어요" description={error} />;
   }
@@ -95,6 +147,7 @@ export function CheckoutClient() {
   const readiness = getCheckoutReadiness(order);
   const hostedCheckout = isHostedCheckoutProvider(order.provider);
   const mockCheckout = order.provider === "MOCK";
+  const portOneCheckout = order.provider === "PORTONE";
   const canOpenHostedCheckout = hostedCheckout && Boolean(order.checkoutUrl);
 
   return (
@@ -132,7 +185,12 @@ export function CheckoutClient() {
             <p>현재는 메일 발송이 아니라 월 1회 재점검 결과를 화면에서 확인해요.</p>
           </div>
         </div>
-        {hostedCheckout ? (
+        {portOneCheckout ? (
+          <button className="toss-button" type="button" onClick={payWithPortOne} disabled={isPaying}>
+            {isPaying ? <Loader2 size={18} aria-hidden /> : <CreditCard size={18} aria-hidden />}
+            {isPaying ? copy.loading : copy.cta}
+          </button>
+        ) : hostedCheckout ? (
           <div className="checkout-action-stack">
             {canOpenHostedCheckout ? (
               <a className="toss-button" href={order.checkoutUrl ?? "#"} style={{ textDecoration: "none" }}>
@@ -217,6 +275,7 @@ function getCheckoutReadiness(order: PublicOrder) {
 function providerLabel(provider: PublicOrder["provider"]) {
   if (provider === "TOSS") return "Toss";
   if (provider === "POLAR") return "Polar";
+  if (provider === "PORTONE") return "PortOne";
   if (provider === "APP_STORE") return "App Store";
   if (provider === "GOOGLE_PLAY") return "Google Play";
   return "Mock";

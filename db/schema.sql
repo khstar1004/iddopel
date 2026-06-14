@@ -61,7 +61,7 @@ create index if not exists report_orders_payment_key_idx on report_orders (provi
 
 alter table report_orders drop constraint if exists report_orders_provider_check;
 alter table report_orders add constraint report_orders_provider_check
-  check (provider in ('MOCK', 'TOSS', 'POLAR', 'APP_STORE', 'GOOGLE_PLAY'));
+  check (provider in ('MOCK', 'TOSS', 'POLAR', 'PORTONE', 'APP_STORE', 'GOOGLE_PLAY'));
 
 alter table report_orders drop constraint if exists report_orders_product_id_check;
 alter table report_orders add constraint report_orders_product_id_check

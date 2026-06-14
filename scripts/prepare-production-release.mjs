@@ -35,7 +35,8 @@ const polarPaymentRequiredValues = [
   "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
   "POLAR_WEBHOOK_SECRET"
 ];
-const productionPaymentProviders = new Set(["toss", "polar"]);
+const portOnePaymentRequiredValues = ["NEXT_PUBLIC_PORTONE_STORE_ID", "NEXT_PUBLIC_PORTONE_CHANNEL_KEY", "PORTONE_API_SECRET"];
+const productionPaymentProviders = new Set(["toss", "polar", "portone"]);
 const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
 const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
 const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
@@ -125,6 +126,9 @@ export function renderDeployEnv(values) {
     POLAR_MONTHLY_MONITORING_PRODUCT_ID: values.POLAR_MONTHLY_MONITORING_PRODUCT_ID || "",
     POLAR_WEBHOOK_SECRET: values.POLAR_WEBHOOK_SECRET || "",
     POLAR_SERVER: values.POLAR_SERVER || "production",
+    NEXT_PUBLIC_PORTONE_STORE_ID: values.NEXT_PUBLIC_PORTONE_STORE_ID || values.PORTONE_STORE_ID || "",
+    NEXT_PUBLIC_PORTONE_CHANNEL_KEY: values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || values.PORTONE_CHANNEL_KEY || "",
+    PORTONE_API_SECRET: values.PORTONE_API_SECRET || "",
     TOSS_CONSOLE_APP_ID: values.TOSS_CONSOLE_APP_ID,
     TOSS_MINI_APP_NAME: values.TOSS_MINI_APP_NAME,
     TOSS_ALLOWED_ORIGINS: values.TOSS_ALLOWED_ORIGINS,
@@ -178,7 +182,7 @@ export function createProductionReleasePreparation({ env = {}, existingFiles = {
   }
 
   if (!productionPaymentProviders.has(paymentProvider)) {
-    missing.push("PAYMENT_PROVIDER=toss|polar");
+    missing.push("PAYMENT_PROVIDER=toss|polar|portone");
   }
 
   for (const requirement of requiredExternalValuesForProvider(paymentProvider)) {
@@ -220,6 +224,9 @@ export function createProductionReleasePreparation({ env = {}, existingFiles = {
     POLAR_MONTHLY_MONITORING_PRODUCT_ID: env.POLAR_MONTHLY_MONITORING_PRODUCT_ID || "",
     POLAR_WEBHOOK_SECRET: env.POLAR_WEBHOOK_SECRET || "",
     POLAR_SERVER: env.POLAR_SERVER || "production",
+    NEXT_PUBLIC_PORTONE_STORE_ID: env.NEXT_PUBLIC_PORTONE_STORE_ID || env.PORTONE_STORE_ID || "",
+    NEXT_PUBLIC_PORTONE_CHANNEL_KEY: env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || env.PORTONE_CHANNEL_KEY || "",
+    PORTONE_API_SECRET: env.PORTONE_API_SECRET || "",
     TOSS_CONSOLE_APP_ID: env.TOSS_CONSOLE_APP_ID || "",
     TOSS_MINI_APP_NAME: tossMiniAppName,
     TOSS_ALLOWED_ORIGINS:
@@ -300,7 +307,10 @@ function renderNativeAppConfig(origin, env) {
 export function renderProductionLaunchRunbook(values) {
   const supportEmail = values.STORE_SUPPORT_EMAIL || "not configured";
   const paymentProvider = normalizePaymentProvider(values.PAYMENT_PROVIDER);
-  const paymentProviderLabel = paymentProvider === "polar" ? "Polar" : "Toss Payments";
+  const paymentProviderLabel =
+    paymentProvider === "polar" ? "Polar" :
+    paymentProvider === "portone" ? "PortOne" :
+    "Toss Payments";
 
   return `# ID Doppelganger Production Launch Runbook
 
@@ -404,6 +414,7 @@ function normalizePaymentProvider(value) {
 function requiredExternalValuesForProvider(paymentProvider) {
   const paymentValues =
     paymentProvider === "polar" ? polarPaymentRequiredValues :
+    paymentProvider === "portone" ? portOnePaymentRequiredValues :
     paymentProvider === "toss" ? tossPaymentRequiredValues :
     [];
   return [...commonRequiredExternalValues, ...paymentValues];

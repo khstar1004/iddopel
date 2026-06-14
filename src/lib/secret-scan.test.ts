@@ -15,6 +15,7 @@ describe("secret scan verifier", () => {
         "GOOGLE_PLAY_UPLOAD_KEY_PASSWORD=",
         "POLAR_ACCESS_TOKEN=replace-with-polar-access-token",
         "POLAR_WEBHOOK_SECRET=replace-with-polar-webhook-secret",
+        "PORTONE_API_SECRET=replace-with-portone-api-secret",
         'TOSS_SECRET_KEY: "${TOSS_SECRET_KEY:?Set TOSS_SECRET_KEY}"',
         'DATABASE_URL="postgres://USER:PASSWORD@HOST:5432/DB"'
       ].join("\n")

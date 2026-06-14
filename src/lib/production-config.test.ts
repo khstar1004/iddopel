@@ -72,6 +72,22 @@ describe("production config preflight", () => {
     expect(report.failed).toBe(0);
   });
 
+  it("accepts PortOne as the live web checkout provider", async () => {
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "portone",
+        NEXT_PUBLIC_PORTONE_STORE_ID: "store-0a47c3c4-3b2c-4037-a77b-4fd1ee0b575f",
+        NEXT_PUBLIC_PORTONE_CHANNEL_KEY: "channel-key-live-12345",
+        PORTONE_API_SECRET: "not-a-real-portone-api-secret"
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.failed).toBe(0);
+  });
+
   it("rejects Toss test keys in production preflight", async () => {
     const report = await createProductionConfigReport({
       envValues: {
@@ -113,6 +129,28 @@ describe("production config preflight", () => {
         expect.objectContaining({ name: "Polar monthly monitoring product id is configured", ok: false }),
         expect.objectContaining({ name: "Polar webhook secret is strong", ok: false }),
         expect.objectContaining({ name: "Polar server is production", ok: false })
+      ])
+    );
+  });
+
+  it("rejects incomplete PortOne checkout configuration", async () => {
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "portone",
+        NEXT_PUBLIC_PORTONE_STORE_ID: "YOUR_PORTONE_STORE_ID",
+        NEXT_PUBLIC_PORTONE_CHANNEL_KEY: "",
+        PORTONE_API_SECRET: "short"
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "PortOne store id is configured", ok: false }),
+        expect.objectContaining({ name: "PortOne channel key is configured", ok: false }),
+        expect.objectContaining({ name: "PortOne API secret is configured", ok: false })
       ])
     );
   });

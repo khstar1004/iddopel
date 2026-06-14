@@ -54,6 +54,38 @@ export function PaymentSuccessClient() {
       return;
     }
 
+    if (provider === "portone") {
+      const paymentId = searchParams.get("paymentId");
+      const orderId = searchParams.get("orderId");
+
+      fetch("/api/payments/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider: "portone", paymentId, orderId })
+      })
+        .then(async (response) => {
+          const body = (await response.json()) as PaymentAccessResponse & { error?: { message?: string } };
+          if (!response.ok) throw new Error(body?.error?.message ?? "결제 완료 정보를 확인하지 못했어요.");
+
+          if (isMonthlyMonitoringPayment(body)) {
+            setMessage("월간 모니터링을 등록하고 있어요.");
+            await registerPaidMonitoringFromPayment(body);
+            setMessage("월간 모니터링으로 이동하고 있어요.");
+            window.location.href = "/#monitoring-status-title";
+            return;
+          }
+
+          if (!body.reportUrl) throw new Error("결제 리포트 주소가 응답에 없어요.");
+          storePaidReportAccess(body);
+          setMessage("정밀 리포트로 이동하고 있어요.");
+          window.location.href = body.reportUrl;
+        })
+        .catch((confirmError) => {
+          setError(confirmError instanceof Error ? confirmError.message : "결제 완료 정보를 확인하지 못했어요.");
+        });
+      return;
+    }
+
     const paymentKey = searchParams.get("paymentKey");
     const orderId = searchParams.get("orderId");
     const amount = searchParams.get("amount");

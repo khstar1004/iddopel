@@ -83,6 +83,7 @@ const polarPaymentKeys = [
   "POLAR_WEBHOOK_SECRET",
   "POLAR_SERVER"
 ];
+const portOnePaymentKeys = ["NEXT_PUBLIC_PORTONE_STORE_ID", "NEXT_PUBLIC_PORTONE_CHANNEL_KEY", "PORTONE_API_SECRET"];
 const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
 const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
 const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
@@ -258,7 +259,10 @@ function applyVercelProductionDefaults(launchEnv, rawEnv) {
 }
 
 function resolveEntryKeys(paymentProvider, rawEnv) {
-  const paymentKeys = paymentProvider === "polar" ? polarPaymentKeys : tossPaymentKeys;
+  const paymentKeys =
+    paymentProvider === "polar" ? polarPaymentKeys :
+    paymentProvider === "portone" ? portOnePaymentKeys :
+    tossPaymentKeys;
   const explicitOptionalKeys = optionalExplicitKeys.filter((key) => isConfiguredValue(rawEnv[key]));
   return uniqueKeys([...commonRequiredKeys, ...paymentKeys, ...mobileStoreKeys, ...explicitOptionalKeys]);
 }
@@ -290,6 +294,7 @@ function isRequiredKey(key, paymentProvider) {
   if (commonRequiredKeys.includes(key)) return true;
   if (mobileStoreKeys.includes(key)) return true;
   if (paymentProvider === "polar") return polarPaymentKeys.includes(key);
+  if (paymentProvider === "portone") return portOnePaymentKeys.includes(key);
   return tossPaymentKeys.includes(key);
 }
 
@@ -308,7 +313,8 @@ function isConfiguredValue(value) {
 
 function normalizePaymentProvider(value) {
   const provider = String(value || "").trim().toLowerCase();
-  return provider === "polar" ? "polar" : "toss";
+  if (provider === "polar" || provider === "portone") return provider;
+  return "toss";
 }
 
 function uniqueKeys(keys) {

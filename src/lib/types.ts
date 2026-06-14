@@ -144,7 +144,7 @@ export interface ReportOrder {
   amount: number;
   currency: "KRW";
   orderName: string;
-  provider: "MOCK" | "TOSS" | "POLAR" | "APP_STORE" | "GOOGLE_PLAY";
+  provider: "MOCK" | "TOSS" | "POLAR" | "PORTONE" | "APP_STORE" | "GOOGLE_PLAY";
   status: OrderStatus;
   checkoutUrl: string | null;
   paymentKey: string | null;

@@ -177,7 +177,7 @@ SMOKE_BASE_URL="https://iddopel.vercel.app" npm run smoke:vercel-beta
 - `SCAN_RESULT_METADATA_MAX_BYTES`: maximum HTML prefix to read per metadata fetch; beta uses `65536`
 - `MAIGRET_API_SECRET`: required shared secret for public Vercel production so the Node scan route can call the Python Maigret function with `x-maigret-api-secret`
 - `INLINE_SCAN_ARTIFACTS`: `true` only for Vercel beta without Postgres; keep false when durable report storage and paid web reports are enabled
-- `PAYMENT_PROVIDER`: `toss` or `polar` for live web checkout
+- `PAYMENT_PROVIDER`: `toss`, `polar`, or `portone` for live web checkout
 - `WEB_DETAILED_REPORT_PAYWALL_ENABLED`: keep `false` only for a free beta; set `true` after live checkout is ready to require checkout for detailed web reports
 - `MONITORING_PAYWALL_ENABLED`: keep `false` only for a free beta; set `true` after the monthly monitoring checkout product is ready
 - `TOSS_CLIENT_KEY`: Toss Payments live client key starting with `live_ck_`, required when `PAYMENT_PROVIDER=toss`
@@ -190,6 +190,9 @@ Instagram and X/Twitter checks depend on public unauthenticated responses from t
 - `POLAR_MONTHLY_MONITORING_PRODUCT_ID`: Polar monthly-monitoring product id, required when `PAYMENT_PROVIDER=polar`
 - `POLAR_WEBHOOK_SECRET`: 32+ character Polar webhook signing secret, required when `PAYMENT_PROVIDER=polar`
 - `POLAR_SERVER`: `production` for live Polar checkout, `sandbox` only for sandbox testing
+- `NEXT_PUBLIC_PORTONE_STORE_ID`: PortOne V2 store id, required when `PAYMENT_PROVIDER=portone`
+- `NEXT_PUBLIC_PORTONE_CHANNEL_KEY`: PortOne payment channel key, required when `PAYMENT_PROVIDER=portone`
+- `PORTONE_API_SECRET`: PortOne V2 API secret, required when `PAYMENT_PROVIDER=portone`
 - `TOSS_CONSOLE_API_KEY`: Apps in Toss console/AX release automation API key; keep it in the secret manager and never expose it to the client
 - `TOSS_CONSOLE_APP_ID`: Toss developer console app id
 - `TOSS_MINI_APP_NAME`: Toss mini app slug used to derive standard Toss origins

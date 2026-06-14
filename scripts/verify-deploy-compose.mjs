@@ -85,7 +85,16 @@ function validateComposeSource(compose) {
   addCheck("Compose keeps mock payments disabled by default", compose.includes("ENABLE_MOCK_PAYMENTS: \"${ENABLE_MOCK_PAYMENTS:-false}\""), "Mock payments must be disabled by default.");
   addCheck("Compose passes web paywall switches", compose.includes("WEB_DETAILED_REPORT_PAYWALL_ENABLED") && compose.includes("MONITORING_PAYWALL_ENABLED"), "App service must receive web paywall switches.");
   addCheck("Compose passes report access secrets", compose.includes("REPORT_TOKEN_SECRET") && compose.includes("FIRST_FREE_FINGERPRINT_SECRET"), "App service must receive report token and first-free fingerprint secrets.");
-  addCheck("Compose passes live checkout env", compose.includes("TOSS_CLIENT_KEY") && compose.includes("POLAR_ACCESS_TOKEN") && compose.includes("POLAR_MONTHLY_MONITORING_PRODUCT_ID"), "App service must receive Toss and Polar checkout settings.");
+  addCheck(
+    "Compose passes live checkout env",
+    compose.includes("TOSS_CLIENT_KEY") &&
+      compose.includes("POLAR_ACCESS_TOKEN") &&
+      compose.includes("POLAR_MONTHLY_MONITORING_PRODUCT_ID") &&
+      compose.includes("NEXT_PUBLIC_PORTONE_STORE_ID") &&
+      compose.includes("NEXT_PUBLIC_PORTONE_CHANNEL_KEY") &&
+      compose.includes("PORTONE_API_SECRET"),
+    "App service must receive Toss, Polar, and PortOne checkout settings."
+  );
   addCheck("Compose passes Toss mini-app env", compose.includes("TOSS_MINI_APP_NAME") && compose.includes("TOSS_ALLOWED_ORIGINS"), "App service must receive Toss mini-app Origin settings.");
   addCheck("Compose passes alert webhook env", compose.includes("ALERT_WEBHOOK_URL") && compose.includes("ALERT_RUNBOOK_URL"), "App service must receive alert webhook settings.");
   addCheck("Compose exposes only Caddy ports", compose.includes("443:443") && !compose.includes("3000:3000"), "Only Caddy should bind public ports in production.");
@@ -141,14 +150,17 @@ function validateEnvShape(values) {
     "POLAR_PRODUCT_ID",
     "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
     "POLAR_WEBHOOK_SECRET",
-    "POLAR_SERVER"
+    "POLAR_SERVER",
+    "NEXT_PUBLIC_PORTONE_STORE_ID",
+    "NEXT_PUBLIC_PORTONE_CHANNEL_KEY",
+    "PORTONE_API_SECRET"
   ]) {
     addCheck(`Deploy env declares ${key}`, hasEnvKey(values, key), `${key} must be declared in ${envPath}.`);
   }
 
   const paymentProvider = String(values.PAYMENT_PROVIDER || "").trim();
   addCheck("Deploy env defaults to Maigret", values.SCAN_PROVIDER === "maigret", "SCAN_PROVIDER should be maigret in production Compose.");
-  addCheck("Deploy env uses live checkout provider", ["toss", "polar"].includes(paymentProvider), "PAYMENT_PROVIDER should be toss or polar in production Compose.");
+  addCheck("Deploy env uses live checkout provider", ["toss", "polar", "portone"].includes(paymentProvider), "PAYMENT_PROVIDER should be toss, polar, or portone in production Compose.");
   addCheck("Deploy env disables mock payments", values.ENABLE_MOCK_PAYMENTS === "false", "ENABLE_MOCK_PAYMENTS must be false.");
   addCheck("Postgres password is URL-safe", /^[A-Za-z0-9._~-]+$/.test(values.POSTGRES_PASSWORD ?? ""), "Use URL-safe characters because the password is interpolated into DATABASE_URL.");
 
@@ -181,6 +193,11 @@ function validateEnvShape(values) {
       addCheck("Polar webhook secret is strong", isStrongSecret(values.POLAR_WEBHOOK_SECRET), "Set a 32+ character Polar webhook secret.");
       addCheck("Polar server is production", values.POLAR_SERVER !== "sandbox", "Use POLAR_SERVER=production or leave it unset for production checkout.");
     }
+    if (paymentProvider === "portone") {
+      addCheck("PortOne store id configured", /^store-[0-9a-f-]{36}$/i.test(values.NEXT_PUBLIC_PORTONE_STORE_ID ?? ""), "Set the PortOne V2 store id.");
+      addCheck("PortOne channel key configured", (values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY ?? "").length >= 12 && !hasPlaceholder(values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY), "Set the PortOne payment channel key.");
+      addCheck("PortOne API secret configured", (values.PORTONE_API_SECRET ?? "").length >= 12 && !hasPlaceholder(values.PORTONE_API_SECRET), "Set the PortOne V2 API secret.");
+    }
     addCheck("Toss console app id configured", (values.TOSS_CONSOLE_APP_ID ?? "").length > 0 && !hasPlaceholder(values.TOSS_CONSOLE_APP_ID), "Set the Apps in Toss console app id.");
     addCheck("Toss mini app name finalized", /^[a-z0-9-]+$/.test(values.TOSS_MINI_APP_NAME ?? "") && !hasPlaceholder(values.TOSS_MINI_APP_NAME), "Set the Apps in Toss mini app name.");
     addCheck("Toss allowed origins finalized", hasFinalTossOrigins(values.TOSS_ALLOWED_ORIGINS), "Set live and private tossmini.com Origins.");
@@ -202,7 +219,10 @@ function validateEnvShape(values) {
       hasPlaceholder(values.POLAR_ACCESS_TOKEN) ||
       hasPlaceholder(values.POLAR_PRODUCT_ID) ||
       hasPlaceholder(values.POLAR_MONTHLY_MONITORING_PRODUCT_ID) ||
-      hasPlaceholder(values.POLAR_WEBHOOK_SECRET)
+      hasPlaceholder(values.POLAR_WEBHOOK_SECRET) ||
+      hasPlaceholder(values.NEXT_PUBLIC_PORTONE_STORE_ID) ||
+      hasPlaceholder(values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY) ||
+      hasPlaceholder(values.PORTONE_API_SECRET)
     ) {
       addWarning("Production secret placeholder", "Replace CRON_SECRET, report secrets, and checkout provider keys in deploy/compose/.env before deployment.");
     }

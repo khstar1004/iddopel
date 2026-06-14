@@ -25,7 +25,8 @@ const polarPaymentRequiredKeys = [
   "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
   "POLAR_WEBHOOK_SECRET"
 ];
-const productionPaymentProviders = new Set(["toss", "polar"]);
+const portOnePaymentRequiredKeys = ["NEXT_PUBLIC_PORTONE_STORE_ID", "NEXT_PUBLIC_PORTONE_CHANNEL_KEY", "PORTONE_API_SECRET"];
+const productionPaymentProviders = new Set(["toss", "polar", "portone"]);
 const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
 const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
 const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
@@ -107,6 +108,9 @@ const publicLaunchEnvKeys = new Set([
   "POLAR_MONTHLY_MONITORING_PRODUCT_ID",
   "POLAR_WEBHOOK_SECRET",
   "POLAR_SERVER",
+  "NEXT_PUBLIC_PORTONE_STORE_ID",
+  "NEXT_PUBLIC_PORTONE_CHANNEL_KEY",
+  "PORTONE_API_SECRET",
   "SITE_URL",
   "PRODUCTION_BASE_URL",
   "SMOKE_BASE_URL",
@@ -279,7 +283,7 @@ export function buildLaunchButtonPlan({
   ];
   const missing = missingKeys(env, ship ? [...prepareRequiredKeys, ...shipRequiredKeys, ...storeReleaseRequiredKeys] : prepareRequiredKeys);
   if (!productionPaymentProviders.has(paymentProvider)) {
-    missing.push("PAYMENT_PROVIDER=toss|polar");
+    missing.push("PAYMENT_PROVIDER=toss|polar|portone");
   }
   if (ship) {
     for (const [key, expectedValue] of Object.entries(shipRequiredValues)) {
@@ -417,6 +421,7 @@ function normalizePaymentProvider(value) {
 
 function requiredPaymentKeysForProvider(paymentProvider) {
   if (paymentProvider === "polar") return polarPaymentRequiredKeys;
+  if (paymentProvider === "portone") return portOnePaymentRequiredKeys;
   if (paymentProvider === "toss") return tossPaymentRequiredKeys;
   return [];
 }

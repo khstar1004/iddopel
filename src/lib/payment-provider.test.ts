@@ -1,5 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { attachCheckoutUrl, confirmPolarCheckout, polarPaymentKey } from "./payment-provider";
+import {
+  attachCheckoutUrl,
+  confirmPolarCheckout,
+  confirmPortOnePayment,
+  polarPaymentKey,
+  portOnePaymentKey,
+  publicPortOneConfig
+} from "./payment-provider";
 import type { ReportOrder } from "./types";
 
 describe("attachCheckoutUrl", () => {
@@ -10,6 +17,9 @@ describe("attachCheckoutUrl", () => {
     delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
     delete process.env.POLAR_SERVER;
     delete process.env.ENABLE_MOCK_PAYMENTS;
+    delete process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+    delete process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+    delete process.env.PORTONE_API_SECRET;
   });
 
   it("returns an absolute checkout URL for mock orders created from a Toss-hosted mini app", async () => {
@@ -141,6 +151,27 @@ describe("attachCheckoutUrl", () => {
       message: "Polar 인증이 실패했어요. Access Token을 확인해 주세요."
     });
   });
+
+  it("returns an internal checkout URL for PortOne browser checkout orders", async () => {
+    process.env.NEXT_PUBLIC_PORTONE_STORE_ID = "store_test";
+    process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY = "channel-key-test";
+    const order = orderFixture("order_portone", "PORTONE");
+
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).resolves.toMatchObject({
+      checkoutUrl: "https://id-doppelganger.kr/checkout/order_portone"
+    });
+  });
+
+  it("blocks PortOne checkout when channel key is missing", async () => {
+    process.env.NEXT_PUBLIC_PORTONE_STORE_ID = "store_test";
+    const order = orderFixture("order_portone", "PORTONE");
+
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).rejects.toMatchObject({
+      code: "PAYMENT_CONFIG_MISSING",
+      status: 503,
+      message: "PORTONE_CHANNEL_KEY가 설정되어 있지 않아요."
+    });
+  });
 });
 
 describe("confirmPolarCheckout", () => {
@@ -227,6 +258,96 @@ describe("confirmPolarCheckout", () => {
 describe("polarPaymentKey", () => {
   it("namespaces Polar checkout ids before storing them on local orders", () => {
     expect(polarPaymentKey("chk_123")).toBe("polar_checkout:chk_123");
+  });
+});
+
+describe("confirmPortOnePayment", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.PORTONE_API_SECRET;
+  });
+
+  it("accepts a paid PortOne payment whose amount and currency match the local order", async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        id: "order_portone",
+        status: "PAID",
+        amount: { total: 2900 },
+        currency: "CURRENCY_KRW"
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.PORTONE_API_SECRET = "portone_secret_test";
+
+    await expect(confirmPortOnePayment(orderFixture("order_portone", "PORTONE"), "order_portone")).resolves.toMatchObject({
+      status: "PAID"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.portone.io/payments/order_portone",
+      expect.objectContaining({
+        headers: { Authorization: "PortOne portone_secret_test" },
+        cache: "no-store"
+      })
+    );
+  });
+
+  it("rejects paid PortOne payments with a different amount", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          id: "order_portone",
+          status: "PAID",
+          amount: { total: 1000 },
+          currency: "CURRENCY_KRW"
+        })
+      )
+    );
+    process.env.PORTONE_API_SECRET = "portone_secret_test";
+
+    await expect(confirmPortOnePayment(orderFixture("order_portone", "PORTONE"), "order_portone")).rejects.toThrow(
+      "PortOne 결제 금액이 주문 금액과 일치하지 않아요."
+    );
+  });
+
+  it("rejects PortOne payments that are not paid yet", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          id: "order_portone",
+          status: "READY",
+          amount: { total: 2900 },
+          currency: "CURRENCY_KRW"
+        })
+      )
+    );
+    process.env.PORTONE_API_SECRET = "portone_secret_test";
+
+    await expect(confirmPortOnePayment(orderFixture("order_portone", "PORTONE"), "order_portone")).rejects.toThrow(
+      "PortOne 결제가 아직 완료되지 않았어요."
+    );
+  });
+});
+
+describe("PortOne helpers", () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
+    delete process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
+  });
+
+  it("returns public PortOne browser SDK configuration from env", () => {
+    process.env.NEXT_PUBLIC_PORTONE_STORE_ID = "store_test";
+    process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY = "channel-key-test";
+
+    expect(publicPortOneConfig()).toEqual({
+      storeId: "store_test",
+      channelKey: "channel-key-test"
+    });
+  });
+
+  it("namespaces PortOne payment ids before storing paid access", () => {
+    expect(portOnePaymentKey("payment_123")).toBe("portone_payment:payment_123");
   });
 });
 

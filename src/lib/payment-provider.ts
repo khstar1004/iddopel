@@ -35,9 +35,27 @@ interface PolarCheckoutResponse {
   detail?: string;
 }
 
+interface PortOnePaymentResponse {
+  id?: string;
+  status?: string;
+  amount?: {
+    total?: number;
+  };
+  currency?: string;
+  orderName?: string;
+}
+
 export async function attachCheckoutUrl(order: ReportOrder, origin: string): Promise<ReportOrder> {
   if (order.provider === "POLAR") {
     return attachPolarCheckoutUrl(order, origin);
+  }
+
+  if (order.provider === "PORTONE") {
+    requirePortOnePublicConfig();
+    return {
+      ...order,
+      checkoutUrl: `${origin}/checkout/${order.orderId}`
+    };
   }
 
   if (order.provider !== "TOSS") {
@@ -217,6 +235,39 @@ export async function confirmTossPayment(order: ReportOrder, paymentKey: string,
   return body;
 }
 
+export async function confirmPortOnePayment(order: ReportOrder, paymentId: string) {
+  if (order.provider !== "PORTONE") {
+    throw new Error("PortOne 주문이 아니에요.");
+  }
+
+  if (!paymentId || paymentId !== order.orderId) {
+    throw new Error("PortOne 결제 ID가 주문과 일치하지 않아요.");
+  }
+
+  const payment = await getPortOnePayment(paymentId);
+  if (payment.status !== "PAID") {
+    throw new Error("PortOne 결제가 아직 완료되지 않았어요.");
+  }
+
+  if (payment.amount?.total !== order.amount) {
+    throw new Error("PortOne 결제 금액이 주문 금액과 일치하지 않아요.");
+  }
+
+  if (payment.currency && normalizePortOneCurrency(payment.currency) !== order.currency) {
+    throw new Error("PortOne 결제 통화가 주문 통화와 일치하지 않아요.");
+  }
+
+  return payment;
+}
+
+export function portOnePaymentKey(paymentId: string) {
+  return `portone_payment:${paymentId}`;
+}
+
+export function publicPortOneConfig() {
+  return requirePortOnePublicConfig();
+}
+
 function requireTossSecretKey() {
   const secretKey = process.env.TOSS_SECRET_KEY?.trim();
   if (!isUsableCredential(secretKey)) {
@@ -224,6 +275,53 @@ function requireTossSecretKey() {
   }
 
   return secretKey;
+}
+
+function requirePortOnePublicConfig() {
+  const storeId = process.env.NEXT_PUBLIC_PORTONE_STORE_ID?.trim() || process.env.PORTONE_STORE_ID?.trim();
+  const channelKey = process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY?.trim() || process.env.PORTONE_CHANNEL_KEY?.trim();
+  if (!isUsableCredential(storeId)) {
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "PORTONE_STORE_ID가 설정되어 있지 않아요.", 503);
+  }
+  if (!isUsableCredential(channelKey)) {
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "PORTONE_CHANNEL_KEY가 설정되어 있지 않아요.", 503);
+  }
+
+  return { storeId, channelKey };
+}
+
+function requirePortOneApiSecret() {
+  const apiSecret = process.env.PORTONE_API_SECRET?.trim();
+  if (!isUsableCredential(apiSecret)) {
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "PORTONE_API_SECRET이 설정되어 있지 않아요.", 503);
+  }
+
+  return apiSecret;
+}
+
+async function getPortOnePayment(paymentId: string) {
+  const response = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
+    headers: {
+      Authorization: `PortOne ${requirePortOneApiSecret()}`
+    },
+    cache: "no-store"
+  });
+  const body = (await response.json().catch(() => ({}))) as PortOnePaymentResponse & { message?: string };
+
+  if (!response.ok) {
+    throw new PaymentProviderError(
+      response.status === 401 || response.status === 403 ? "PAYMENT_CONFIG_INVALID" : "PAYMENT_REQUEST_REJECTED",
+      body.message ?? "PortOne 결제 정보를 확인하지 못했어요.",
+      response.status === 401 || response.status === 403 ? 503 : 400,
+      { status: response.status }
+    );
+  }
+
+  return body;
+}
+
+function normalizePortOneCurrency(currency: string) {
+  return currency.replace(/^CURRENCY_/, "").toUpperCase();
 }
 
 function requireMockPaymentsEnabled() {

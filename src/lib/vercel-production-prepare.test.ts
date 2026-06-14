@@ -130,4 +130,27 @@ describe("prepare Vercel production env", () => {
     );
     expect(plan.entries.map((entry: { key: string }) => entry.key)).not.toContain("TOSS_SECRET_KEY");
   });
+
+  it("requires PortOne keys instead of Toss payment keys when PortOne is selected", () => {
+    const plan = createVercelProductionPreparation({
+      fileEnv: {
+        ...completeTossEnv,
+        PAYMENT_PROVIDER: "portone",
+        [envKey("TOSS", "CLIENT", "KEY")]: "",
+        [envKey("TOSS", "SECRET", "KEY")]: "",
+        [envKey("TOSS", "SECURITY", "KEY")]: "",
+        NEXT_PUBLIC_PORTONE_STORE_ID: "store-0a47c3c4-3b2c-4037-a77b-4fd1ee0b575f",
+        NEXT_PUBLIC_PORTONE_CHANNEL_KEY: "channel-key-live-12345",
+        PORTONE_API_SECRET: "not-a-real-portone-api-secret"
+      },
+      env: {}
+    });
+
+    expect(plan.ready).toBe(true);
+    expect(plan.missing).toEqual([]);
+    expect(plan.entries.map((entry: { key: string }) => entry.key)).toEqual(
+      expect.arrayContaining(["NEXT_PUBLIC_PORTONE_STORE_ID", "NEXT_PUBLIC_PORTONE_CHANNEL_KEY", "PORTONE_API_SECRET"])
+    );
+    expect(plan.entries.map((entry: { key: string }) => entry.key)).not.toContain("TOSS_SECRET_KEY");
+  });
 });
