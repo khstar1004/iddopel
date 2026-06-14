@@ -46,6 +46,7 @@ export interface TicketWalletClaimResult {
 
 interface TicketWalletStore {
   getByEmailHash(emailHash: string): Promise<TicketWalletAccount | null>;
+  getByRecoveryCode(recoveryCode: string): Promise<TicketWalletAccount | null>;
   getBySessionTokenHash(sessionTokenHash: string): Promise<TicketWalletAccount | null>;
   create(account: TicketWalletAccount): Promise<TicketWalletAccount>;
   updateSession(accountId: string, sessionTokenHash: string | null, now?: Date): Promise<TicketWalletAccount | null>;
@@ -153,6 +154,16 @@ export async function resolveTicketWalletSession(request: Request): Promise<Tick
   return getTicketWalletStore().getBySessionTokenHash(hashSessionToken(sessionToken));
 }
 
+export async function findTicketWalletAccountByEmail(email: unknown): Promise<TicketWalletAccount | null> {
+  const normalizedEmail = normalizeTicketWalletEmail(email);
+  return getTicketWalletStore().getByEmailHash(hashTicketWalletEmail(normalizedEmail));
+}
+
+export async function findTicketWalletAccountByRecoveryCode(recoveryCode: unknown): Promise<TicketWalletAccount | null> {
+  const normalizedRecoveryCode = normalizeTicketWalletRecoveryCode(recoveryCode);
+  return getTicketWalletStore().getByRecoveryCode(normalizedRecoveryCode);
+}
+
 export async function logoutTicketWallet(request: Request): Promise<void> {
   const account = await resolveTicketWalletSession(request);
   if (!account) return;
@@ -190,6 +201,19 @@ export function normalizeTicketWalletEmail(value: unknown) {
   }
 
   return email;
+}
+
+function normalizeTicketWalletRecoveryCode(value: unknown) {
+  if (typeof value !== "string") {
+    throw new TicketWalletError("TICKET_WALLET_RECOVERY_INVALID", "복구코드를 입력해 주세요.");
+  }
+
+  const recoveryCode = value.trim();
+  if (recoveryCode.length < 8 || recoveryCode.length > 128 || !/^[A-Za-z0-9_-]+$/.test(recoveryCode)) {
+    throw new TicketWalletError("TICKET_WALLET_RECOVERY_INVALID", "복구코드 형식을 확인해 주세요.");
+  }
+
+  return recoveryCode;
 }
 
 function hashTicketWalletEmail(email: string) {
@@ -262,6 +286,16 @@ export class FileTicketWalletStore implements TicketWalletStore {
     return this.withQueue(async () => {
       const accounts = await this.readAll();
       return Object.values(accounts).find((account) => account.emailHash === emailHash) ?? null;
+    });
+  }
+
+  getByRecoveryCode(recoveryCode: string): Promise<TicketWalletAccount | null> {
+    return this.withQueue(async () => {
+      const accounts = await this.readAll();
+      for (const account of Object.values(accounts)) {
+        if (await verifySecret(recoveryCode, account.recoveryCodeHash)) return account;
+      }
+      return null;
     });
   }
 
@@ -351,6 +385,16 @@ class PostgresTicketWalletStore implements TicketWalletStore {
     await this.ready;
     const result = await this.pool.query(`select * from ticket_wallet_accounts where email_hash = $1 limit 1`, [emailHash]);
     return result.rows[0] ? mapPostgresTicketWallet(result.rows[0]) : null;
+  }
+
+  async getByRecoveryCode(recoveryCode: string): Promise<TicketWalletAccount | null> {
+    await this.ready;
+    const result = await this.pool.query(`select * from ticket_wallet_accounts order by created_at desc limit 1000`);
+    for (const row of result.rows) {
+      const account = mapPostgresTicketWallet(row);
+      if (await verifySecret(recoveryCode, account.recoveryCodeHash)) return account;
+    }
+    return null;
   }
 
   async getBySessionTokenHash(sessionTokenHash: string): Promise<TicketWalletAccount | null> {

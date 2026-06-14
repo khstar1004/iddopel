@@ -58,6 +58,17 @@ export interface BetaScanReferralGrantResult {
   bonusRemaining: number;
 }
 
+export type BetaScanBonusGrantReason = "INVALID_REFERRAL" | "INVALID_AMOUNT";
+
+export interface BetaScanBonusGrantResult {
+  granted: boolean;
+  reason?: BetaScanBonusGrantReason;
+  amount: number;
+  bonusRemaining: number;
+  previousBonusRemaining: number;
+  referralCode: string | null;
+}
+
 export interface BetaScanReferralTransferResult {
   transferred: number;
   fromBonusRemaining: number;
@@ -83,6 +94,7 @@ interface BetaScanUsageStore {
     referralCode?: string | null
   ): Promise<BetaScanTicketStatus>;
   grantReferralTicket(referralCode: string | null, recipientKey: string, now?: Date): Promise<BetaScanReferralGrantResult>;
+  grantBonusTickets(referralCode: string | null, amount: number, now?: Date): Promise<BetaScanBonusGrantResult>;
   transferReferralTickets(
     fromReferralCode: string | null,
     toReferralCode: string | null,
@@ -228,6 +240,15 @@ export function grantBetaScanReferralTicket(
   return store.grantReferralTicket(referralCode, recipientKey, now);
 }
 
+export function grantBetaScanBonusTickets(
+  store: BetaScanUsageStore,
+  referralCode: string | null,
+  amount: number,
+  now = new Date()
+) {
+  return store.grantBonusTickets(referralCode, amount, now);
+}
+
 export function transferBetaScanReferralTickets(
   store: BetaScanUsageStore,
   fromReferralCode: string | null,
@@ -295,6 +316,10 @@ export async function grantBetaScanReferralTicketForRequest(
     referral,
     tickets: await status()
   };
+}
+
+export function normalizeBetaScanReferralCode(value: string | null | undefined) {
+  return normalizeReferralCode(value);
 }
 
 export function acquireBetaScanLoadSlot(settings: BetaScanQuotaSettings) {
@@ -505,6 +530,56 @@ export class FileBetaScanUsageStore implements BetaScanUsageStore {
       await this.writeAll(usage);
 
       return { granted: true, bonusRemaining: bonusRemaining + 1 };
+    });
+  }
+
+  grantBonusTickets(referralCode: string | null, amount: number, now = new Date()) {
+    return this.withQueue(async () => {
+      const normalizedReferralCode = normalizeReferralCode(referralCode);
+      const normalizedAmount = normalizeBonusGrantAmount(amount);
+
+      if (!normalizedReferralCode) {
+        return {
+          granted: false,
+          reason: "INVALID_REFERRAL" as const,
+          amount: normalizedAmount,
+          bonusRemaining: 0,
+          previousBonusRemaining: 0,
+          referralCode: null
+        };
+      }
+
+      if (normalizedAmount <= 0) {
+        const usage = await this.readAll();
+        const bonusRemaining = activeCountFor(usage[referralBonusKey(normalizedReferralCode)], now);
+        return {
+          granted: false,
+          reason: "INVALID_AMOUNT" as const,
+          amount: normalizedAmount,
+          bonusRemaining,
+          previousBonusRemaining: bonusRemaining,
+          referralCode: normalizedReferralCode
+        };
+      }
+
+      const usage = await this.readAll();
+      const bonusKey = referralBonusKey(normalizedReferralCode);
+      const bonusRemaining = activeCountFor(usage[bonusKey], now);
+      const nextBonusRemaining = bonusRemaining + normalizedAmount;
+      usage[bonusKey] = {
+        count: nextBonusRemaining,
+        resetAt: referralTicketResetAt(),
+        updatedAt: now.toISOString()
+      };
+      await this.writeAll(usage);
+
+      return {
+        granted: true,
+        amount: normalizedAmount,
+        bonusRemaining: nextBonusRemaining,
+        previousBonusRemaining: bonusRemaining,
+        referralCode: normalizedReferralCode
+      };
     });
   }
 
@@ -901,6 +976,67 @@ class PostgresBetaScanUsageStore implements BetaScanUsageStore {
     }
   }
 
+  async grantBonusTickets(referralCode: string | null, amount: number, now = new Date()) {
+    await this.ready;
+    const normalizedReferralCode = normalizeReferralCode(referralCode);
+    const normalizedAmount = normalizeBonusGrantAmount(amount);
+
+    if (!normalizedReferralCode) {
+      return {
+        granted: false,
+        reason: "INVALID_REFERRAL" as const,
+        amount: normalizedAmount,
+        bonusRemaining: 0,
+        previousBonusRemaining: 0,
+        referralCode: null
+      };
+    }
+
+    const bonusKey = referralBonusKey(normalizedReferralCode);
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+      const existing = await client.query(
+        `select quota_key, count, reset_at
+         from beta_scan_usage
+         where quota_key = $1
+         for update`,
+        [bonusKey]
+      );
+      const usage = usageRecordsFromRows(existing.rows);
+      const bonusRemaining = activeCountFor(usage[bonusKey], now);
+
+      if (normalizedAmount <= 0) {
+        await client.query("commit");
+        return {
+          granted: false,
+          reason: "INVALID_AMOUNT" as const,
+          amount: normalizedAmount,
+          bonusRemaining,
+          previousBonusRemaining: bonusRemaining,
+          referralCode: normalizedReferralCode
+        };
+      }
+
+      const nextBonusRemaining = bonusRemaining + normalizedAmount;
+      await upsertUsageRecord(client, bonusKey, nextBonusRemaining, referralTicketResetAt(), now);
+      await client.query("commit");
+      return {
+        granted: true,
+        amount: normalizedAmount,
+        bonusRemaining: nextBonusRemaining,
+        previousBonusRemaining: bonusRemaining,
+        referralCode: normalizedReferralCode
+      };
+    } catch (error) {
+      await client.query("rollback").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async transferReferralTickets(fromReferralCode: string | null, toReferralCode: string | null, now = new Date()) {
     await this.ready;
     const from = normalizeReferralCode(fromReferralCode);
@@ -1159,6 +1295,10 @@ function activeCountFor(record: BetaScanUsageRecord | undefined, now: Date) {
 function normalizeReferralCode(value: string | null | undefined) {
   const normalized = value?.trim().toLowerCase() ?? "";
   return /^[a-f0-9]{24}$/.test(normalized) ? normalized : null;
+}
+
+function normalizeBonusGrantAmount(value: number) {
+  return Number.isInteger(value) && value > 0 && value <= 1000 ? value : 0;
 }
 
 function referralBonusKey(referralCode: string) {

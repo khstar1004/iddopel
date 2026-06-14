@@ -3749,6 +3749,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 
 .admin-login,
 .admin-settings-form,
+.admin-ticket-form,
 .admin-setup-panel {
   display: grid;
   gap: 14px;
@@ -3769,6 +3770,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 
 .admin-login label,
 .admin-number-field,
+.admin-text-field,
 .admin-switch-field {
   display: grid;
   gap: 8px;
@@ -3778,6 +3780,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 }
 
 .admin-login input,
+.admin-text-field input,
 .admin-number-field input {
   width: 100%;
   min-height: 52px;
@@ -3790,9 +3793,14 @@ form.toss-card .submit-hint[data-ready="true"] {
 }
 
 .admin-login input:focus,
+.admin-text-field input:focus,
 .admin-number-field input:focus {
   border-color: #3182f6;
   box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.16);
+}
+
+.admin-ticket-grid {
+  grid-template-columns: 150px minmax(0, 1fr);
 }
 
 .admin-panel-title {

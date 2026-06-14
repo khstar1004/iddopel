@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, CheckCircle2, Gauge, History, RefreshCw, ShieldAlert, ShieldCheck, SlidersHorizontal } from "lucide-react";
+import { Activity, CheckCircle2, Gauge, Gift, History, RefreshCw, ShieldAlert, ShieldCheck, SlidersHorizontal } from "lucide-react";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 const devAdminTokenKey = "id-doppelganger-dev-admin-token";
@@ -59,6 +59,23 @@ type AdminOverviewResponse = AdminSettingsResponse & {
   recentAuditEvents?: AdminAuditEvent[];
 };
 
+type AdminTicketTargetKind = "email" | "recoveryCode" | "referralCode";
+
+type AdminTicketGrantResponse = {
+  target?: {
+    kind: AdminTicketTargetKind;
+    referralCode: string;
+    accountId: string | null;
+    emailMasked: string | null;
+  };
+  grant?: {
+    amount: number;
+    previousBonusRemaining: number;
+    bonusRemaining: number;
+  };
+  error?: { message?: string };
+};
+
 const defaultSettings: BetaScanSettings = {
   publicScanEnabled: true,
   freeScanLimit: 1,
@@ -79,6 +96,11 @@ export function AdminConsole() {
   const [recentAuditEvents, setRecentAuditEvents] = useState<AdminAuditEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [ticketTarget, setTicketTarget] = useState("");
+  const [ticketAmount, setTicketAmount] = useState(1);
+  const [ticketMemo, setTicketMemo] = useState("");
+  const [ticketGrantStatus, setTicketGrantStatus] = useState("");
+  const [isGrantingTickets, setIsGrantingTickets] = useState(false);
 
   const headers = useMemo<Record<string, string>>(() => {
     const nextHeaders: Record<string, string> = {};
@@ -177,6 +199,42 @@ export function AdminConsole() {
       setStatusText("운영 설정을 저장했어요.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleGrantTickets(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!adminToken) return;
+    setIsGrantingTickets(true);
+    setTicketGrantStatus("");
+    try {
+      const response = await fetch("/api/admin/tickets", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...headers
+        },
+        body: JSON.stringify({
+          target: ticketTarget,
+          amount: ticketAmount,
+          memo: ticketMemo
+        })
+      });
+      const body = (await response.json()) as AdminTicketGrantResponse;
+      if (!response.ok || !body.grant || !body.target) {
+        setTicketGrantStatus(body.error?.message || "티켓을 지급하지 못했어요.");
+        return;
+      }
+
+      setTicketGrantStatus(
+        `${ticketTargetLabel(body.target.kind)} ${body.target.emailMasked || body.target.referralCode}에 ${body.grant.amount}장을 지급했어요. 현재 추천권 ${body.grant.bonusRemaining}장`
+      );
+      setTicketTarget("");
+      setTicketAmount(1);
+      setTicketMemo("");
+      await loadSettings(adminToken);
+    } finally {
+      setIsGrantingTickets(false);
     }
   }
 
@@ -333,6 +391,62 @@ export function AdminConsole() {
             )}
 
             {adminToken ? (
+              <section className="admin-panel" aria-labelledby="ticket-grant-title">
+                <div className="admin-panel-title">
+                  <Gift size={20} aria-hidden="true" />
+                  <div>
+                    <h2 id="ticket-grant-title">무료 검색권 지급</h2>
+                    <p>티켓 지갑 이메일, 복구코드, 추천코드 중 하나로 bonus 검색권을 추가합니다.</p>
+                  </div>
+                </div>
+                <form className="admin-ticket-form" onSubmit={handleGrantTickets}>
+                  <label className="admin-text-field" htmlFor="ticket-target">
+                    <span>대상</span>
+                    <input
+                      id="ticket-target"
+                      value={ticketTarget}
+                      onChange={(event) => setTicketTarget(event.target.value)}
+                      placeholder="email@example.com 또는 복구코드"
+                      autoComplete="off"
+                    />
+                  </label>
+                  <div className="admin-field-grid admin-ticket-grid">
+                    <NumberField
+                      id="ticket-grant-amount"
+                      label="지급"
+                      unit="장"
+                      min={1}
+                      max={100}
+                      value={ticketAmount}
+                      onChange={(value) => setTicketAmount(Number(value))}
+                    />
+                    <label className="admin-text-field" htmlFor="ticket-memo">
+                      <span>메모</span>
+                      <input
+                        id="ticket-memo"
+                        value={ticketMemo}
+                        onChange={(event) => setTicketMemo(event.target.value)}
+                        placeholder="고객지원 지급"
+                        maxLength={120}
+                      />
+                    </label>
+                  </div>
+                  <div className="admin-action-row">
+                    <button className="primary-button" type="submit" disabled={isGrantingTickets || !ticketTarget.trim()}>
+                      <Gift size={17} aria-hidden="true" />
+                      {isGrantingTickets ? "지급 중" : "티켓 지급"}
+                    </button>
+                  </div>
+                  {ticketGrantStatus ? (
+                    <div className={ticketGrantStatus.includes("지급했어요") ? "admin-status" : "admin-alert"}>
+                      {ticketGrantStatus}
+                    </div>
+                  ) : null}
+                </form>
+              </section>
+            ) : null}
+
+            {adminToken ? (
               <section className="admin-panel" aria-labelledby="admin-audit-title">
                 <div className="admin-panel-title">
                   <History size={20} aria-hidden="true" />
@@ -374,6 +488,7 @@ export function AdminConsole() {
 
 function auditActionLabel(action: string) {
   if (action === "scan_settings.update") return "검색 설정 변경";
+  if (action === "tickets.grant") return "무료 검색권 지급";
   return action;
 }
 
@@ -393,9 +508,20 @@ function settingLabel(key: string) {
     windowHours: "기준 시간",
     maxConcurrentScans: "동시 검색",
     busyRetryAfterSeconds: "재시도",
-    scanLeaseTtlSeconds: "슬롯 TTL"
+    scanLeaseTtlSeconds: "슬롯 TTL",
+    targetKind: "대상",
+    targetIdentifier: "식별자",
+    amount: "지급",
+    bonusRemaining: "추천권",
+    memo: "메모"
   };
   return labels[key] || key;
+}
+
+function ticketTargetLabel(kind: AdminTicketTargetKind) {
+  if (kind === "email") return "이메일";
+  if (kind === "recoveryCode") return "복구코드";
+  return "추천코드";
 }
 
 function formatAuditValue(value: string | number | boolean | null) {
