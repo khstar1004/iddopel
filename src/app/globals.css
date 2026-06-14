@@ -696,7 +696,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 
 .scan-submit-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 128px;
+  grid-template-columns: minmax(0, 1fr) 118px;
   gap: 10px;
   align-items: stretch;
 }
@@ -714,40 +714,23 @@ form.toss-card .submit-hint[data-ready="true"] {
   align-items: center;
   column-gap: 7px;
   overflow: hidden;
-  border: 1px solid #f0b429;
+  border: 1px solid #dbe2ea;
   border-radius: 8px;
-  padding: 7px 10px;
-  color: #2a2108;
-  background: #fff7d6;
+  padding: 7px 11px;
+  color: #191f28;
+  background: #ffffff;
   appearance: none;
   cursor: pointer;
 }
 
 .ticket-badge::before,
 .ticket-badge::after {
-  position: absolute;
-  top: 50%;
-  width: 14px;
-  height: 14px;
-  border: 1px solid #f0b429;
-  border-radius: 999px;
-  background: var(--surface);
-  content: "";
-}
-
-.ticket-badge::before {
-  left: -8px;
-  translate: 0 -50%;
-}
-
-.ticket-badge::after {
-  right: -8px;
-  translate: 0 -50%;
+  display: none;
 }
 
 .ticket-badge svg {
   grid-row: span 2;
-  color: #9a6700;
+  color: #4e5968;
 }
 
 .ticket-badge span,
@@ -759,46 +742,58 @@ form.toss-card .submit-hint[data-ready="true"] {
 }
 
 .ticket-badge span {
+  color: #191f28;
   font-size: 14px;
   font-weight: 900;
 }
 
 .ticket-badge strong {
-  color: #6f4e00;
+  color: #6b7684;
   font-size: 11px;
   font-weight: 800;
 }
 
 .ticket-badge[data-empty="true"] {
-  border-color: #ff8a8c;
+  border-color: #f0c4c4;
   color: #7f1d1d;
-  background: #fff1f1;
+  background: #fffafa;
 }
 
 .ticket-badge[data-empty="true"] svg,
 .ticket-badge[data-empty="true"] strong {
-  color: #9f1239;
+  color: #b42318;
+}
+
+.ticket-badge[data-empty="true"] span {
+  color: #7f1d1d;
 }
 
 .ticket-badge:hover,
 .ticket-badge:focus-visible {
+  border-color: #8b95a1;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(240, 180, 41, 0.22);
+  box-shadow: 0 0 0 3px rgba(139, 149, 161, 0.16);
 }
 
 .referral-ticket-panel {
   display: grid;
-  gap: 10px;
-  border: 1px solid rgba(240, 180, 41, 0.55);
+  gap: 12px;
+  border: 1px solid #dbe2ea;
   border-radius: 8px;
   padding: 12px;
-  color: #2a2108;
-  background: #fffaf0;
+  color: #191f28;
+  background: #ffffff;
 }
 
 .referral-ticket-copy {
   display: grid;
   gap: 4px;
+}
+
+.referral-ticket-copy strong {
+  color: #191f28;
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .referral-ticket-copy p,
@@ -809,7 +804,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 
 .referral-ticket-copy p,
 .ticket-message {
-  color: #6f4e00;
+  color: #4e5968;
   font-size: 13px;
 }
 
@@ -822,11 +817,46 @@ form.toss-card .submit-hint[data-ready="true"] {
 .referral-link-row input {
   min-width: 0;
   min-height: 42px;
-  border: 1px solid #ecd08a;
+  border: 1px solid #dbe2ea;
   border-radius: 8px;
   padding: 0 11px;
   color: #191f28;
+  background: #fbfcfd;
+}
+
+.referral-ticket-panel .secondary-button {
+  border-color: #14b8a6;
+  color: #06443c;
+  background: #ecfffb;
+}
+
+.referral-ticket-panel .secondary-button:hover,
+.referral-ticket-panel .secondary-button:focus-visible {
+  border-color: #0f766e;
+  outline: none;
+  background: #d9fff8;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.18);
+}
+
+.referral-ticket-panel .secondary-button:disabled {
+  cursor: not-allowed;
+  border-color: #dbe2ea;
+  color: #5f6b7a;
+  background: #f3f6f8;
+  opacity: 1;
+}
+
+.referral-ticket-panel .ghost-button {
+  border-color: #dbe2ea;
+  color: #333d4b;
   background: #ffffff;
+}
+
+.referral-ticket-panel .ghost-button:hover,
+.referral-ticket-panel .ghost-button:focus-visible {
+  border-color: #8b95a1;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(139, 149, 161, 0.16);
 }
 
 .ticket-wallet-overlay {
@@ -910,11 +940,11 @@ form.toss-card .submit-hint[data-ready="true"] {
 .ticket-recharge-panel {
   display: grid;
   gap: 10px;
-  border: 1px solid #ffe0a8;
+  border: 1px solid #dbe2ea;
   border-radius: 8px;
   padding: 12px;
-  color: #2a2108;
-  background: #fffaf0;
+  color: #191f28;
+  background: #ffffff;
 }
 
 .ticket-recharge-heading {
@@ -936,24 +966,24 @@ form.toss-card .submit-hint[data-ready="true"] {
 }
 
 .ticket-recharge-heading strong {
-  color: #2a2108;
+  color: #191f28;
   font-size: 14px;
   line-height: 1.3;
 }
 
 .ticket-recharge-heading p {
-  color: #6f4e00;
+  color: #4e5968;
   font-size: 13px;
   line-height: 1.45;
 }
 
 .ticket-recharge-heading span {
   flex: 0 0 auto;
-  border: 1px solid #f0b429;
+  border: 1px solid #dbe2ea;
   border-radius: 999px;
   padding: 4px 8px;
-  color: #6f4e00;
-  background: #fff7d6;
+  color: #333d4b;
+  background: #f7f8fa;
   font-size: 12px;
   font-weight: 900;
   line-height: 1.2;
@@ -968,15 +998,15 @@ form.toss-card .submit-hint[data-ready="true"] {
 .ticket-recharge-link-row input {
   min-width: 0;
   min-height: 42px;
-  border: 1px solid #ecd08a;
+  border: 1px solid #dbe2ea;
   border-radius: 8px;
   padding: 0 11px;
   color: #191f28;
-  background: #ffffff;
+  background: #fbfcfd;
 }
 
 .ticket-recharge-panel .ticket-message {
-  color: #6f4e00;
+  color: #4e5968;
 }
 
 .ticket-wallet-panel {

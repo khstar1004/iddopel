@@ -158,20 +158,22 @@ const scanExperienceCopy = {
       },
       charCount: (count: number) => `${count}/30자`,
       quotaRemaining: (remaining: number, limit: number, resetLabel: string | null) =>
-        resetLabel
-          ? `무료 티켓 ${remaining}장 남음 · 기본 티켓 초기화 ${resetLabel}`
-          : `무료 티켓 ${remaining}/${limit}장 남음`,
-      ticketsAria: "무료 검색 티켓",
-      ticketLoading: "티켓 확인 중",
-      ticketEmpty: "티켓 없음",
+        remaining <= 0
+          ? "무료 검색권 0장 · 상세 결과는 결제 후 열림"
+          : resetLabel
+          ? `무료 검색권 ${remaining}장 · 기본 검색권 초기화 ${resetLabel}`
+          : `무료 검색권 ${remaining}/${limit}장`,
+      ticketsAria: "무료 검색권",
+      ticketLoading: "확인 중",
+      ticketEmpty: "0장",
       ticketCount: (count: number) => `${count}장`,
       ticketBreakdown: (base: number, bonus: number) => bonus > 0 ? `기본 ${base} · 추천 ${bonus}` : `기본 ${base}`,
-      ticketEmptyHint: "무료 티켓이 없어요. 추천 링크를 공유해 티켓을 충전해 주세요.",
+      ticketEmptyHint: "검색은 가능해요. 무료 검색권이 없으면 상세 결과는 결제 후 열립니다.",
       ticketLoadFailed: "티켓 상태를 확인하지 못했어요. 검색 시 서버에서 다시 확인합니다.",
-      referralTitle: "무료 티켓 충전",
-      referralDescription: "링크로 친구가 들어오면 무료 검색 티켓 1장이 추가돼요.",
+      referralTitle: "무료 검색권 충전",
+      referralDescription: "링크로 친구가 들어오면 무료 검색권 1장이 추가돼요.",
       referralLinkLabel: "추천 링크",
-      referralCopy: "링크 복사",
+      referralCopy: "복사",
       referralCopying: "복사 중",
       referralCopied: "추천 링크를 복사했어요.",
       referralFailed: "링크를 복사하지 못했어요.",
@@ -392,7 +394,7 @@ const scanExperienceCopy = {
       paywallPreview: "리포트 잠김",
       freeDetail: "무료 상세 보기",
       freeDetailAgain: "무료 상세 보기 다시 보기",
-      ticketFull: "무료 티켓 전체 결과",
+      ticketFull: "무료 검색권 전체 결과",
       paidReport: "결제 완료 리포트",
       fullOpen: "전체 결과 열림",
       lockedUrl: "URL 잠김"
@@ -460,20 +462,22 @@ const scanExperienceCopy = {
       },
       charCount: (count: number) => `${count}/30 chars`,
       quotaRemaining: (remaining: number, limit: number, resetLabel: string | null) =>
-        resetLabel
+        remaining <= 0
+          ? "0 free credits · detailed results open after payment"
+          : resetLabel
           ? `${remaining} free tickets left · base tickets reset ${resetLabel}`
           : `${remaining}/${limit} free tickets left`,
-      ticketsAria: "Free search tickets",
-      ticketLoading: "Checking tickets",
-      ticketEmpty: "No tickets",
+      ticketsAria: "Free search credits",
+      ticketLoading: "Checking",
+      ticketEmpty: "0",
       ticketCount: (count: number) => `${count}`,
       ticketBreakdown: (base: number, bonus: number) => bonus > 0 ? `Base ${base} · Referral ${bonus}` : `Base ${base}`,
-      ticketEmptyHint: "No free tickets left. Share your referral link to refill one ticket at a time.",
+      ticketEmptyHint: "You can still search. Without free credits, detailed results open after payment.",
       ticketLoadFailed: "Could not check ticket status. The server will verify it when you search.",
-      referralTitle: "Refill free tickets",
-      referralDescription: "When a friend opens this link, one free search ticket is added.",
+      referralTitle: "Refill free credits",
+      referralDescription: "When a friend opens this link, one free search credit is added.",
       referralLinkLabel: "Referral link",
-      referralCopy: "Copy link",
+      referralCopy: "Copy",
       referralCopying: "Copying",
       referralCopied: "Referral link copied.",
       referralFailed: "Could not copy the link.",
@@ -1087,8 +1091,7 @@ export function ScanExperience({ initialLocale }: { initialLocale?: Locale } = {
     monitoringDraft.usernames.length > 0 &&
     monitoringDraft.invalid.length === 0 &&
     monitoringDraft.extraCount === 0;
-  const hasSearchTicket = Boolean(devAdminToken) || ticketStatus === null || ticketStatus.remaining > 0;
-  const canSubmit = username.trim().length >= 3 && !usernameValidationMessage && acknowledged && !isScanning && hasSearchTicket;
+  const canSubmit = username.trim().length >= 3 && !usernameValidationMessage && acknowledged && !isScanning;
 
   function changeLocale(nextLocale: Locale) {
     setLocale(nextLocale);
@@ -3342,6 +3345,14 @@ async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExp
   }
 
   if (freeBody?.error?.code === "WEB_PAYWALL_ENABLED") {
+    return loadPreviewResults(
+      scanId,
+      copy.detailLabels.paywallPreview,
+      freeBody?.error?.message ?? copy.detailLabels.lockedUrl
+    );
+  }
+
+  if (freeBody?.error?.code === "BETA_FREE_SCAN_LIMITED") {
     return loadPreviewResults(
       scanId,
       copy.detailLabels.paywallPreview,

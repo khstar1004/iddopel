@@ -60,32 +60,13 @@ export async function POST(request: Request) {
     try {
       const ticketPrincipal = isAdminRequest ? null : await resolveScanTicketPrincipal(request);
       const quota = ticketPrincipal ? await consumeBetaScanQuotaForPrincipal(request, ticketPrincipal, settings) : null;
-
-      if (quota && !quota.allowed) {
-        const response = jsonError(
-          "BETA_FREE_SCAN_LIMITED",
-          "무료 검색 티켓을 모두 사용했어요. 추천 링크를 공유하면 친구 방문마다 티켓 1장이 추가돼요.",
-          429,
-          {
-            limit: quota.limit,
-            remaining: quota.remaining,
-            baseRemaining: quota.baseRemaining,
-            bonusRemaining: quota.bonusRemaining,
-            resetAt: quota.resetAt,
-            retryAfterSeconds: quota.retryAfterSeconds,
-            referralCode: quota.referralCode
-          }
-        );
-        if (quota.retryAfterSeconds) response.headers.set("Retry-After", String(quota.retryAfterSeconds));
-        setQuotaHeaders(response, quota);
-        return withTossCors(request, response);
-      }
+      const paywalledForMissingTicket = Boolean(quota && !quota.allowed);
 
       const job = await createStoredScan(input, {
         origin: new URL(request.url).origin,
-        ticketAccessOwnerTokenHash: quota?.allowed
-          ? hashScanTicketAccessOwner(ticketPrincipal?.ownerToken)
-          : null
+        freePreviewLocked: paywalledForMissingTicket,
+        freePreviewLockReason: paywalledForMissingTicket ? "BETA_FREE_SCAN_LIMITED" : undefined,
+        ticketAccessOwnerTokenHash: quota?.allowed ? hashScanTicketAccessOwner(ticketPrincipal?.ownerToken) : null
       });
       const response = NextResponse.json(publicScanResponse(job), { status: 201 });
       if (quota) setQuotaHeaders(response, quota);

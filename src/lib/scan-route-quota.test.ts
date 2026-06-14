@@ -29,7 +29,7 @@ describe("scan route beta free quota", () => {
     resetTicketWalletStoreForTests(null);
   });
 
-  it("blocks beta searches after the free ticket quota is used", async () => {
+  it("creates a paywalled scan after the free ticket quota is used", async () => {
     process.env.SCAN_PROVIDER = "mock";
     process.env.BETA_FREE_SCAN_LIMIT = "1";
     process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
@@ -45,14 +45,18 @@ describe("scan route beta free quota", () => {
     const first = await POST(scanRequest("firstquota", { ownerToken: "same-owner-token" }));
     const second = await POST(scanRequest("secondquota", { ownerToken: "same-owner-token" }));
     const secondBody = await second.json();
+    const secondScan = await repository.get(secondBody.scanId);
 
     expect(first.status).toBe(201);
     expect(first.headers.get("x-beta-free-scans-remaining")).toBe("0");
-    expect(second.status).toBe(429);
+    expect(second.status).toBe(201);
     expect(second.headers.get("x-beta-free-scans-remaining")).toBe("0");
     expect(second.headers.get("x-beta-free-ticket-referral-code")).toBeTruthy();
-    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
-    expect(repository.size).toBe(1);
+    expect(secondBody.freePreviewLocked).toBe(true);
+    expect(secondBody.freePreviewLockReason).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(secondBody.previewResults).toEqual([]);
+    expect(secondScan?.ticketAccessOwnerTokenHash).toBeNull();
+    expect(repository.size).toBe(2);
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -79,7 +83,7 @@ describe("scan route beta free quota", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it("locks free previews after the configured number of beta searches per owner token", async () => {
+  it("marks no-ticket scans as paywalled across owner token requests", async () => {
     process.env.SCAN_PROVIDER = "mock";
     process.env.BETA_FREE_SCAN_LIMIT = "1";
     process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
@@ -96,8 +100,10 @@ describe("scan route beta free quota", () => {
     const secondBody = await second.json();
 
     expect(first.status).toBe(201);
-    expect(second.status).toBe(429);
-    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(second.status).toBe(201);
+    expect(secondBody.freePreviewLocked).toBe(true);
+    expect(secondBody.freePreviewLockReason).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(secondBody.previewResults).toEqual([]);
     await rm(dir, { recursive: true, force: true });
   });
 
@@ -141,8 +147,10 @@ describe("scan route beta free quota", () => {
     const secondBody = await second.json();
 
     expect(first.status).toBe(201);
-    expect(second.status).toBe(429);
-    expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(second.status).toBe(201);
+    expect(secondBody.freePreviewLocked).toBe(true);
+    expect(secondBody.freePreviewLockReason).toBe("BETA_FREE_SCAN_LIMITED");
+    expect(secondBody.previewResults).toEqual([]);
 
     await rm(dir, { recursive: true, force: true });
   });
