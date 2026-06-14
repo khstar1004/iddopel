@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { ClientTelemetry } from "@/components/ClientTelemetry";
 import "./globals.css";
 
 const siteUrl = normalizeOrigin(process.env.SITE_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || "https://YOUR_PRODUCTION_DOMAIN");
+const adsensePublisherId = "ca-pub-5490654987125120";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -25,6 +27,9 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ko_KR",
     url: siteUrl
+  },
+  other: {
+    "google-adsense-account": adsensePublisherId
   }
 };
 
@@ -45,6 +50,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           type="application/ld+json"
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <Script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePublisherId}`}
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
         />
         <ClientTelemetry />
       </body>
