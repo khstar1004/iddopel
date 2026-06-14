@@ -25,7 +25,9 @@ describe("businessInfo", () => {
     expect(Object.values(businessInfo).join(" ")).not.toContain("2004");
   });
 
-  it("uses the configured public phone number by default for PG review", () => {
-    expect(getBusinessInfo({}).phone).toBe("031-891-1379");
+  it("uses the configured shared office contact by default for PG review", () => {
+    const info = getBusinessInfo({});
+    expect(info.address).toBe("경기 용인시 수지구 현암로 148 스카이프라자 602호");
+    expect(info.phone).toBe("0507-1330-8289");
   });
 });
