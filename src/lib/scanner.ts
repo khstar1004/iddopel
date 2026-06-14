@@ -125,7 +125,12 @@ export function createScanJobFromResults(
 }
 
 export function publicSummary(job: ScanJob) {
-  const { maigretReport: _maigretReport, results: _results, ...summary } = job;
+  const {
+    maigretReport: _maigretReport,
+    results: _results,
+    ticketAccessOwnerTokenHash: _ticketAccessOwnerTokenHash,
+    ...summary
+  } = job;
   const freePreviewLocked = Boolean(job.freePreviewLocked);
 
   return {

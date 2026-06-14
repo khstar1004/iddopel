@@ -9,6 +9,7 @@ import {
 import { isDevAdminRequest } from "@/lib/dev-admin";
 import { publicScanResponse } from "@/lib/scan-response";
 import { createStoredScan } from "@/lib/scan-store";
+import { hashScanTicketAccessOwner } from "@/lib/scan-ticket-access";
 import { resolveTicketWalletSession } from "@/lib/ticket-wallet";
 import { createTossPreflightResponse, rejectDisallowedTossCors, withTossCors } from "@/lib/toss-cors";
 import { parseCreateScanInput } from "@/lib/validation";
@@ -57,9 +58,8 @@ export async function POST(request: Request) {
     }
 
     try {
-      const quota = isAdminRequest
-        ? null
-        : await consumeBetaScanQuotaForRequest(request, settings);
+      const ticketPrincipal = isAdminRequest ? null : await resolveScanTicketPrincipal(request);
+      const quota = ticketPrincipal ? await consumeBetaScanQuotaForPrincipal(request, ticketPrincipal, settings) : null;
 
       if (quota && !quota.allowed) {
         const response = jsonError(
@@ -82,7 +82,10 @@ export async function POST(request: Request) {
       }
 
       const job = await createStoredScan(input, {
-        origin: new URL(request.url).origin
+        origin: new URL(request.url).origin,
+        ticketAccessOwnerTokenHash: quota?.allowed
+          ? hashScanTicketAccessOwner(ticketPrincipal?.ownerToken)
+          : null
       });
       const response = NextResponse.json(publicScanResponse(job), { status: 201 });
       if (quota) setQuotaHeaders(response, quota);
@@ -95,10 +98,21 @@ export async function POST(request: Request) {
   }
 }
 
-async function consumeBetaScanQuotaForRequest(request: Request, settings: BetaScanQuotaSettings) {
+async function resolveScanTicketPrincipal(request: Request) {
   const wallet = await resolveTicketWalletSession(request);
   const ownerToken = wallet?.ownerToken ?? request.headers.get("x-scan-owner-token");
-  return consumeBetaScanQuota(request, ownerToken, settings, { accountScoped: Boolean(wallet) });
+  return {
+    ownerToken,
+    accountScoped: Boolean(wallet)
+  };
+}
+
+async function consumeBetaScanQuotaForPrincipal(
+  request: Request,
+  principal: Awaited<ReturnType<typeof resolveScanTicketPrincipal>>,
+  settings: BetaScanQuotaSettings
+) {
+  return consumeBetaScanQuota(request, principal.ownerToken, settings, { accountScoped: principal.accountScoped });
 }
 
 function setQuotaHeaders(

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { GET } from "../app/api/scans/[scanId]/results/route";
 import { resetScanRepositoryForTests, type ScanRepository } from "./repository";
+import { hashScanTicketAccessOwner } from "./scan-ticket-access";
 import { createScanJobFromResults } from "./scanner";
 import type { ScanJob } from "./types";
 
@@ -45,6 +46,44 @@ describe("scan results route free preview policy", () => {
     expect(body.lockedCount).toBe(1);
     expect(body.results.map((result: { platform: string }) => result.platform)).toEqual(["GitHub"]);
     expect(body.lockedResults.map((result: { platform: string }) => result.platform)).toEqual(["LinkedIn"]);
+  });
+
+  it("opens full results when the same owner spent a free ticket on the scan", async () => {
+    const scan = {
+      ...staleScanWithLeakedPreview(),
+      ticketAccessOwnerTokenHash: hashScanTicketAccessOwner("ticket-owner")
+    };
+    resetScanRepositoryForTests(new MemoryScanRepository([scan]));
+
+    const response = await GET(
+      resultsRequest(scan.scanId, "access=full", { ownerToken: "ticket-owner" }),
+      routeContext(scan.scanId)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.access).toBe("FULL");
+    expect(body.lockedCount).toBe(0);
+    expect(body.lockedResults).toEqual([]);
+    expect(body.results.map((result: { platform: string }) => result.platform)).toEqual(["GitHub", "LinkedIn"]);
+  });
+
+  it("keeps ticket-unlocked scans locked for a different owner", async () => {
+    const scan = {
+      ...staleScanWithLeakedPreview(),
+      ticketAccessOwnerTokenHash: hashScanTicketAccessOwner("ticket-owner")
+    };
+    resetScanRepositoryForTests(new MemoryScanRepository([scan]));
+
+    const response = await GET(
+      resultsRequest(scan.scanId, "access=full", { ownerToken: "other-owner" }),
+      routeContext(scan.scanId)
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(402);
+    expect(body.access).toBe("LOCKED");
+    expect(body.lockedCount).toBe(1);
   });
 
   it("returns only locked mosaics when the scan used the beta free preview quota", async () => {
@@ -162,9 +201,13 @@ function staleScanWithLeakedPreview() {
   };
 }
 
-function resultsRequest(scanId: string, query = "") {
+function resultsRequest(scanId: string, query = "", options: { ownerToken?: string } = {}) {
   const suffix = query ? `?${query}` : "";
-  return new Request(`http://localhost/api/scans/${scanId}/results${suffix}`);
+  return new Request(`http://localhost/api/scans/${scanId}/results${suffix}`, {
+    headers: {
+      ...(options.ownerToken ? { "x-scan-owner-token": options.ownerToken } : {})
+    }
+  });
 }
 
 function routeContext(scanId: string) {

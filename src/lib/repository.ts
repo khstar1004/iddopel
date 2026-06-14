@@ -156,15 +156,17 @@ class PostgresScanRepository implements ScanRepository {
       `insert into scan_jobs (
         id, username, purpose, mode, status, progress, found_count, checked_count, failed_rate,
         doppelganger_score, rarity_score, exposure_score, impersonation_score, cleanup_score,
-        country_distribution, category_distribution, preview_results, free_preview_locked, free_preview_lock_reason, results,
+        country_distribution, category_distribution, preview_results, free_preview_locked, free_preview_lock_reason,
+        ticket_access_owner_token_hash, results,
         maigret_report_html, maigret_report_filename, maigret_report_generated_at,
         created_at, finished_at, expires_at
       ) values (
         $1, $2, $3, $4, $5, $6, $7, $8, $9,
         $10, $11, $12, $13, $14,
-        $15::jsonb, $16::jsonb, $17::jsonb, $18, $19, $20::jsonb,
-        $21, $22, $23,
-        $24, $25, $26
+        $15::jsonb, $16::jsonb, $17::jsonb, $18, $19,
+        $20, $21::jsonb,
+        $22, $23, $24,
+        $25, $26, $27
       )
       on conflict (id) do update set
         username = excluded.username,
@@ -185,6 +187,7 @@ class PostgresScanRepository implements ScanRepository {
         preview_results = excluded.preview_results,
         free_preview_locked = excluded.free_preview_locked,
         free_preview_lock_reason = excluded.free_preview_lock_reason,
+        ticket_access_owner_token_hash = excluded.ticket_access_owner_token_hash,
         results = excluded.results,
         maigret_report_html = excluded.maigret_report_html,
         maigret_report_filename = excluded.maigret_report_filename,
@@ -211,6 +214,7 @@ class PostgresScanRepository implements ScanRepository {
         JSON.stringify(job.previewResults),
         Boolean(job.freePreviewLocked),
         job.freePreviewLockReason ?? null,
+        job.ticketAccessOwnerTokenHash ?? null,
         JSON.stringify(job.results),
         job.maigretReport?.html ?? null,
         job.maigretReport?.htmlFilename ?? null,
@@ -273,6 +277,7 @@ function mapPostgresRow(row: Record<string, unknown>): ScanJob {
     freePreviewLockReason: row.free_preview_lock_reason
       ? row.free_preview_lock_reason as ScanJob["freePreviewLockReason"]
       : undefined,
+    ticketAccessOwnerTokenHash: row.ticket_access_owner_token_hash ? String(row.ticket_access_owner_token_hash) : null,
     results: row.results as ScanJob["results"],
     maigretReportAvailable: Boolean(row.maigret_report_html),
     maigretReportFilename: row.maigret_report_filename ? String(row.maigret_report_filename) : undefined,

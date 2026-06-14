@@ -392,6 +392,7 @@ const scanExperienceCopy = {
       paywallPreview: "리포트 잠김",
       freeDetail: "무료 상세 보기",
       freeDetailAgain: "무료 상세 보기 다시 보기",
+      ticketFull: "무료 티켓 전체 결과",
       paidReport: "결제 완료 리포트",
       fullOpen: "전체 결과 열림",
       lockedUrl: "URL 잠김"
@@ -693,6 +694,7 @@ const scanExperienceCopy = {
       paywallPreview: "Detailed report locked",
       freeDetail: "One-time free detailed result",
       freeDetailAgain: "View one-time free detailed result again",
+      ticketFull: "Free ticket full results",
       paidReport: "Paid report restored",
       fullOpen: "Full results open",
       lockedUrl: "Detailed URL locked"
@@ -3296,6 +3298,19 @@ async function loadFirstFreeOrPreviewResults(summary: ScanSummary, copy: ScanExp
     }
 
     removePaidReportAccess(scanId);
+  }
+
+  const ticketResponse = await fetch(`/api/scans/${scanId}/results?access=full`, {
+    headers: { "x-scan-owner-token": getOrCreateFreeScanOwnerToken() }
+  });
+  const ticketBody = await ticketResponse.json().catch(() => null);
+
+  if (ticketResponse.ok) {
+    return {
+      ...(ticketBody as ResultsResponse),
+      label: copy.detailLabels.ticketFull,
+      description: copy.detailLabels.fullOpen
+    };
   }
 
   const ownerToken = window.localStorage.getItem(freeDetailOwnerTokenKey);

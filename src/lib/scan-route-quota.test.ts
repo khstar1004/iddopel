@@ -11,6 +11,7 @@ import {
   resetBetaScanQuotaStoresForTests
 } from "./beta-scan-quota";
 import { resetScanRepositoryForTests, type ScanRepository } from "./repository";
+import { hashScanTicketAccessOwner } from "./scan-ticket-access";
 import { FileTicketWalletStore, resetTicketWalletStoreForTests } from "./ticket-wallet";
 import type { ScanJob } from "./types";
 
@@ -52,6 +53,29 @@ describe("scan route beta free quota", () => {
     expect(second.headers.get("x-beta-free-ticket-referral-code")).toBeTruthy();
     expect(secondBody.error?.code).toBe("BETA_FREE_SCAN_LIMITED");
     expect(repository.size).toBe(1);
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("stores full-result ticket access for the owner that spent the free ticket", async () => {
+    process.env.SCAN_PROVIDER = "mock";
+    process.env.BETA_FREE_SCAN_LIMIT = "2";
+    process.env.BETA_FREE_SCAN_WINDOW_HOURS = "24";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "scan-route-ticket-access-"));
+    const repository = new MemoryScanRepository();
+    resetScanRepositoryForTests(repository);
+    resetBetaScanQuotaStoresForTests(
+      new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
+      new FileBetaScanUsageStore(path.join(dir, "usage.json")),
+      new FileBetaScanLoadStore(path.join(dir, "load.json"))
+    );
+
+    const ownerToken = "ticket-access-owner";
+    const response = await POST(scanRequest("ticketaccess", { ownerToken }));
+    const body = await response.json();
+    const storedScan = await repository.get(body.scanId);
+
+    expect(response.status).toBe(201);
+    expect(storedScan?.ticketAccessOwnerTokenHash).toBe(hashScanTicketAccessOwner(ownerToken));
     await rm(dir, { recursive: true, force: true });
   });
 

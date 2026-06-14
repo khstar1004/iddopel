@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api";
 import { canAccessFullReport } from "@/lib/entitlements";
 import { getStoredScan } from "@/lib/scan-store";
+import { canAccessTicketUnlockedScan } from "@/lib/scan-ticket-access";
 import { foundScanResults, lockedPreviewInsightFor, lockedPreviewResultsFor, lockedResultsCountFor, publicPreviewResultsFor } from "@/lib/scanner";
 import { createTossPreflightResponse, rejectDisallowedTossCors, withTossCors } from "@/lib/toss-cors";
 import type { ScanJob } from "@/lib/types";
@@ -28,6 +29,8 @@ export async function GET(request: Request, context: RouteContext) {
   const url = new URL(request.url);
   const fullAccess = url.searchParams.get("access") === "full";
   const hasPaidAccess = await canAccessFullReport(scanId, url.searchParams.get("token"), request);
+  const hasTicketAccess = await canAccessTicketUnlockedScan(job, request);
+  const hasFullAccess = hasPaidAccess || hasTicketAccess;
   const foundResults = foundScanResults(job.results);
   const freePreviewLocked = Boolean(job.freePreviewLocked);
   const previewResults = freePreviewLocked ? [] : publicPreviewResultsFor(job.results);
@@ -35,7 +38,7 @@ export async function GET(request: Request, context: RouteContext) {
   const lockedResults = lockedPreviewResultsFor(job.results, { includeFreePreview: freePreviewLocked });
   const lockedInsight = lockedPreviewInsightFor(job.results, { includeFreePreview: freePreviewLocked });
 
-  if (fullAccess && !hasPaidAccess) {
+  if (fullAccess && !hasFullAccess) {
     return withTossCors(request, NextResponse.json(
       {
         scanId,
@@ -56,16 +59,16 @@ export async function GET(request: Request, context: RouteContext) {
 
   return withTossCors(request, NextResponse.json({
     scanId,
-    access: fullAccess && hasPaidAccess ? "FULL" : "PREVIEW",
+    access: fullAccess && hasFullAccess ? "FULL" : "PREVIEW",
     summary: reportSummary(job),
-    freePreviewLocked: fullAccess && hasPaidAccess ? false : freePreviewLocked,
-    freePreviewLockReason: fullAccess && hasPaidAccess ? undefined : job.freePreviewLockReason,
-    lockedCount: fullAccess && hasPaidAccess ? 0 : lockedCount,
-    lockedResults: fullAccess && hasPaidAccess ? [] : lockedResults,
-    lockedInsight: fullAccess && hasPaidAccess ? undefined : lockedInsight,
+    freePreviewLocked: fullAccess && hasFullAccess ? false : freePreviewLocked,
+    freePreviewLockReason: fullAccess && hasFullAccess ? undefined : job.freePreviewLockReason,
+    lockedCount: fullAccess && hasFullAccess ? 0 : lockedCount,
+    lockedResults: fullAccess && hasFullAccess ? [] : lockedResults,
+    lockedInsight: fullAccess && hasFullAccess ? undefined : lockedInsight,
     maigretReportAvailable: Boolean(job.maigretReport?.html),
     maigretReportFilename: job.maigretReport?.htmlFilename,
-    results: fullAccess && hasPaidAccess ? foundResults : previewResults
+    results: fullAccess && hasFullAccess ? foundResults : previewResults
   }));
 }
 

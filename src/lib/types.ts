@@ -116,6 +116,7 @@ export interface ScanSummary extends ScoreBundle {
 export interface ScanJob extends ScanSummary {
   results: ScanResult[];
   maigretReport?: MaigretReportArtifacts;
+  ticketAccessOwnerTokenHash?: string | null;
 }
 
 export interface CreateScanInput {

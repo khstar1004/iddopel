@@ -7,6 +7,7 @@ interface CreateStoredScanOptions {
   origin?: string;
   freePreviewLocked?: boolean;
   freePreviewLockReason?: FreePreviewLockReason;
+  ticketAccessOwnerTokenHash?: string | null;
 }
 
 export async function createStoredScan(input: CreateScanInput, options: CreateStoredScanOptions = {}): Promise<ScanJob> {
@@ -14,7 +15,8 @@ export async function createStoredScan(input: CreateScanInput, options: CreateSt
   return getScanRepository().create({
     ...job,
     freePreviewLocked: options.freePreviewLocked,
-    freePreviewLockReason: options.freePreviewLockReason
+    freePreviewLockReason: options.freePreviewLockReason,
+    ticketAccessOwnerTokenHash: options.ticketAccessOwnerTokenHash
   });
 }
 
