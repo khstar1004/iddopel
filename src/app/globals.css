@@ -832,7 +832,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 .ticket-wallet-overlay {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 1000;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -842,7 +842,7 @@ form.toss-card .submit-hint[data-ready="true"] {
 .ticket-wallet-dialog {
   display: grid;
   width: min(460px, 100%);
-  max-height: min(720px, calc(100vh - 36px));
+  max-height: min(720px, calc(100dvh - 36px));
   gap: 14px;
   overflow: auto;
   border: 1px solid #dbe2ea;
@@ -5717,7 +5717,7 @@ form.toss-card .toss-button {
   }
 
   .ticket-wallet-dialog {
-    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
     padding: 14px;
   }
 

@@ -23,6 +23,7 @@ import {
   X
 } from "lucide-react";
 import { FormEvent, type MouseEvent, type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   categoryLabelsByLocale,
   countryLabelsByLocale,
@@ -2338,7 +2339,9 @@ function TicketWalletDialog({
   status: ScanTicketStatus | null;
   wallet: TicketWalletStatus | null;
 }) {
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className="ticket-wallet-overlay" role="presentation" onMouseDown={onClose}>
       <div
         className="ticket-wallet-dialog"
@@ -2369,7 +2372,8 @@ function TicketWalletDialog({
           wallet={wallet}
         />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
