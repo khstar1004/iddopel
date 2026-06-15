@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { ClientTelemetry } from "@/components/ClientTelemetry";
 import "./globals.css";
 
@@ -51,11 +50,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-        <Script
+        <script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsensePublisherId}`}
           crossOrigin="anonymous"
-          strategy="afterInteractive"
         />
         <ClientTelemetry />
       </body>
