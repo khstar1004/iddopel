@@ -6,7 +6,7 @@ const contentSecurityPolicy = [
   "object-src 'none'",
   "frame-ancestors 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.tosspayments.com https://stdpay.inicis.com https://stdux.inicis.com https://pagead2.googlesyndication.com",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://stdpay.inicis.com https://stdux.inicis.com",
   "img-src 'self' https: data: blob:",
   "font-src 'self' data:",
   "connect-src 'self' https://api.tosspayments.com https://stdpay.inicis.com https://stgstdpay.inicis.com https://fcstdpay.inicis.com https://ksstdpay.inicis.com https://stdux.inicis.com https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net https://*.adtrafficquality.google ws: wss: http://localhost:* http://127.0.0.1:*",

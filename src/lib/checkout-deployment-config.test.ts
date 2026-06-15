@@ -22,5 +22,6 @@ describe("checkout deployment configuration", () => {
 
     expect(nextConfig).toContain("https://stdpay.inicis.com");
     expect(nextConfig).toContain("https://stdux.inicis.com");
+    expect(nextConfig).toContain("style-src 'self' 'unsafe-inline' https://stdpay.inicis.com https://stdux.inicis.com");
   });
 });
