@@ -29,6 +29,7 @@ describe("businessInfo", () => {
     const info = getBusinessInfo({});
     expect(info.address).toBe("경기 용인시 수지구 현암로 148 스카이프라자 602호");
     expect(info.phone).toBe("0507-1330-8289");
+    expect(info.supportEmail).toBe("azicteam@gmail.com");
   });
 
   it("publishes service period and refund policy for payment review", () => {

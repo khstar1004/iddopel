@@ -27,7 +27,7 @@ export function getBusinessInfo(env: Record<string, string | undefined> = proces
     businessType: env.BUSINESS_TYPE?.trim() || "정보통신업",
     businessItem: env.BUSINESS_ITEM?.trim() || "IT 서비스",
     phone: env.BUSINESS_PHONE?.trim() || "0507-1330-8289",
-    supportEmail: env.BUSINESS_SUPPORT_EMAIL?.trim() || env.STORE_SUPPORT_EMAIL?.trim() || "khstar1004@yonsei.ac.kr",
+    supportEmail: env.BUSINESS_SUPPORT_EMAIL?.trim() || env.STORE_SUPPORT_EMAIL?.trim() || "azicteam@gmail.com",
     serviceDelivery:
       env.BUSINESS_SERVICE_DELIVERY?.trim() ||
       "실물 배송이 없는 온라인 디지털 서비스입니다. 결제 완료 즉시 상세 리포트 조회 권한을 제공합니다.",

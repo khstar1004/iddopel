@@ -44,6 +44,7 @@
     "SCAN_RESULT_METADATA_MAX_BYTES": "65536",
     "INLINE_SCAN_ARTIFACTS": "false",
     "SITE_URL": "https://iddopel.vercel.app",
+    "BUSINESS_SUPPORT_EMAIL": "azicteam@gmail.com",
     "INICIS_MID": "MOI3480760",
     "ENABLE_MOCK_PAYMENTS": "false"
   },

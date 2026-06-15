@@ -482,7 +482,7 @@ function inicisBuyerConfig() {
   return {
     name: process.env.INICIS_BUYER_NAME?.trim() || "ID도플갱어고객",
     tel: process.env.INICIS_BUYER_TEL?.trim() || "010-0000-0000",
-    email: process.env.INICIS_BUYER_EMAIL?.trim() || process.env.BUSINESS_SUPPORT_EMAIL?.trim() || "khstar1004@yonsei.ac.kr"
+    email: process.env.INICIS_BUYER_EMAIL?.trim() || process.env.BUSINESS_SUPPORT_EMAIL?.trim() || "azicteam@gmail.com"
   };
 }
 
