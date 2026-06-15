@@ -142,13 +142,16 @@ class PostgresCommerceRepository implements CommerceRepository {
   }
 
   async create(order: ReportOrder): Promise<ReportOrder> {
-    await this.pool.query(
-      `insert into report_orders (
-        id, scan_id, product_id, amount, currency, order_name, provider, status,
-        checkout_url, payment_key, report_token_hash, created_at, paid_at
-      ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-      orderToParams(order)
-    );
+    try {
+      await this.insertOrder(order);
+    } catch (error) {
+      if (!shouldRepairReportOrderProviderConstraint(error, order.provider)) {
+        throw error;
+      }
+
+      await this.ensureReportOrderProviderConstraint();
+      await this.insertOrder(order);
+    }
     return order;
   }
 
@@ -193,6 +196,42 @@ class PostgresCommerceRepository implements CommerceRepository {
     );
     return result.rows[0] ? mapOrderRow(result.rows[0]) : null;
   }
+
+  private async insertOrder(order: ReportOrder) {
+    await this.pool.query(
+      `insert into report_orders (
+        id, scan_id, product_id, amount, currency, order_name, provider, status,
+        checkout_url, payment_key, report_token_hash, created_at, paid_at
+      ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      orderToParams(order)
+    );
+  }
+
+  private async ensureReportOrderProviderConstraint() {
+    await this.pool.query("begin");
+    try {
+      await this.pool.query("alter table report_orders drop constraint if exists report_orders_provider_check");
+      await this.pool.query(
+        `alter table report_orders add constraint report_orders_provider_check
+          check (provider in ('MOCK', 'TOSS', 'POLAR', 'PORTONE', 'INICIS', 'APP_STORE', 'GOOGLE_PLAY'))`
+      );
+      await this.pool.query("commit");
+    } catch (error) {
+      await this.pool.query("rollback").catch(() => undefined);
+      throw error;
+    }
+  }
+}
+
+export function shouldRepairReportOrderProviderConstraint(error: unknown, provider: ReportOrder["provider"]) {
+  if (provider !== "INICIS") return false;
+  if (!isRecord(error)) return false;
+
+  const code = stringField(error.code);
+  const constraint = stringField(error.constraint);
+  const message = stringField(error.message);
+
+  return code === "23514" && (constraint === "report_orders_provider_check" || message.includes("report_orders_provider_check"));
 }
 
 function orderToParams(order: ReportOrder) {
@@ -229,4 +268,12 @@ function mapOrderRow(row: Record<string, unknown>): ReportOrder {
     createdAt: new Date(String(row.created_at)).toISOString(),
     paidAt: row.paid_at ? new Date(String(row.paid_at)).toISOString() : null
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function stringField(value: unknown) {
+  return typeof value === "string" ? value : "";
 }

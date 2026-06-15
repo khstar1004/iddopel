@@ -2,7 +2,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { FileCommerceRepository } from "./commerce-repository";
+import { FileCommerceRepository, shouldRepairReportOrderProviderConstraint } from "./commerce-repository";
 import type { ReportOrder } from "./types";
 
 describe("FileCommerceRepository", () => {
@@ -54,6 +54,29 @@ describe("FileCommerceRepository", () => {
       await readFile(path.join(os.tmpdir(), "id-doppelganger", "orders.json"), "utf-8")
     ) as Record<string, ReportOrder>;
     expect(persisted.order_vercel_tmp).toMatchObject({ orderId: "order_vercel_tmp" });
+  });
+});
+
+describe("shouldRepairReportOrderProviderConstraint", () => {
+  it("repairs the legacy provider constraint only for KG Inicis check violations", () => {
+    expect(
+      shouldRepairReportOrderProviderConstraint(
+        { code: "23514", constraint: "report_orders_provider_check", message: "violates check constraint" },
+        "INICIS"
+      )
+    ).toBe(true);
+    expect(
+      shouldRepairReportOrderProviderConstraint(
+        { code: "23514", constraint: "report_orders_provider_check", message: "violates check constraint" },
+        "TOSS"
+      )
+    ).toBe(false);
+    expect(
+      shouldRepairReportOrderProviderConstraint(
+        { code: "23505", constraint: "report_orders_provider_check", message: "duplicate key" },
+        "INICIS"
+      )
+    ).toBe(false);
   });
 });
 

@@ -46,7 +46,7 @@ create table if not exists report_orders (
   amount integer not null check (amount > 0),
   currency text not null check (currency in ('KRW')),
   order_name text not null,
-  provider text not null check (provider in ('MOCK', 'TOSS', 'APP_STORE', 'GOOGLE_PLAY')),
+  provider text not null check (provider in ('MOCK', 'TOSS', 'POLAR', 'PORTONE', 'INICIS', 'APP_STORE', 'GOOGLE_PLAY')),
   status text not null check (status in ('READY', 'PAID', 'FAILED', 'CANCELED')),
   checkout_url text,
   payment_key text,
@@ -61,7 +61,7 @@ create index if not exists report_orders_payment_key_idx on report_orders (provi
 
 alter table report_orders drop constraint if exists report_orders_provider_check;
 alter table report_orders add constraint report_orders_provider_check
-  check (provider in ('MOCK', 'TOSS', 'POLAR', 'PORTONE', 'APP_STORE', 'GOOGLE_PLAY'));
+  check (provider in ('MOCK', 'TOSS', 'POLAR', 'PORTONE', 'INICIS', 'APP_STORE', 'GOOGLE_PLAY'));
 
 alter table report_orders drop constraint if exists report_orders_product_id_check;
 alter table report_orders add constraint report_orders_product_id_check
