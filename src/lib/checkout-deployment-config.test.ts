@@ -14,5 +14,13 @@ describe("checkout deployment configuration", () => {
     expect(nextConfig).toContain("https://pagead2.googlesyndication.com");
     expect(nextConfig).toContain("https://googleads.g.doubleclick.net");
     expect(nextConfig).toContain("https://tpc.googlesyndication.com");
+    expect(nextConfig).toContain("https://*.adtrafficquality.google");
+  });
+
+  it("allows KG Inicis child scripts and frames in the global content security policy", async () => {
+    const nextConfig = await readFile("next.config.ts", "utf-8");
+
+    expect(nextConfig).toContain("https://stdpay.inicis.com");
+    expect(nextConfig).toContain("https://stdux.inicis.com");
   });
 });
