@@ -3,7 +3,8 @@
 import { AlertTriangle, ArrowLeft, CreditCard, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import Script from "next/script";
+import { useEffect, useRef, useState } from "react";
 import * as PortOne from "@portone/browser-sdk/v2";
 import { BrandIcon } from "./BrandIcon";
 import {
@@ -12,6 +13,7 @@ import {
   storePaidReportAccess,
   type PaymentAccessResponse
 } from "./paid-monitoring-client";
+import { defaultRefundPolicy, defaultServicePeriod } from "@/lib/service-policy";
 
 interface PublicOrder {
   orderId: string;
@@ -20,11 +22,25 @@ interface PublicOrder {
   amount: number;
   currency: "KRW";
   orderName: string;
-  provider: "MOCK" | "TOSS" | "POLAR" | "PORTONE" | "APP_STORE" | "GOOGLE_PLAY";
+  provider: "MOCK" | "TOSS" | "POLAR" | "PORTONE" | "INICIS" | "APP_STORE" | "GOOGLE_PLAY";
   status: "READY" | "PAID" | "FAILED" | "CANCELED";
   checkoutUrl: string | null;
   createdAt: string;
   paidAt: string | null;
+}
+
+interface InicisPaymentRequest {
+  scriptUrl: string;
+  formId: string;
+  fields: Record<string, string>;
+}
+
+declare global {
+  interface Window {
+    INIStdPay?: {
+      pay: (formId: string) => void;
+    };
+  }
 }
 
 export function CheckoutClient() {
@@ -32,6 +48,9 @@ export function CheckoutClient() {
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [inicisScriptReady, setInicisScriptReady] = useState(false);
+  const [inicisRequest, setInicisRequest] = useState<InicisPaymentRequest | null>(null);
+  const openedInicisOrderRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/orders/${params.orderId}`)
@@ -42,6 +61,20 @@ export function CheckoutClient() {
       })
       .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "주문을 불러오지 못했어요."));
   }, [params.orderId]);
+
+  useEffect(() => {
+    if (!inicisRequest || !inicisScriptReady || !order || openedInicisOrderRef.current === order.orderId) return;
+
+    if (!window.INIStdPay) {
+      setError("KG이니시스 결제창 스크립트를 불러오지 못했어요.");
+      setIsPaying(false);
+      return;
+    }
+
+    openedInicisOrderRef.current = order.orderId;
+    window.INIStdPay.pay(inicisRequest.formId);
+    setIsPaying(false);
+  }, [inicisRequest, inicisScriptReady, order]);
 
   async function payWithMock() {
     if (!order) return;
@@ -122,6 +155,27 @@ export function CheckoutClient() {
     }
   }
 
+  async function payWithInicis() {
+    if (!order) return;
+    setIsPaying(true);
+    setError(null);
+    openedInicisOrderRef.current = null;
+
+    try {
+      const response = await fetch("/api/payments/inicis/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: order.orderId })
+      });
+      const body = (await response.json()) as InicisPaymentRequest & { error?: { message?: string } };
+      if (!response.ok) throw new Error(body?.error?.message ?? "KG이니시스 결제창을 준비하지 못했어요.");
+      setInicisRequest(body);
+    } catch (paymentError) {
+      setIsPaying(false);
+      setError(paymentError instanceof Error ? paymentError.message : "KG이니시스 결제창을 준비하지 못했어요.");
+    }
+  }
+
   if (error) {
     return <CheckoutShell title="결제를 준비하지 못했어요" description={error} />;
   }
@@ -148,10 +202,26 @@ export function CheckoutClient() {
   const hostedCheckout = isHostedCheckoutProvider(order.provider);
   const mockCheckout = order.provider === "MOCK";
   const portOneCheckout = order.provider === "PORTONE";
+  const inicisCheckout = order.provider === "INICIS";
   const canOpenHostedCheckout = hostedCheckout && Boolean(order.checkoutUrl);
 
   return (
     <CheckoutShell title={copy.title} description={copy.description}>
+      {inicisCheckout ? (
+        <Script
+          src="https://stdpay.inicis.com/stdjs/INIStdPay.js"
+          strategy="afterInteractive"
+          onLoad={() => setInicisScriptReady(true)}
+          onError={() => setError("KG이니시스 결제창 스크립트를 불러오지 못했어요.")}
+        />
+      ) : null}
+      {inicisCheckout && inicisRequest ? (
+        <form id={inicisRequest.formId} method="POST" acceptCharset="UTF-8" style={{ display: "none" }}>
+          {Object.entries(inicisRequest.fields).map(([name, value]) => (
+            <input key={name} type="hidden" name={name} value={value} readOnly />
+          ))}
+        </form>
+      ) : null}
       <section className="toss-card" style={{ display: "grid", gap: 14 }}>
         <div>
           <span style={{ color: "#6b7684", fontSize: 13 }}>주문명</span>
@@ -184,8 +254,23 @@ export function CheckoutClient() {
             <strong>대시보드 기반</strong>
             <p>현재는 메일 발송이 아니라 월 1회 재점검 결과를 화면에서 확인해요.</p>
           </div>
+          <div>
+            <span>제공기간</span>
+            <strong>결제 즉시, 30일</strong>
+            <p>{defaultServicePeriod}</p>
+          </div>
+          <div>
+            <span>취소/환불</span>
+            <strong>미사용 7일 이내</strong>
+            <p>{defaultRefundPolicy}</p>
+          </div>
         </div>
-        {portOneCheckout ? (
+        {inicisCheckout ? (
+          <button className="toss-button" type="button" onClick={payWithInicis} disabled={isPaying}>
+            {isPaying ? <Loader2 size={18} aria-hidden /> : <CreditCard size={18} aria-hidden />}
+            {isPaying ? "KG이니시스 결제창을 열고 있어요." : "KG이니시스 결제창 열기"}
+          </button>
+        ) : portOneCheckout ? (
           <button className="toss-button" type="button" onClick={payWithPortOne} disabled={isPaying}>
             {isPaying ? <Loader2 size={18} aria-hidden /> : <CreditCard size={18} aria-hidden />}
             {isPaying ? copy.loading : copy.cta}
@@ -276,6 +361,7 @@ function providerLabel(provider: PublicOrder["provider"]) {
   if (provider === "TOSS") return "Toss";
   if (provider === "POLAR") return "Polar";
   if (provider === "PORTONE") return "PortOne";
+  if (provider === "INICIS") return "KG이니시스";
   if (provider === "APP_STORE") return "App Store";
   if (provider === "GOOGLE_PLAY") return "Google Play";
   return "Mock";

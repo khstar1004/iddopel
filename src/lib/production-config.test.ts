@@ -88,6 +88,21 @@ describe("production config preflight", () => {
     expect(report.failed).toBe(0);
   });
 
+  it("accepts KG Inicis as the live web checkout provider", async () => {
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "inicis",
+        INICIS_MID: "INIpayTest",
+        INICIS_SIGN_KEY: "i".repeat(40)
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(true);
+    expect(report.failed).toBe(0);
+  });
+
   it("rejects Toss test keys in production preflight", async () => {
     const report = await createProductionConfigReport({
       envValues: {
@@ -151,6 +166,26 @@ describe("production config preflight", () => {
         expect.objectContaining({ name: "PortOne store id is configured", ok: false }),
         expect.objectContaining({ name: "PortOne channel key is configured", ok: false }),
         expect.objectContaining({ name: "PortOne API secret is configured", ok: false })
+      ])
+    );
+  });
+
+  it("rejects incomplete KG Inicis checkout configuration", async () => {
+    const report = await createProductionConfigReport({
+      envValues: {
+        ...completeEnv,
+        PAYMENT_PROVIDER: "inicis",
+        INICIS_MID: "",
+        INICIS_SIGN_KEY: "YOUR_INICIS_SIGN_KEY"
+      },
+      runRuntimeChecks: false
+    });
+
+    expect(report.ok).toBe(false);
+    expect(report.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "KG Inicis MID is configured", ok: false }),
+        expect.objectContaining({ name: "KG Inicis sign key is configured", ok: false })
       ])
     );
   });

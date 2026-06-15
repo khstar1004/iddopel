@@ -84,6 +84,7 @@ const polarPaymentKeys = [
   "POLAR_SERVER"
 ];
 const portOnePaymentKeys = ["NEXT_PUBLIC_PORTONE_STORE_ID", "NEXT_PUBLIC_PORTONE_CHANNEL_KEY", "PORTONE_API_SECRET"];
+const inicisPaymentKeys = ["INICIS_MID", "INICIS_SIGN_KEY"];
 const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
 const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
 const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
@@ -262,6 +263,7 @@ function resolveEntryKeys(paymentProvider, rawEnv) {
   const paymentKeys =
     paymentProvider === "polar" ? polarPaymentKeys :
     paymentProvider === "portone" ? portOnePaymentKeys :
+    paymentProvider === "inicis" ? inicisPaymentKeys :
     tossPaymentKeys;
   const explicitOptionalKeys = optionalExplicitKeys.filter((key) => isConfiguredValue(rawEnv[key]));
   return uniqueKeys([...commonRequiredKeys, ...paymentKeys, ...mobileStoreKeys, ...explicitOptionalKeys]);
@@ -295,6 +297,7 @@ function isRequiredKey(key, paymentProvider) {
   if (mobileStoreKeys.includes(key)) return true;
   if (paymentProvider === "polar") return polarPaymentKeys.includes(key);
   if (paymentProvider === "portone") return portOnePaymentKeys.includes(key);
+  if (paymentProvider === "inicis") return inicisPaymentKeys.includes(key);
   return tossPaymentKeys.includes(key);
 }
 
@@ -313,7 +316,7 @@ function isConfiguredValue(value) {
 
 function normalizePaymentProvider(value) {
   const provider = String(value || "").trim().toLowerCase();
-  if (provider === "polar" || provider === "portone") return provider;
+  if (provider === "polar" || provider === "portone" || provider === "inicis") return provider;
   return "toss";
 }
 

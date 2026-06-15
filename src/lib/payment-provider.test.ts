@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   attachCheckoutUrl,
+  createInicisPaymentRequest,
   confirmPolarCheckout,
   confirmPortOnePayment,
+  inicisPaymentKey,
   polarPaymentKey,
   portOnePaymentKey,
   publicPortOneConfig
@@ -20,6 +22,8 @@ describe("attachCheckoutUrl", () => {
     delete process.env.NEXT_PUBLIC_PORTONE_STORE_ID;
     delete process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY;
     delete process.env.PORTONE_API_SECRET;
+    delete process.env.INICIS_MID;
+    delete process.env.INICIS_SIGN_KEY;
   });
 
   it("returns an absolute checkout URL for mock orders created from a Toss-hosted mini app", async () => {
@@ -171,6 +175,74 @@ describe("attachCheckoutUrl", () => {
       status: 503,
       message: "PORTONE_CHANNEL_KEY가 설정되어 있지 않아요."
     });
+  });
+
+  it("returns an internal checkout URL for KG Inicis browser checkout orders", async () => {
+    process.env.INICIS_MID = "INIpayTest";
+    process.env.INICIS_SIGN_KEY = "not-a-real-inicis-sign-key";
+    const order = orderFixture("order_inicis", "INICIS");
+
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).resolves.toMatchObject({
+      checkoutUrl: "https://id-doppelganger.kr/checkout/order_inicis"
+    });
+  });
+
+  it("blocks KG Inicis checkout when the sign key is missing", async () => {
+    process.env.INICIS_MID = "INIpayTest";
+    const order = orderFixture("order_inicis", "INICIS");
+
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).rejects.toMatchObject({
+      code: "PAYMENT_CONFIG_MISSING",
+      status: 503,
+      message: "INICIS_SIGN_KEY가 설정되어 있지 않아요."
+    });
+  });
+});
+
+describe("createInicisPaymentRequest", () => {
+  afterEach(() => {
+    delete process.env.INICIS_MID;
+    delete process.env.INICIS_SIGN_KEY;
+    delete process.env.INICIS_BUYER_NAME;
+    delete process.env.INICIS_BUYER_TEL;
+    delete process.env.INICIS_BUYER_EMAIL;
+  });
+
+  it("creates signed KG Inicis request fields without exposing the sign key", () => {
+    process.env.INICIS_MID = "INIpayTest";
+    process.env.INICIS_SIGN_KEY = "not-a-real-inicis-sign-key";
+    process.env.INICIS_BUYER_NAME = "검수자";
+    process.env.INICIS_BUYER_TEL = "010-0000-0000";
+    process.env.INICIS_BUYER_EMAIL = "review@example.com";
+
+    const request = createInicisPaymentRequest(orderFixture("order_inicis", "INICIS"), "https://id-doppelganger.kr", 1770000000000);
+
+    expect(request.scriptUrl).toBe("https://stdpay.inicis.com/stdjs/INIStdPay.js");
+    expect(request.fields).toMatchObject({
+      version: "1.0",
+      mid: "INIpayTest",
+      oid: "order_inicis",
+      price: "2900",
+      timestamp: "1770000000000",
+      currency: "WON",
+      goodname: "ID 도플갱어 정밀 리포트",
+      buyername: "검수자",
+      buyertel: "010-0000-0000",
+      buyeremail: "review@example.com",
+      returnUrl: "https://id-doppelganger.kr/api/payments/inicis/return",
+      closeUrl: "https://id-doppelganger.kr/payment/fail?provider=inicis&orderId=order_inicis",
+      acceptmethod: "centerCd(Y)"
+    });
+    expect(Object.values(request.fields)).not.toContain("not-a-real-inicis-sign-key");
+    expect(request.fields.signature).toHaveLength(64);
+    expect(request.fields.verification).toHaveLength(64);
+    expect(request.fields.mKey).toHaveLength(64);
+  });
+
+  it("namespaces KG Inicis transaction ids before storing paid access", () => {
+    expect(inicisPaymentKey("StdpayCARDINIpayTest202606150000000001")).toBe(
+      "inicis_tid:StdpayCARDINIpayTest202606150000000001"
+    );
   });
 });
 

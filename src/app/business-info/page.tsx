@@ -41,6 +41,14 @@ export default function BusinessInfoPage() {
         <h2>서비스 제공 방식</h2>
         <p>{businessInfo.serviceDelivery}</p>
       </section>
+      <section>
+        <h2>서비스 제공기간</h2>
+        <p>{businessInfo.servicePeriod}</p>
+      </section>
+      <section>
+        <h2>취소/환불 규정</h2>
+        <p>{businessInfo.refundPolicy}</p>
+      </section>
       <script
         type="application/ld+json"
         suppressHydrationWarning
@@ -49,4 +57,3 @@ export default function BusinessInfoPage() {
     </PolicyPage>
   );
 }
-

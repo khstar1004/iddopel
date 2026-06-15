@@ -45,9 +45,47 @@ interface PortOnePaymentResponse {
   orderName?: string;
 }
 
+interface InicisAuthForm {
+  resultCode?: string;
+  resultMsg?: string;
+  mid?: string;
+  orderNumber?: string;
+  authToken?: string;
+  authUrl?: string;
+  netCancelUrl?: string;
+  idc_name?: string;
+  charset?: string;
+  merchantData?: string;
+}
+
+interface InicisApprovalResponse {
+  resultCode?: string;
+  resultMsg?: string;
+  tid?: string;
+  mid?: string;
+  MOID?: string;
+  TotPrice?: string;
+  goodName?: string;
+  payMethod?: string;
+}
+
+export interface InicisPaymentRequest {
+  scriptUrl: string;
+  formId: string;
+  fields: Record<string, string>;
+}
+
 export async function attachCheckoutUrl(order: ReportOrder, origin: string): Promise<ReportOrder> {
   if (order.provider === "POLAR") {
     return attachPolarCheckoutUrl(order, origin);
+  }
+
+  if (order.provider === "INICIS") {
+    requireInicisConfig();
+    return {
+      ...order,
+      checkoutUrl: `${origin}/checkout/${order.orderId}`
+    };
   }
 
   if (order.provider === "PORTONE") {
@@ -264,6 +302,113 @@ export function portOnePaymentKey(paymentId: string) {
   return `portone_payment:${paymentId}`;
 }
 
+export function createInicisPaymentRequest(order: ReportOrder, origin: string, timestampValue = Date.now()): InicisPaymentRequest {
+  if (order.provider !== "INICIS") {
+    throw new Error("KG이니시스 주문이 아니에요.");
+  }
+
+  const { mid, signKey } = requireInicisConfig();
+  const timestamp = String(timestampValue);
+  const price = String(order.amount);
+  const safeOrigin = origin.replace(/\/$/, "");
+  const buyer = inicisBuyerConfig();
+
+  return {
+    scriptUrl: "https://stdpay.inicis.com/stdjs/INIStdPay.js",
+    formId: "inicisPayForm",
+    fields: {
+      version: "1.0",
+      gopaymethod: "Card",
+      mid,
+      oid: order.orderId,
+      price,
+      timestamp,
+      use_chkfake: "Y",
+      signature: sha256(`oid=${order.orderId}&price=${price}&timestamp=${timestamp}`),
+      verification: sha256(`oid=${order.orderId}&price=${price}&signKey=${signKey}&timestamp=${timestamp}`),
+      mKey: sha256(signKey),
+      currency: "WON",
+      goodname: inicisGoodName(order),
+      buyername: buyer.name,
+      buyertel: buyer.tel,
+      buyeremail: buyer.email,
+      returnUrl: `${safeOrigin}/api/payments/inicis/return`,
+      closeUrl: `${safeOrigin}/payment/fail?provider=inicis&orderId=${encodeURIComponent(order.orderId)}`,
+      acceptmethod: "centerCd(Y)",
+      charset: "UTF-8",
+      payViewType: "overlay",
+      languageView: "ko",
+      merchantData: order.orderId
+    }
+  };
+}
+
+export async function confirmInicisPayment(order: ReportOrder, authForm: InicisAuthForm) {
+  if (order.provider !== "INICIS") {
+    throw new Error("KG이니시스 주문이 아니에요.");
+  }
+
+  if (authForm.resultCode !== "0000") {
+    throw new Error(authForm.resultMsg || "KG이니시스 인증이 완료되지 않았어요.");
+  }
+
+  const orderNumber = authForm.orderNumber || authForm.merchantData || "";
+  if (orderNumber !== order.orderId) {
+    throw new Error("KG이니시스 인증 주문번호가 주문과 일치하지 않아요.");
+  }
+
+  const { mid, signKey } = requireInicisConfig();
+  if (authForm.mid !== mid) {
+    throw new Error("KG이니시스 MID가 주문 설정과 일치하지 않아요.");
+  }
+
+  const authToken = authForm.authToken?.trim();
+  const authUrl = authForm.authUrl?.trim();
+  if (!authToken || !authUrl) {
+    throw new Error("KG이니시스 승인 정보가 올바르지 않아요.");
+  }
+
+  assertInicisAuthUrl(authUrl, authForm.idc_name);
+
+  const timestamp = String(Date.now());
+  const body = new URLSearchParams({
+    mid,
+    authToken,
+    timestamp,
+    signature: sha256(`authToken=${authToken}&timestamp=${timestamp}`),
+    verification: sha256(`authToken=${authToken}&signKey=${signKey}&timestamp=${timestamp}`),
+    charset: "UTF-8",
+    format: "JSON",
+    price: String(order.amount)
+  });
+
+  const response = await fetch(authUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded"
+    },
+    body,
+    cache: "no-store"
+  });
+  const approval = (await response.json().catch(() => ({}))) as InicisApprovalResponse;
+
+  if (!response.ok || approval.resultCode !== "0000") {
+    throw new PaymentProviderError(
+      "PAYMENT_REQUEST_REJECTED",
+      approval.resultMsg || "KG이니시스 결제 승인을 완료하지 못했어요.",
+      response.ok ? 400 : response.status,
+      { status: response.status }
+    );
+  }
+
+  validateInicisApproval(order, approval, mid);
+  return approval;
+}
+
+export function inicisPaymentKey(transactionId: string) {
+  return `inicis_tid:${transactionId}`;
+}
+
 export function publicPortOneConfig() {
   return requirePortOnePublicConfig();
 }
@@ -299,6 +444,19 @@ function requirePortOneApiSecret() {
   return apiSecret;
 }
 
+function requireInicisConfig() {
+  const mid = process.env.INICIS_MID?.trim();
+  const signKey = process.env.INICIS_SIGN_KEY?.trim();
+  if (!isUsableCredential(mid)) {
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "INICIS_MID가 설정되어 있지 않아요.", 503);
+  }
+  if (!isUsableCredential(signKey)) {
+    throw new PaymentProviderError("PAYMENT_CONFIG_MISSING", "INICIS_SIGN_KEY가 설정되어 있지 않아요.", 503);
+  }
+
+  return { mid, signKey };
+}
+
 async function getPortOnePayment(paymentId: string) {
   const response = await fetch(`https://api.portone.io/payments/${encodeURIComponent(paymentId)}`, {
     headers: {
@@ -320,6 +478,50 @@ async function getPortOnePayment(paymentId: string) {
   return body;
 }
 
+function inicisBuyerConfig() {
+  return {
+    name: process.env.INICIS_BUYER_NAME?.trim() || "ID도플갱어고객",
+    tel: process.env.INICIS_BUYER_TEL?.trim() || "010-0000-0000",
+    email: process.env.INICIS_BUYER_EMAIL?.trim() || process.env.BUSINESS_SUPPORT_EMAIL?.trim() || "khstar1004@yonsei.ac.kr"
+  };
+}
+
+function inicisGoodName(order: ReportOrder) {
+  return order.productId === "MONTHLY_MONITORING" ? "ID 도플갱어 월간 모니터링" : "ID 도플갱어 정밀 리포트";
+}
+
+function assertInicisAuthUrl(rawAuthUrl: string, idcName: string | undefined) {
+  const authUrl = new URL(rawAuthUrl);
+  if (authUrl.protocol !== "https:") {
+    throw new Error("KG이니시스 승인 URL은 HTTPS여야 해요.");
+  }
+
+  const allowedHosts = new Map([
+    ["stg", "stgstdpay.inicis.com"],
+    ["fc", "fcstdpay.inicis.com"],
+    ["ks", "ksstdpay.inicis.com"]
+  ]);
+  const expectedHost = allowedHosts.get((idcName || "").toLowerCase());
+  if (!expectedHost || authUrl.hostname !== expectedHost) {
+    throw new Error("KG이니시스 승인 URL과 IDC 코드가 일치하지 않아요.");
+  }
+}
+
+function validateInicisApproval(order: ReportOrder, approval: InicisApprovalResponse, mid: string) {
+  if (approval.mid !== mid) {
+    throw new Error("KG이니시스 승인 MID가 주문 설정과 일치하지 않아요.");
+  }
+  if (approval.MOID !== order.orderId) {
+    throw new Error("KG이니시스 승인 주문번호가 주문과 일치하지 않아요.");
+  }
+  if (Number(approval.TotPrice) !== order.amount) {
+    throw new Error("KG이니시스 승인 금액이 주문 금액과 일치하지 않아요.");
+  }
+  if (!approval.tid) {
+    throw new Error("KG이니시스 거래번호가 응답에 없어요.");
+  }
+}
+
 function normalizePortOneCurrency(currency: string) {
   return currency.replace(/^CURRENCY_/, "").toUpperCase();
 }
@@ -336,6 +538,10 @@ function requireMockPaymentsEnabled() {
 
 function tossBasicAuth(secretKey: string) {
   return `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`;
+}
+
+function sha256(value: string) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function requirePolarAccessToken() {

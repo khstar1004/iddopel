@@ -30,4 +30,12 @@ describe("businessInfo", () => {
     expect(info.address).toBe("경기 용인시 수지구 현암로 148 스카이프라자 602호");
     expect(info.phone).toBe("0507-1330-8289");
   });
+
+  it("publishes service period and refund policy for payment review", () => {
+    const info = getBusinessInfo({});
+    expect(info.servicePeriod).toContain("결제 완료 즉시");
+    expect(info.servicePeriod).toContain("30일");
+    expect(info.refundPolicy).toContain("7일 이내");
+    expect(info.refundPolicy).toContain("환불");
+  });
 });

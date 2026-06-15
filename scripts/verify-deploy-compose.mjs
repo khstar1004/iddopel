@@ -92,8 +92,10 @@ function validateComposeSource(compose) {
       compose.includes("POLAR_MONTHLY_MONITORING_PRODUCT_ID") &&
       compose.includes("NEXT_PUBLIC_PORTONE_STORE_ID") &&
       compose.includes("NEXT_PUBLIC_PORTONE_CHANNEL_KEY") &&
-      compose.includes("PORTONE_API_SECRET"),
-    "App service must receive Toss, Polar, and PortOne checkout settings."
+      compose.includes("PORTONE_API_SECRET") &&
+      compose.includes("INICIS_MID") &&
+      compose.includes("INICIS_SIGN_KEY"),
+    "App service must receive Toss, Polar, PortOne, and KG Inicis checkout settings."
   );
   addCheck("Compose passes Toss mini-app env", compose.includes("TOSS_MINI_APP_NAME") && compose.includes("TOSS_ALLOWED_ORIGINS"), "App service must receive Toss mini-app Origin settings.");
   addCheck("Compose passes alert webhook env", compose.includes("ALERT_WEBHOOK_URL") && compose.includes("ALERT_RUNBOOK_URL"), "App service must receive alert webhook settings.");
@@ -153,14 +155,16 @@ function validateEnvShape(values) {
     "POLAR_SERVER",
     "NEXT_PUBLIC_PORTONE_STORE_ID",
     "NEXT_PUBLIC_PORTONE_CHANNEL_KEY",
-    "PORTONE_API_SECRET"
+    "PORTONE_API_SECRET",
+    "INICIS_MID",
+    "INICIS_SIGN_KEY"
   ]) {
     addCheck(`Deploy env declares ${key}`, hasEnvKey(values, key), `${key} must be declared in ${envPath}.`);
   }
 
   const paymentProvider = String(values.PAYMENT_PROVIDER || "").trim();
   addCheck("Deploy env defaults to Maigret", values.SCAN_PROVIDER === "maigret", "SCAN_PROVIDER should be maigret in production Compose.");
-  addCheck("Deploy env uses live checkout provider", ["toss", "polar", "portone"].includes(paymentProvider), "PAYMENT_PROVIDER should be toss, polar, or portone in production Compose.");
+  addCheck("Deploy env uses live checkout provider", ["toss", "polar", "portone", "inicis"].includes(paymentProvider), "PAYMENT_PROVIDER should be toss, polar, portone, or inicis in production Compose.");
   addCheck("Deploy env disables mock payments", values.ENABLE_MOCK_PAYMENTS === "false", "ENABLE_MOCK_PAYMENTS must be false.");
   addCheck("Postgres password is URL-safe", /^[A-Za-z0-9._~-]+$/.test(values.POSTGRES_PASSWORD ?? ""), "Use URL-safe characters because the password is interpolated into DATABASE_URL.");
 
@@ -198,6 +202,10 @@ function validateEnvShape(values) {
       addCheck("PortOne channel key configured", (values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY ?? "").length >= 12 && !hasPlaceholder(values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY), "Set the PortOne payment channel key.");
       addCheck("PortOne API secret configured", (values.PORTONE_API_SECRET ?? "").length >= 12 && !hasPlaceholder(values.PORTONE_API_SECRET), "Set the PortOne V2 API secret.");
     }
+    if (paymentProvider === "inicis") {
+      addCheck("KG Inicis MID configured", (values.INICIS_MID ?? "").length > 0 && !hasPlaceholder(values.INICIS_MID), "Set the KG Inicis MID.");
+      addCheck("KG Inicis sign key configured", isStrongSecret(values.INICIS_SIGN_KEY), "Set the KG Inicis SignKey.");
+    }
     addCheck("Toss console app id configured", (values.TOSS_CONSOLE_APP_ID ?? "").length > 0 && !hasPlaceholder(values.TOSS_CONSOLE_APP_ID), "Set the Apps in Toss console app id.");
     addCheck("Toss mini app name finalized", /^[a-z0-9-]+$/.test(values.TOSS_MINI_APP_NAME ?? "") && !hasPlaceholder(values.TOSS_MINI_APP_NAME), "Set the Apps in Toss mini app name.");
     addCheck("Toss allowed origins finalized", hasFinalTossOrigins(values.TOSS_ALLOWED_ORIGINS), "Set live and private tossmini.com Origins.");
@@ -222,7 +230,9 @@ function validateEnvShape(values) {
       hasPlaceholder(values.POLAR_WEBHOOK_SECRET) ||
       hasPlaceholder(values.NEXT_PUBLIC_PORTONE_STORE_ID) ||
       hasPlaceholder(values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY) ||
-      hasPlaceholder(values.PORTONE_API_SECRET)
+      hasPlaceholder(values.PORTONE_API_SECRET) ||
+      hasPlaceholder(values.INICIS_MID) ||
+      hasPlaceholder(values.INICIS_SIGN_KEY)
     ) {
       addWarning("Production secret placeholder", "Replace CRON_SECRET, report secrets, and checkout provider keys in deploy/compose/.env before deployment.");
     }

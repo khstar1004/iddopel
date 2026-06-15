@@ -10,7 +10,7 @@ export const requiredSecurityHeaders = [
   "permissions-policy"
 ];
 
-const livePaymentProviders = new Set(["toss", "polar"]);
+const livePaymentProviders = new Set(["toss", "polar", "inicis"]);
 const protectedCronPaths = ["/api/cron/prune", "/api/cron/monitoring"];
 
 export async function createVercelProductionReport({
@@ -152,7 +152,7 @@ export async function createVercelProductionReport({
         order.status === 201 && typeof order.body?.checkoutUrl === "string" && /^https:\/\//.test(order.body.checkoutUrl),
         sanitizeOrderDetail(order)
       );
-      addCheck(report, "checkout order uses live provider", ["TOSS", "POLAR"].includes(order.body?.provider), {
+      addCheck(report, "checkout order uses live provider", ["TOSS", "POLAR", "INICIS"].includes(order.body?.provider), {
         provider: order.body?.provider
       });
     }

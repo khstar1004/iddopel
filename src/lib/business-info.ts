@@ -1,3 +1,5 @@
+import { defaultRefundPolicy, defaultServicePeriod } from "./service-policy";
+
 export interface BusinessInfoFields {
   serviceName: string;
   legalName: string;
@@ -9,6 +11,8 @@ export interface BusinessInfoFields {
   phone: string;
   supportEmail: string;
   serviceDelivery: string;
+  servicePeriod: string;
+  refundPolicy: string;
 }
 
 export const businessInfo = getBusinessInfo();
@@ -26,6 +30,12 @@ export function getBusinessInfo(env: Record<string, string | undefined> = proces
     supportEmail: env.BUSINESS_SUPPORT_EMAIL?.trim() || env.STORE_SUPPORT_EMAIL?.trim() || "khstar1004@yonsei.ac.kr",
     serviceDelivery:
       env.BUSINESS_SERVICE_DELIVERY?.trim() ||
-      "실물 배송이 없는 온라인 디지털 서비스입니다. 결제 완료 즉시 상세 리포트 조회 권한을 제공합니다."
+      "실물 배송이 없는 온라인 디지털 서비스입니다. 결제 완료 즉시 상세 리포트 조회 권한을 제공합니다.",
+    servicePeriod:
+      env.BUSINESS_SERVICE_PERIOD?.trim() ||
+      defaultServicePeriod,
+    refundPolicy:
+      env.BUSINESS_REFUND_POLICY?.trim() ||
+      defaultRefundPolicy
   };
 }

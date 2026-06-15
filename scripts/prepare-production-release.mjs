@@ -36,7 +36,8 @@ const polarPaymentRequiredValues = [
   "POLAR_WEBHOOK_SECRET"
 ];
 const portOnePaymentRequiredValues = ["NEXT_PUBLIC_PORTONE_STORE_ID", "NEXT_PUBLIC_PORTONE_CHANNEL_KEY", "PORTONE_API_SECRET"];
-const productionPaymentProviders = new Set(["toss", "polar", "portone"]);
+const inicisPaymentRequiredValues = ["INICIS_MID", "INICIS_SIGN_KEY"];
+const productionPaymentProviders = new Set(["toss", "polar", "portone", "inicis"]);
 const tossClientKey = ["TOSS", "CLIENT", "KEY"].join("_");
 const tossSecretKey = ["TOSS", "SECRET", "KEY"].join("_");
 const tossSecurityKey = ["TOSS", "SECURITY", "KEY"].join("_");
@@ -129,6 +130,11 @@ export function renderDeployEnv(values) {
     NEXT_PUBLIC_PORTONE_STORE_ID: values.NEXT_PUBLIC_PORTONE_STORE_ID || values.PORTONE_STORE_ID || "",
     NEXT_PUBLIC_PORTONE_CHANNEL_KEY: values.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || values.PORTONE_CHANNEL_KEY || "",
     PORTONE_API_SECRET: values.PORTONE_API_SECRET || "",
+    INICIS_MID: values.INICIS_MID || "",
+    INICIS_SIGN_KEY: values.INICIS_SIGN_KEY || "",
+    INICIS_BUYER_NAME: values.INICIS_BUYER_NAME || "",
+    INICIS_BUYER_TEL: values.INICIS_BUYER_TEL || "",
+    INICIS_BUYER_EMAIL: values.INICIS_BUYER_EMAIL || "",
     TOSS_CONSOLE_APP_ID: values.TOSS_CONSOLE_APP_ID,
     TOSS_MINI_APP_NAME: values.TOSS_MINI_APP_NAME,
     TOSS_ALLOWED_ORIGINS: values.TOSS_ALLOWED_ORIGINS,
@@ -182,7 +188,7 @@ export function createProductionReleasePreparation({ env = {}, existingFiles = {
   }
 
   if (!productionPaymentProviders.has(paymentProvider)) {
-    missing.push("PAYMENT_PROVIDER=toss|polar|portone");
+    missing.push("PAYMENT_PROVIDER=toss|polar|portone|inicis");
   }
 
   for (const requirement of requiredExternalValuesForProvider(paymentProvider)) {
@@ -227,6 +233,11 @@ export function createProductionReleasePreparation({ env = {}, existingFiles = {
     NEXT_PUBLIC_PORTONE_STORE_ID: env.NEXT_PUBLIC_PORTONE_STORE_ID || env.PORTONE_STORE_ID || "",
     NEXT_PUBLIC_PORTONE_CHANNEL_KEY: env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || env.PORTONE_CHANNEL_KEY || "",
     PORTONE_API_SECRET: env.PORTONE_API_SECRET || "",
+    INICIS_MID: env.INICIS_MID || "",
+    INICIS_SIGN_KEY: env.INICIS_SIGN_KEY || "",
+    INICIS_BUYER_NAME: env.INICIS_BUYER_NAME || "",
+    INICIS_BUYER_TEL: env.INICIS_BUYER_TEL || "",
+    INICIS_BUYER_EMAIL: env.INICIS_BUYER_EMAIL || "",
     TOSS_CONSOLE_APP_ID: env.TOSS_CONSOLE_APP_ID || "",
     TOSS_MINI_APP_NAME: tossMiniAppName,
     TOSS_ALLOWED_ORIGINS:
@@ -310,6 +321,7 @@ export function renderProductionLaunchRunbook(values) {
   const paymentProviderLabel =
     paymentProvider === "polar" ? "Polar" :
     paymentProvider === "portone" ? "PortOne" :
+    paymentProvider === "inicis" ? "KG Inicis" :
     "Toss Payments";
 
   return `# ID Doppelganger Production Launch Runbook
@@ -415,6 +427,7 @@ function requiredExternalValuesForProvider(paymentProvider) {
   const paymentValues =
     paymentProvider === "polar" ? polarPaymentRequiredValues :
     paymentProvider === "portone" ? portOnePaymentRequiredValues :
+    paymentProvider === "inicis" ? inicisPaymentRequiredValues :
     paymentProvider === "toss" ? tossPaymentRequiredValues :
     [];
   return [...commonRequiredExternalValues, ...paymentValues];
