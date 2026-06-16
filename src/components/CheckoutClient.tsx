@@ -48,9 +48,10 @@ export function CheckoutClient() {
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [isPreparingInicis, setIsPreparingInicis] = useState(false);
   const [inicisScriptReady, setInicisScriptReady] = useState(false);
   const [inicisRequest, setInicisRequest] = useState<InicisPaymentRequest | null>(null);
-  const openedInicisOrderRef = useRef<string | null>(null);
+  const preparedInicisOrderRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/orders/${params.orderId}`)
@@ -63,18 +64,37 @@ export function CheckoutClient() {
   }, [params.orderId]);
 
   useEffect(() => {
-    if (!inicisRequest || !inicisScriptReady || !order || openedInicisOrderRef.current === order.orderId) return;
+    if (!order || order.provider !== "INICIS" || preparedInicisOrderRef.current === order.orderId) return;
 
-    if (!window.INIStdPay) {
-      setError("KG이니시스 결제창 스크립트를 불러오지 못했어요.");
-      setIsPaying(false);
-      return;
-    }
+    let cancelled = false;
+    preparedInicisOrderRef.current = order.orderId;
+    setIsPreparingInicis(true);
+    setError(null);
 
-    openedInicisOrderRef.current = order.orderId;
-    window.INIStdPay.pay(inicisRequest.formId);
-    setIsPaying(false);
-  }, [inicisRequest, inicisScriptReady, order]);
+    fetch("/api/payments/inicis/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: order.orderId })
+    })
+      .then(async (response) => {
+        const body = (await response.json()) as InicisPaymentRequest & { error?: { message?: string } };
+        if (!response.ok) throw new Error(body?.error?.message ?? "KG이니시스 결제창을 준비하지 못했어요.");
+        if (!body.formId || !body.fields) throw new Error("KG이니시스 결제 요청 정보가 올바르지 않아요.");
+        if (!cancelled) setInicisRequest(body);
+      })
+      .catch((paymentError) => {
+        if (cancelled) return;
+        preparedInicisOrderRef.current = null;
+        setError(paymentError instanceof Error ? paymentError.message : "KG이니시스 결제창을 준비하지 못했어요.");
+      })
+      .finally(() => {
+        if (!cancelled) setIsPreparingInicis(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [order]);
 
   async function payWithMock() {
     if (!order) return;
@@ -155,24 +175,19 @@ export function CheckoutClient() {
     }
   }
 
-  async function payWithInicis() {
+  function payWithInicis() {
     if (!order) return;
-    setIsPaying(true);
     setError(null);
-    openedInicisOrderRef.current = null;
 
     try {
-      const response = await fetch("/api/payments/inicis/request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.orderId })
-      });
-      const body = (await response.json()) as InicisPaymentRequest & { error?: { message?: string } };
-      if (!response.ok) throw new Error(body?.error?.message ?? "KG이니시스 결제창을 준비하지 못했어요.");
-      setInicisRequest(body);
+      if (!inicisRequest) throw new Error("KG이니시스 결제창이 아직 준비 중이에요. 잠시 후 다시 눌러 주세요.");
+      if (!inicisScriptReady || !window.INIStdPay) throw new Error("KG이니시스 결제창 스크립트를 불러오지 못했어요.");
+      setIsPaying(true);
+      window.INIStdPay.pay(inicisRequest.formId);
     } catch (paymentError) {
-      setIsPaying(false);
       setError(paymentError instanceof Error ? paymentError.message : "KG이니시스 결제창을 준비하지 못했어요.");
+    } finally {
+      setIsPaying(false);
     }
   }
 
@@ -204,6 +219,7 @@ export function CheckoutClient() {
   const portOneCheckout = order.provider === "PORTONE";
   const inicisCheckout = order.provider === "INICIS";
   const canOpenHostedCheckout = hostedCheckout && Boolean(order.checkoutUrl);
+  const inicisReadyToOpen = inicisCheckout && inicisScriptReady && Boolean(inicisRequest) && !isPreparingInicis;
 
   return (
     <CheckoutShell title={copy.title} description={copy.description}>
@@ -266,9 +282,15 @@ export function CheckoutClient() {
           </div>
         </div>
         {inicisCheckout ? (
-          <button className="toss-button" type="button" onClick={payWithInicis} disabled={isPaying}>
+          <button className="toss-button" type="button" onClick={payWithInicis} disabled={isPaying || !inicisReadyToOpen}>
             {isPaying ? <Loader2 size={18} aria-hidden /> : <CreditCard size={18} aria-hidden />}
-            {isPaying ? "KG이니시스 결제창을 열고 있어요." : "KG이니시스 결제창 열기"}
+            {isPaying
+              ? "KG이니시스 결제창을 열고 있어요."
+              : !inicisRequest || isPreparingInicis
+                ? "KG이니시스 결제창 준비 중"
+                : !inicisScriptReady
+                  ? "KG이니시스 스크립트 로딩 중"
+                  : "KG이니시스 결제창 열기"}
           </button>
         ) : portOneCheckout ? (
           <button className="toss-button" type="button" onClick={payWithPortOne} disabled={isPaying}>

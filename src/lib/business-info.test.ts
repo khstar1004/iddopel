@@ -27,7 +27,7 @@ describe("businessInfo", () => {
 
   it("uses the configured shared office contact by default for PG review", () => {
     const info = getBusinessInfo({});
-    expect(info.address).toBe("경기 용인시 수지구 현암로 148 스카이프라자 602호");
+    expect(info.address).toBe("경기도 용인시 기흥구 사은로126번길 10, 103동 1701호(보라동, 민속마을쌍용아파트)");
     expect(info.phone).toBe("0507-1330-8289");
     expect(info.supportEmail).toBe("azicteam@gmail.com");
   });
