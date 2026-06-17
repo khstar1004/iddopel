@@ -33,6 +33,7 @@ The full console answer source is `store-assets/privacy-declarations.json` and `
 - Phone number
 - Email address as a search target
 - Resident registration number
+- CI / DI / PortOne identity verification unique keys
 - Precise location
 - Workplace or school inference
 - Profile photo
@@ -45,3 +46,4 @@ The full console answer source is `store-assets/privacy-declarations.json` and `
 - The UI requires a legitimate-purpose acknowledgment before scanning.
 - Results include a fixed disclaimer that discovered accounts are not identity proof.
 - Search history can be deleted by the user.
+- PortOne is used for payment only. Identity verification and CI/DI collection are not active; `npm run identity:verify` blocks accidental client-side CI/DI exposure before release.

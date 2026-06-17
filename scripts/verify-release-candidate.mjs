@@ -7,6 +7,7 @@ export const releaseCandidateScripts = [
   { script: "verify", env: {} },
   { script: "scan:maigret", env: {} },
   { script: "code:hygiene", env: {} },
+  { script: "identity:verify", env: {} },
   { script: "product:verify", env: {} },
   { script: "security:audit", env: {} },
   { script: "security:secrets", env: {} },

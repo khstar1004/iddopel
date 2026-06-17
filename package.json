@@ -13,6 +13,7 @@
     "scan:maigret": "node scripts/verify-maigret-runtime.mjs",
     "scan:maigret:live": "node scripts/verify-maigret-runtime.mjs --live",
     "code:hygiene": "node scripts/verify-code-hygiene.mjs",
+    "identity:verify": "node scripts/verify-identity-assurance.mjs",
     "product:verify": "node scripts/verify-product-positioning.mjs",
     "security:audit": "npm audit --audit-level=high",
     "security:secrets": "node scripts/verify-secret-scan.mjs",
