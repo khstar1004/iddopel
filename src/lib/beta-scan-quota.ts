@@ -349,9 +349,13 @@ export class FileBetaScanSettingsStore implements BetaScanSettingsStore {
   get(): Promise<BetaScanQuotaSettings> {
     return this.withQueue(async () => {
       const persisted = await this.read();
-      return {
+      const settings = {
         ...betaScanQuotaSettings(),
         ...persisted
+      };
+      return {
+        ...settings,
+        freeScanLimit: enforceConfiguredFreeScanLimit(settings.freeScanLimit)
       };
     });
   }
@@ -777,7 +781,7 @@ class PostgresBetaScanSettingsStore implements BetaScanSettingsStore {
 
     return {
       publicScanEnabled: typeof row.public_scan_enabled === "boolean" ? row.public_scan_enabled : defaults.publicScanEnabled,
-      freeScanLimit: normalizeFreeScanLimit(Number(row.free_scan_limit)),
+      freeScanLimit: enforceConfiguredFreeScanLimit(normalizeFreeScanLimit(Number(row.free_scan_limit))),
       windowHours: clampInteger(String(row.window_hours), defaults.windowHours, 1, 24 * 30),
       freeScanLifetime: defaults.freeScanLifetime,
       referralTicketsEnabled: defaults.referralTicketsEnabled,
@@ -1190,6 +1194,8 @@ function applyBetaScanSettingsUpdate(
     next.scanLeaseTtlSeconds = normalizeScanLeaseTtlSeconds(input.scanLeaseTtlSeconds);
   }
 
+  next.freeScanLimit = enforceConfiguredFreeScanLimit(next.freeScanLimit);
+
   return next;
 }
 
@@ -1387,6 +1393,12 @@ function normalizeFreeScanLimit(value: number) {
   }
 
   return value;
+}
+
+function enforceConfiguredFreeScanLimit(value: number, env: Record<string, string | undefined> = process.env) {
+  const configured = Number(env.BETA_FREE_SCAN_LIMIT);
+  if (!Number.isInteger(configured) || configured < 0 || configured > 1000) return value;
+  return Math.min(value, configured);
 }
 
 function normalizeWindowHours(value: number) {

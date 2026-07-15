@@ -77,6 +77,17 @@ describe("beta scan quota", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
+  it("caps persisted settings at the explicitly configured production free-search limit", async () => {
+    process.env.BETA_FREE_SCAN_LIMIT = "1";
+    const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-settings-cap-"));
+    const store = new FileBetaScanSettingsStore(path.join(dir, "settings.json"));
+
+    await store.update({ freeScanLimit: 8 });
+
+    await expect(store.get()).resolves.toMatchObject({ freeScanLimit: 1 });
+    await rm(dir, { recursive: true, force: true });
+  });
+
   it("enforces the configured per-person quota and reports remaining scans", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-usage-"));
     const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
