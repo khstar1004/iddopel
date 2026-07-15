@@ -91,6 +91,7 @@ interface ScanTicketStatus {
   bonusRemaining: number;
   remaining: number;
   resetAt: string;
+  lifetime: boolean;
   referralCode: string | null;
 }
 
@@ -785,16 +786,18 @@ function createQuotaNotice(response: Response, copy: ScanExperienceCopy, locale:
   const remaining = parseHeaderNumber(response.headers.get("x-beta-free-scans-remaining"));
   const limit = parseHeaderNumber(response.headers.get("x-beta-free-scan-limit"));
   const resetAt = response.headers.get("x-beta-free-scan-reset-at");
+  const lifetime = response.headers.get("x-beta-free-scan-lifetime") === "true";
 
   if (remaining === undefined || limit === undefined) return null;
 
-  return copy.form.quotaRemaining(remaining, limit, resetAt ? formatDateTime(resetAt, locale) : null);
+  return copy.form.quotaRemaining(remaining, limit, lifetime || !resetAt ? null : formatDateTime(resetAt, locale));
 }
 
 function ticketStatusFromHeaders(response: Response): ScanTicketStatus | null {
   const remaining = parseHeaderNumber(response.headers.get("x-beta-free-scans-remaining"));
   const limit = parseHeaderNumber(response.headers.get("x-beta-free-scan-limit"));
   const resetAt = response.headers.get("x-beta-free-scan-reset-at");
+  const lifetime = response.headers.get("x-beta-free-scan-lifetime") === "true";
 
   if (remaining === undefined || limit === undefined || !resetAt) return null;
 
@@ -809,6 +812,7 @@ function ticketStatusFromHeaders(response: Response): ScanTicketStatus | null {
     bonusRemaining,
     remaining,
     resetAt,
+    lifetime,
     referralCode: response.headers.get("x-beta-free-ticket-referral-code")
   };
 }
@@ -822,6 +826,7 @@ function normalizeTicketStatus(value: unknown): ScanTicketStatus | null {
   const bonusRemaining = typeof record.bonusRemaining === "number" ? record.bonusRemaining : null;
   const remaining = typeof record.remaining === "number" ? record.remaining : null;
   const resetAt = typeof record.resetAt === "string" ? record.resetAt : null;
+  const lifetime = record.lifetime === true;
 
   if (
     limit === null ||
@@ -841,6 +846,7 @@ function normalizeTicketStatus(value: unknown): ScanTicketStatus | null {
     bonusRemaining,
     remaining,
     resetAt,
+    lifetime,
     referralCode: typeof record.referralCode === "string" ? record.referralCode : null
   };
 }

@@ -19,10 +19,12 @@ import { FileTicketWalletStore, claimTicketWallet, resetTicketWalletStoreForTest
 describe("admin tickets route", () => {
   const originalEnableDevAdmin = process.env.ENABLE_DEV_ADMIN;
   const originalDevAdminPassword = process.env.DEV_ADMIN_PASSWORD;
+  const originalReferralTicketsEnabled = process.env.BETA_REFERRAL_TICKETS_ENABLED;
 
   afterEach(() => {
     restoreEnv("ENABLE_DEV_ADMIN", originalEnableDevAdmin);
     restoreEnv("DEV_ADMIN_PASSWORD", originalDevAdminPassword);
+    restoreEnv("BETA_REFERRAL_TICKETS_ENABLED", originalReferralTicketsEnabled);
     resetBetaScanQuotaStoresForTests(null, null);
     resetTicketWalletStoreForTests(null);
     resetAdminAuditLogStoreForTests(null);
@@ -37,6 +39,7 @@ describe("admin tickets route", () => {
   });
 
   it("grants bonus tickets to a wallet found by recovery code", async () => {
+    process.env.BETA_REFERRAL_TICKETS_ENABLED = "true";
     process.env.ENABLE_DEV_ADMIN = "true";
     process.env.DEV_ADMIN_PASSWORD = "secret-password";
     const dir = await mkdtemp(path.join(os.tmpdir(), "admin-tickets-recovery-"));
@@ -88,6 +91,7 @@ describe("admin tickets route", () => {
   });
 
   it("grants bonus tickets to a wallet found by email", async () => {
+    process.env.BETA_REFERRAL_TICKETS_ENABLED = "true";
     process.env.ENABLE_DEV_ADMIN = "true";
     process.env.DEV_ADMIN_PASSWORD = "secret-password";
     const dir = await mkdtemp(path.join(os.tmpdir(), "admin-tickets-email-"));
@@ -120,6 +124,7 @@ describe("admin tickets route", () => {
   });
 
   it("grants bonus tickets directly to a referral code", async () => {
+    process.env.BETA_REFERRAL_TICKETS_ENABLED = "true";
     process.env.ENABLE_DEV_ADMIN = "true";
     process.env.DEV_ADMIN_PASSWORD = "secret-password";
     const dir = await mkdtemp(path.join(os.tmpdir(), "admin-tickets-referral-"));

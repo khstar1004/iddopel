@@ -104,6 +104,7 @@ function setQuotaHeaders(
     resetAt: string;
     baseRemaining?: number;
     bonusRemaining?: number;
+    lifetime?: boolean;
     referralCode?: string | null;
   }
 ) {
@@ -115,6 +116,9 @@ function setQuotaHeaders(
   }
   if (quota.bonusRemaining !== undefined) {
     response.headers.set("x-beta-free-ticket-bonus-remaining", String(quota.bonusRemaining));
+  }
+  if (quota.lifetime !== undefined) {
+    response.headers.set("x-beta-free-scan-lifetime", String(quota.lifetime));
   }
   if (quota.referralCode) {
     response.headers.set("x-beta-free-ticket-referral-code", quota.referralCode);

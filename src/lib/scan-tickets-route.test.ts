@@ -12,11 +12,15 @@ import {
 } from "./beta-scan-quota";
 
 describe("scan tickets route", () => {
+  const originalReferralTicketsEnabled = process.env.BETA_REFERRAL_TICKETS_ENABLED;
+
   afterEach(() => {
+    restoreEnv("BETA_REFERRAL_TICKETS_ENABLED", originalReferralTicketsEnabled);
     resetBetaScanQuotaStoresForTests(null, null);
   });
 
   it("returns the current ticket balance and a referral code", async () => {
+    process.env.BETA_REFERRAL_TICKETS_ENABLED = "true";
     const dir = await mkdtemp(path.join(os.tmpdir(), "scan-tickets-status-"));
     resetBetaScanQuotaStoresForTests(
       new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
@@ -38,6 +42,7 @@ describe("scan tickets route", () => {
   });
 
   it("credits the referrer once when a new browser opens the referral link", async () => {
+    process.env.BETA_REFERRAL_TICKETS_ENABLED = "true";
     const dir = await mkdtemp(path.join(os.tmpdir(), "scan-tickets-referral-"));
     resetBetaScanQuotaStoresForTests(
       new FileBetaScanSettingsStore(path.join(dir, "settings.json")),
@@ -61,6 +66,15 @@ describe("scan tickets route", () => {
     await rm(dir, { recursive: true, force: true });
   });
 });
+
+function restoreEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}
 
 function ticketRequest(options: { ownerToken: string; referralCode?: string }) {
   return new Request("https://id.example.com/api/scan-tickets", {

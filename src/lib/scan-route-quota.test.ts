@@ -51,7 +51,8 @@ describe("scan route beta free quota", () => {
     expect(first.headers.get("x-beta-free-scans-remaining")).toBe("0");
     expect(second.status).toBe(201);
     expect(second.headers.get("x-beta-free-scans-remaining")).toBe("0");
-    expect(second.headers.get("x-beta-free-ticket-referral-code")).toBeTruthy();
+    expect(second.headers.get("x-beta-free-ticket-referral-code")).toBeNull();
+    expect(second.headers.get("x-beta-free-scan-lifetime")).toBe("true");
     expect(secondBody.freePreviewLocked).toBe(true);
     expect(secondBody.freePreviewLockReason).toBe("BETA_FREE_SCAN_LIMITED");
     expect(secondBody.previewResults).toEqual([]);

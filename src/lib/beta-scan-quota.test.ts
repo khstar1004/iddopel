@@ -18,12 +18,16 @@ import {
 describe("beta scan quota", () => {
   const originalLimit = process.env.BETA_FREE_SCAN_LIMIT;
   const originalWindowHours = process.env.BETA_FREE_SCAN_WINDOW_HOURS;
+  const originalFreeScanLifetime = process.env.BETA_FREE_SCAN_LIFETIME;
+  const originalReferralTicketsEnabled = process.env.BETA_REFERRAL_TICKETS_ENABLED;
   const originalPublicScanEnabled = process.env.BETA_PUBLIC_SCAN_ENABLED;
   const originalMaxConcurrentScans = process.env.BETA_MAX_CONCURRENT_SCANS;
 
   afterEach(() => {
     restoreEnv("BETA_FREE_SCAN_LIMIT", originalLimit);
     restoreEnv("BETA_FREE_SCAN_WINDOW_HOURS", originalWindowHours);
+    restoreEnv("BETA_FREE_SCAN_LIFETIME", originalFreeScanLifetime);
+    restoreEnv("BETA_REFERRAL_TICKETS_ENABLED", originalReferralTicketsEnabled);
     restoreEnv("BETA_PUBLIC_SCAN_ENABLED", originalPublicScanEnabled);
     restoreEnv("BETA_MAX_CONCURRENT_SCANS", originalMaxConcurrentScans);
   });
@@ -36,6 +40,8 @@ describe("beta scan quota", () => {
       publicScanEnabled: true,
       freeScanLimit: 1,
       windowHours: 24,
+      freeScanLifetime: true,
+      referralTicketsEnabled: false,
       maxConcurrentScans: 6
     });
   });
@@ -77,7 +83,7 @@ describe("beta scan quota", () => {
     const key = betaScanQuotaKey("request", "203.0.113.1");
     const now = new Date("2026-06-12T00:00:00.000Z");
 
-    const settings = { ...betaScanQuotaSettings(), freeScanLimit: 2, windowHours: 24 };
+    const settings = { ...betaScanQuotaSettings(), freeScanLimit: 2, windowHours: 24, freeScanLifetime: false };
 
     await expect(assertBetaScanQuota(usageStore, key, settings, now)).resolves.toMatchObject({
       allowed: true,
@@ -96,6 +102,32 @@ describe("beta scan quota", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
+  it("keeps a one-time free search exhausted after the reset window", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-lifetime-usage-"));
+    const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
+    const key = betaScanQuotaKey("owner", "person-one");
+    const firstSearchAt = new Date("2026-06-12T00:00:00.000Z");
+    const settings = {
+      ...betaScanQuotaSettings(),
+      freeScanLimit: 1,
+      windowHours: 24,
+      freeScanLifetime: true
+    };
+
+    await expect(assertBetaScanQuota(usageStore, key, settings, firstSearchAt)).resolves.toMatchObject({
+      allowed: true,
+      remaining: 0
+    });
+    await expect(
+      assertBetaScanQuota(usageStore, key, settings, new Date("2026-06-14T00:00:00.000Z"))
+    ).resolves.toMatchObject({
+      allowed: false,
+      remaining: 0
+    });
+
+    await rm(dir, { recursive: true, force: true });
+  });
+
   it("spends both request and owner quota keys to reduce browser-token reset abuse", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-dual-usage-"));
     const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
@@ -104,7 +136,7 @@ describe("beta scan quota", () => {
     const firstOwnerKey = betaScanQuotaKey("owner", "owner-one");
     const secondOwnerKey = betaScanQuotaKey("owner", "owner-two");
 
-    const settings = { ...betaScanQuotaSettings(), freeScanLimit: 1, windowHours: 24 };
+    const settings = { ...betaScanQuotaSettings(), freeScanLimit: 1, windowHours: 24, referralTicketsEnabled: true };
 
     await expect(assertBetaScanQuota(usageStore, [requestKey, firstOwnerKey], settings, now)).resolves.toMatchObject({
       allowed: true,
@@ -130,7 +162,7 @@ describe("beta scan quota", () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "beta-scan-referral-"));
     const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
     const now = new Date("2026-06-12T00:00:00.000Z");
-    const settings = { ...betaScanQuotaSettings(), freeScanLimit: 1, windowHours: 24 };
+    const settings = { ...betaScanQuotaSettings(), freeScanLimit: 1, windowHours: 24, freeScanLifetime: false, referralTicketsEnabled: true };
     const ownerToken = "owner-with-referral-link";
     const referralCode = betaScanReferralCode(ownerToken);
     const ownerKeys = betaScanQuotaKeys(ownerToken, "203.0.113.17\nMozilla/5.0");
@@ -147,6 +179,14 @@ describe("beta scan quota", () => {
       bonusRemaining: 1,
       remaining: 2,
       referralCode
+    });
+    await expect(
+      getBetaScanTicketStatus(usageStore, ownerKeys, { ...settings, referralTicketsEnabled: false }, referralCode, now)
+    ).resolves.toMatchObject({
+      baseRemaining: 1,
+      bonusRemaining: 0,
+      remaining: 1,
+      referralCode: null
     });
     await expect(assertBetaScanQuota(usageStore, ownerKeys, settings, now, referralCode)).resolves.toMatchObject({
       allowed: true,

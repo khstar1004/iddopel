@@ -9,6 +9,8 @@ export interface BetaScanQuotaSettings {
   publicScanEnabled: boolean;
   freeScanLimit: number;
   windowHours: number;
+  freeScanLifetime: boolean;
+  referralTicketsEnabled: boolean;
   maxConcurrentScans: number;
   busyRetryAfterSeconds: number;
   scanLeaseTtlSeconds: number;
@@ -43,6 +45,7 @@ export interface BetaScanTicketStatus {
   bonusRemaining: number;
   remaining: number;
   resetAt: string;
+  lifetime: boolean;
   referralCode: string | null;
   retryAfterSeconds?: number;
 }
@@ -127,6 +130,8 @@ export function betaScanQuotaSettings(env: Record<string, string | undefined> = 
     publicScanEnabled: parseBoolean(env.BETA_PUBLIC_SCAN_ENABLED, true),
     freeScanLimit: clampInteger(env.BETA_FREE_SCAN_LIMIT, 1, 0, 1000),
     windowHours: clampInteger(env.BETA_FREE_SCAN_WINDOW_HOURS, 24, 1, 24 * 30),
+    freeScanLifetime: parseBoolean(env.BETA_FREE_SCAN_LIFETIME, true),
+    referralTicketsEnabled: parseBoolean(env.BETA_REFERRAL_TICKETS_ENABLED, false),
     maxConcurrentScans: clampInteger(env.BETA_MAX_CONCURRENT_SCANS, 6, 1, 50),
     busyRetryAfterSeconds: clampInteger(env.BETA_SCAN_BUSY_RETRY_AFTER_SECONDS, 30, 1, 3600),
     scanLeaseTtlSeconds: clampInteger(env.BETA_SCAN_LEASE_TTL_SECONDS, 90, 10, 600)
@@ -295,6 +300,13 @@ export async function grantBetaScanReferralTicketForRequest(
   const keys = options.accountScoped ? betaScanAccountQuotaKeys(ownerToken) : betaScanQuotaKeys(ownerToken, requestKey);
   const status = () => getBetaScanUsageStore().status(keys, activeSettings, new Date(), ownReferralCode);
 
+  if (!activeSettings.referralTicketsEnabled) {
+    return {
+      referral: { granted: false, reason: "INVALID_REFERRAL" as const, bonusRemaining: 0 },
+      tickets: await status()
+    };
+  }
+
   if (!normalizedReferralCode) {
     return {
       referral: { granted: false, reason: "INVALID_REFERRAL" as const, bonusRemaining: 0 },
@@ -460,7 +472,7 @@ export class FileBetaScanUsageStore implements BetaScanUsageStore {
         };
       }
 
-      if (normalizedReferralCode && base.bonusRemaining > 0) {
+      if (settings.referralTicketsEnabled && normalizedReferralCode && base.bonusRemaining > 0) {
         const bonusKey = referralBonusKey(normalizedReferralCode);
         usage[bonusKey] = {
           count: base.bonusRemaining - 1,
@@ -767,6 +779,8 @@ class PostgresBetaScanSettingsStore implements BetaScanSettingsStore {
       publicScanEnabled: typeof row.public_scan_enabled === "boolean" ? row.public_scan_enabled : defaults.publicScanEnabled,
       freeScanLimit: normalizeFreeScanLimit(Number(row.free_scan_limit)),
       windowHours: clampInteger(String(row.window_hours), defaults.windowHours, 1, 24 * 30),
+      freeScanLifetime: defaults.freeScanLifetime,
+      referralTicketsEnabled: defaults.referralTicketsEnabled,
       maxConcurrentScans: normalizeMaxConcurrentScans(Number(row.max_concurrent_scans)),
       busyRetryAfterSeconds: normalizeBusyRetryAfterSeconds(Number(row.busy_retry_after_seconds)),
       scanLeaseTtlSeconds: normalizeScanLeaseTtlSeconds(Number(row.scan_lease_ttl_seconds)),
@@ -808,6 +822,8 @@ class PostgresBetaScanSettingsStore implements BetaScanSettingsStore {
       publicScanEnabled: Boolean(row.public_scan_enabled),
       freeScanLimit: normalizeFreeScanLimit(Number(row.free_scan_limit)),
       windowHours: normalizeWindowHours(Number(row.window_hours)),
+      freeScanLifetime: next.freeScanLifetime,
+      referralTicketsEnabled: next.referralTicketsEnabled,
       maxConcurrentScans: normalizeMaxConcurrentScans(Number(row.max_concurrent_scans)),
       busyRetryAfterSeconds: normalizeBusyRetryAfterSeconds(Number(row.busy_retry_after_seconds)),
       scanLeaseTtlSeconds: normalizeScanLeaseTtlSeconds(Number(row.scan_lease_ttl_seconds)),
@@ -887,7 +903,7 @@ class PostgresBetaScanUsageStore implements BetaScanUsageStore {
         };
       }
 
-      if (normalizedReferralCode && base.bonusRemaining > 0) {
+      if (settings.referralTicketsEnabled && normalizedReferralCode && base.bonusRemaining > 0) {
         await upsertUsageRecord(client, referralBonusKey(normalizedReferralCode), base.bonusRemaining - 1, referralTicketResetAt(), now);
         usage[referralBonusKey(normalizedReferralCode)] = {
           count: base.bonusRemaining - 1,
@@ -1229,8 +1245,10 @@ function quotaWindowsFor(
 ): QuotaWindow[] {
   return quotaKeys.map((key) => {
     const current = usage[key];
-    const isActive = Boolean(current && new Date(current.resetAt).getTime() > now.getTime());
-    const resetAt = isActive ? new Date(current.resetAt) : resetAtForWindow(settings, now);
+    const isActive = Boolean(
+      current && (settings.freeScanLifetime ? current.count > 0 : new Date(current.resetAt).getTime() > now.getTime())
+    );
+    const resetAt = isActive && !settings.freeScanLifetime ? new Date(current.resetAt) : resetAtForWindow(settings, now);
     const activeCount = isActive ? current.count : 0;
     return { key, resetAt, activeCount };
   });
@@ -1261,7 +1279,9 @@ function baseTicketStatusFor(
         settings.freeScanLimit
       );
   const used = windows.reduce((max, window) => Math.max(max, window.activeCount), 0);
-  const bonusRemaining = referralCode ? activeCountFor(usage[referralBonusKey(referralCode)], now) : 0;
+  const bonusRemaining = settings.referralTicketsEnabled && referralCode
+    ? activeCountFor(usage[referralBonusKey(referralCode)], now)
+    : 0;
   const remaining = baseRemaining + bonusRemaining;
 
   return {
@@ -1271,8 +1291,12 @@ function baseTicketStatusFor(
     bonusRemaining,
     remaining,
     resetAt: resetAt.toISOString(),
-    referralCode,
-    retryAfterSeconds: remaining > 0 ? undefined : Math.max(1, Math.ceil((resetAt.getTime() - now.getTime()) / 1000))
+    lifetime: settings.freeScanLifetime,
+    referralCode: settings.referralTicketsEnabled ? referralCode : null,
+    retryAfterSeconds:
+      remaining > 0 || settings.freeScanLifetime
+        ? undefined
+        : Math.max(1, Math.ceil((resetAt.getTime() - now.getTime()) / 1000))
   };
 }
 
@@ -1283,6 +1307,7 @@ function earliestResetAt(windows: QuotaWindow[], settings: BetaScanQuotaSettings
 }
 
 function resetAtForWindow(settings: BetaScanQuotaSettings, now: Date) {
+  if (settings.freeScanLifetime) return new Date("9999-12-31T23:59:59.999Z");
   return new Date(now.getTime() + settings.windowHours * 60 * 60 * 1000);
 }
 

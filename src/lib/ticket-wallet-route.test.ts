@@ -15,13 +15,17 @@ import { resetTicketWalletStoreForTests, FileTicketWalletStore } from "./ticket-
 import { resetRateLimitsForTests } from "./rate-limit";
 
 describe("ticket wallet route", () => {
+  const originalReferralTicketsEnabled = process.env.BETA_REFERRAL_TICKETS_ENABLED;
+
   afterEach(() => {
+    restoreEnv("BETA_REFERRAL_TICKETS_ENABLED", originalReferralTicketsEnabled);
     resetBetaScanQuotaStoresForTests(null, null);
     resetTicketWalletStoreForTests(null);
     resetRateLimitsForTests();
   });
 
   it("creates a wallet, sets an httpOnly session cookie, and migrates anonymous referral tickets", async () => {
+    process.env.BETA_REFERRAL_TICKETS_ENABLED = "true";
     const dir = await mkdtemp(path.join(os.tmpdir(), "ticket-wallet-create-"));
     const usageStore = new FileBetaScanUsageStore(path.join(dir, "usage.json"));
     resetBetaScanQuotaStoresForTests(
@@ -137,6 +141,15 @@ describe("ticket wallet route", () => {
     expect(body.error?.details.retryAfterSeconds).toBeGreaterThan(0);
   });
 });
+
+function restoreEnv(key: string, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}
 
 function walletRequest(options: {
   ownerToken?: string;
