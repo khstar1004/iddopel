@@ -76,6 +76,14 @@ export interface InicisPaymentRequest {
 }
 
 export async function attachCheckoutUrl(order: ReportOrder, origin: string): Promise<ReportOrder> {
+  const grobleCheckoutUrl = grobleCheckoutUrlFor(order.productId);
+  if (grobleCheckoutUrl) {
+    return {
+      ...order,
+      checkoutUrl: grobleCheckoutUrl
+    };
+  }
+
   if (order.provider === "POLAR") {
     return attachPolarCheckoutUrl(order, origin);
   }
@@ -420,6 +428,24 @@ function requireTossSecretKey() {
   }
 
   return secretKey;
+}
+
+function grobleCheckoutUrlFor(productId: ReportOrder["productId"]) {
+  const productSpecificUrl =
+    productId === "MONTHLY_MONITORING"
+      ? process.env.GROBLE_MONTHLY_MONITORING_URL?.trim()
+      : process.env.GROBLE_DETAILED_REPORT_URL?.trim();
+  const fallbackUrl = process.env.GROBLE_PAYMENT_URL?.trim();
+  const url = productSpecificUrl || fallbackUrl;
+  if (!url) return null;
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:") return null;
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }
 
 function requirePortOnePublicConfig() {

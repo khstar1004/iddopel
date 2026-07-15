@@ -14,6 +14,9 @@ import type { ReportOrder } from "./types";
 describe("attachCheckoutUrl", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    delete process.env.GROBLE_PAYMENT_URL;
+    delete process.env.GROBLE_DETAILED_REPORT_URL;
+    delete process.env.GROBLE_MONTHLY_MONITORING_URL;
     delete process.env.POLAR_ACCESS_TOKEN;
     delete process.env.POLAR_PRODUCT_ID;
     delete process.env.POLAR_MONTHLY_MONITORING_PRODUCT_ID;
@@ -32,6 +35,30 @@ describe("attachCheckoutUrl", () => {
 
     await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).resolves.toMatchObject({
       checkoutUrl: "https://id-doppelganger.kr/checkout/order_mock"
+    });
+  });
+
+  it("uses the Groble payment link when a fallback link is configured", async () => {
+    process.env.GROBLE_PAYMENT_URL = "https://www.groble.im/payment/ME5ubs";
+    const order = orderFixture("order_groble", "MOCK");
+
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).resolves.toMatchObject({
+      checkoutUrl: "https://www.groble.im/payment/ME5ubs"
+    });
+  });
+
+  it("uses the monthly monitoring Groble link when a product-specific link is configured", async () => {
+    process.env.GROBLE_PAYMENT_URL = "https://www.groble.im/payment/baseLink";
+    process.env.GROBLE_MONTHLY_MONITORING_URL = "https://www.groble.im/payment/ME5ubs";
+    const order = {
+      ...orderFixture("order_monitoring_groble", "MOCK"),
+      productId: "MONTHLY_MONITORING" as const,
+      amount: 3900,
+      orderName: "ID 도플갱어 월간 모니터링 - brand"
+    };
+
+    await expect(attachCheckoutUrl(order, "https://id-doppelganger.kr")).resolves.toMatchObject({
+      checkoutUrl: "https://www.groble.im/payment/ME5ubs"
     });
   });
 
